@@ -1,28 +1,32 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const brand = await prisma.brand.create({
-    data: {
+  await prisma.brand.upsert({
+    where: { slug: "demo-brand" },
+    update: {},
+    create: {
       name: "Demo Brand",
       slug: "demo-brand",
+      websiteUrl: "https://example.com",
     },
   });
 
-  const product = await prisma.product.create({
+  await prisma.product.create({
     data: {
-      brandId: brand.id,
       title: "Demo Abaya",
       slug: "demo-abaya",
-      priceMin: 6500,
+      price: new Prisma.Decimal("65.00"),
+      currency: "GBP",
       sourceUrl: "https://example.com/product/demo-abaya",
+      brand: {
+        connect: { slug: "demo-brand" },
+      },
     },
   });
-
-  console.log("✅ Seeded brand:", brand.id);
-  console.log("✅ Seeded product:", product.id);
 }
+
 
 main()
   .catch((e) => {
@@ -32,3 +36,7 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
+
+
+  
