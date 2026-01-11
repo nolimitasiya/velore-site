@@ -1,8 +1,9 @@
-import "dotenv/config";
+// lib/prisma.ts
+import "server-only";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-const connectionString = process.env.DIRECT_URL || process.env.DATABASE_URL;
+const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
 if (!connectionString) {
   throw new Error("Missing DIRECT_URL / DATABASE_URL in environment.");
 }
