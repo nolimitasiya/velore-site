@@ -1,18 +1,20 @@
 import Link from "next/link";
 
 type Props = {
-  params: { category: string };
+  params?: { category?: string };
 };
 
-function titleize(slug: string) {
-  return slug
+function titleize(slug?: string) {
+  const safe = slug ?? "category";
+  return safe
     .split("-")
     .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
     .join(" ");
 }
 
 export default function CategoryPage({ params }: Props) {
-  const name = titleize(params.category);
+  const name = titleize(params?.category);
+ 
 
   return (
     <div className="mx-auto w-full max-w-[1800px] px-8 py-10">
