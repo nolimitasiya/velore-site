@@ -90,19 +90,31 @@ export default function AdminImportPage() {
       <h1 className="text-2xl font-semibold">Admin – CSV Import</h1>
 
       <div className="rounded-2xl border p-4 space-y-2">
-        <input
-          type="file"
-          accept=".csv"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (!f) return;
-            handleFile(f);
-          }}
-        />
-        <p className="text-sm text-gray-600">
-          Upload a CSV → we validate it → then you click Import.
-        </p>
-      </div>
+  <label
+    htmlFor="csv-upload"
+    className="block text-sm font-medium"
+  >
+    Upload CSV file
+  </label>
+
+  <input
+    id="csv-upload"
+    name="csv"
+    type="file"
+    accept=".csv"
+    aria-label="Upload CSV file"
+    onChange={(e) => {
+      const f = e.currentTarget.files?.[0];
+      if (!f) return;
+      handleFile(f);
+    }}
+  />
+
+  <p className="text-sm text-gray-600">
+    Upload a CSV → we validate it → then you click Import.
+  </p>
+</div>
+
 
       {busy && (
         <div className="text-sm text-gray-600">Working…</div>
