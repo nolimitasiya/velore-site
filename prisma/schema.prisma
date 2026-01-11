@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Currency {
+  GBP
+  EUR
+  CHF
+  USD
+}
+
+enum Badge {
+  bestseller
+  new_in
+  editor_pick
+  modest_essential
+  limited_stock
+  sale
+  ramadan_edit
+  eid_edit
+  workwear
+}
+
+model Brand {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String
+  slug       String   @unique
+  websiteUrl String?
+
+  products   Product[]
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+}
+
+model Category {
+  id    String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name  String
+  slug  String @unique
+
+  products Product[]
+}
+
+model Occasion {
+  id    String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name  String
+  slug  String @unique
+
+  products Product[]
+}
+
+model Material {
+  id    String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name  String
+  slug  String @unique
+
+  products Product[]
+}
+
+model Product {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brandId   String   @db.Uuid
+  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  title     String
+  slug      String   @unique
+
+  // money
+  price     Decimal?
+  currency  Currency @default(GBP)
+
+  // links
+  sourceUrl String?
+  isActive  Boolean @default(true)
+
+  // controlled lists (pick-from-a-list)
+  categoryId String?  @db.Uuid
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  occasionId String?  @db.Uuid
+  occasion   Occasion? @relation(fields: [occasionId], references: [id])
+
+  materialId String?  @db.Uuid
+  material   Material? @relation(fields: [materialId], references: [id])
+
+  // flexible filters
+  colour    String?
+  tags      String[] @default([]) // Postgres only ✅
+  badges    Badge[]  @default([])
+  note      String?
+
+  // stock
+  stock     Int?
+
+  // shipping
+  shippingRegion String?
+
+  images    ProductImage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([brandId])
+  @@index([categoryId])
+  @@index([occasionId])
+  @@index([materialId])
+}
+
+model ProductImage {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId String  @db.Uuid
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  url       String
+  sortOrder Int     @default(0)
+
+  @@index([productId])
+}

@@ -3,6 +3,8 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* DALRA brand accent */
+  --accent: #6b1f2b; /* rich burgundy */
 }
 
 @theme inline {
@@ -16,11 +18,59 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+  --accent: #6b1f2b;
+
+
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+}
+
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 18s linear infinite;
+}
+
+/* Hide scrollbar but keep scroll */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+@layer utilities {
+  .emoji {
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji",
+      "Twemoji Mozilla", sans-serif;
+  }
+}
+
+@layer base {
+  body {
+    text-rendering: geometricPrecision;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-heading);
+    letter-spacing: 0.03em;
+  }
+}
+:root {
+  /* ...your existing vars... */
+  --font-display: var(--font-heading);
 }
