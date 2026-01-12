@@ -137,7 +137,7 @@ export const demo = {
     {
       id: "b2",
       name: "Batul The Collection",
-      imageUrl: "/home/brand-batul.jpg",
+      imageUrl: "/home/brand-batul1.jpg",
     },
     {
       id: "b3",
