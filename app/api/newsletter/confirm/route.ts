@@ -32,10 +32,20 @@ export async function GET(req: Request) {
     },
   });
 
-  try {
+    try {
+    const unsubToken = subscriber.unsubToken ?? crypto.randomUUID();
+
+    // If legacy row has null, store a token so unsubscribe always works
+    if (!subscriber.unsubToken) {
+      await prisma.newsletterSubscriber.update({
+        where: { id: subscriber.id },
+        data: { unsubToken },
+      });
+    }
+
     await sendNewsletterWelcomeEmail({
       to: subscriber.email,
-      unsubToken: subscriber.unsubToken,
+      unsubToken,
     });
   } catch (e) {
     console.error("❌ welcome email failed:", e);
