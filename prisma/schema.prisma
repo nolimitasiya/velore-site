@@ -6,6 +6,14 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  owner
+  admin
+  editor
+  viewer
+  super_admin
+}
+
 enum Currency {
   GBP
   EUR
@@ -25,84 +33,176 @@ enum Badge {
   workwear
 }
 
+/**
+ * =========================
+ * Logins (Companies)
+ * =========================
+ */
+
+model AdminUser {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // hashed
+  name      String?
+  createdAt DateTime @default(now())
+}
+
+/**
+ * =========================
+ * Multi-tenant (Companies)
+ * =========================
+ */
+
+model Company {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships Membership[]
+  brands      Brand[] // optional: link Company -> Brand
+  importJobs  ImportJob[]
+  brandInvites BrandInvite[]   // ✅ add this
+
+}
+
+model User {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String?
+  email       String       @unique
+  password    String
+  createdAt   DateTime     @default(now())
+  memberships Membership[]
+  importJobs  ImportJob[]
+}
+
+
+model Membership {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String @db.Uuid
+  companyId String @db.Uuid
+  role      Role   @default(viewer)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+}
+
+/**
+ * =========================
+ * Inviting Brands
+ * =========================
+ */
+
+
+ model BrandInvite {
+  id          String   @id @default(cuid())
+  email       String
+  tokenHash   String   @unique
+  companyId   String   @db.Uuid
+  role        Role     @default(owner)
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([companyId])
+}
+
+
+/**
+ * =========================
+ * Catalog models
+ * =========================
+ */
 model Brand {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name       String
-  slug       String   @unique
+  slug       String  @unique
   websiteUrl String?
 
-  products   Product[]
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id])
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now()) @updatedAt
+  products Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Category {
-  id    String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name  String
-  slug  String @unique
+  id   String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name String
+  slug String @unique
 
   products Product[]
 }
 
 model Occasion {
-  id    String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name  String
-  slug  String @unique
+  id   String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name String
+  slug String @unique
 
   products Product[]
 }
 
 model Material {
-  id    String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name  String
-  slug  String @unique
+  id   String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name String
+  slug String @unique
 
   products Product[]
 }
 
 model Product {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  brandId   String   @db.Uuid
-  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  id      String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brandId String @db.Uuid
+  brand   Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
-  title     String
-  slug      String   @unique
+  title String
+  slug  String @unique
 
   // money
-  price     Decimal?
-  currency  Currency @default(GBP)
+  price    Decimal? @db.Decimal(10, 2)
+  currency Currency @default(GBP)
 
   // links
   sourceUrl String?
   isActive  Boolean @default(true)
+  publishedAt DateTime?
 
   // controlled lists (pick-from-a-list)
-  categoryId String?  @db.Uuid
+  categoryId String?   @db.Uuid
   category   Category? @relation(fields: [categoryId], references: [id])
 
-  occasionId String?  @db.Uuid
+  occasionId String?   @db.Uuid
   occasion   Occasion? @relation(fields: [occasionId], references: [id])
 
-  materialId String?  @db.Uuid
+  materialId String?   @db.Uuid
   material   Material? @relation(fields: [materialId], references: [id])
 
   // flexible filters
-  colour    String?
-  tags      String[] @default([]) // Postgres only ✅
-  badges    Badge[]  @default([])
-  note      String?
+  colour String?
+  tags   String[] @default([]) // Postgres only ✅
+  badges Badge[]  @default([])
+  note   String?
 
   // stock
-  stock     Int?
+  stock Int?
 
   // shipping
   shippingRegion String?
 
-  images    ProductImage[]
+  images ProductImage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
+  
+
 
   @@index([brandId])
   @@index([categoryId])
@@ -116,7 +216,71 @@ model ProductImage {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   url       String
-  sortOrder Int     @default(0)
+  sortOrder Int    @default(0)
 
   @@index([productId])
 }
+
+/**
+ * =========================
+ * Imports
+ * =========================
+ */
+
+model ImportJob {
+  id       String  @id @default(cuid())
+  type     String // "products"
+  filename String?
+  status   String // "running" | "success" | "failed"
+
+  // ✅ company-scoped
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  // ✅ who ran it
+  userId String? @db.Uuid
+  user   User?   @relation(fields: [userId], references: [id])
+
+  total   Int @default(0)
+  valid   Int @default(0)
+  invalid Int @default(0)
+
+  createdBrands   Int @default(0)
+  createdProducts Int @default(0)
+  updatedProducts Int @default(0)
+
+  rowErrors Json?
+  meta      Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([userId])
+}
+
+/**
+ * =========================
+ * NewsLetter
+ * =========================
+ */
+
+ model NewsletterSubscriber {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  source      String?  // e.g. "popup", "footer", "checkout"
+  tags        String[] // optional segmentation, postgres supports this well
+  status      String   @default("subscribed") // subscribed | unsubscribed | bounced
+  unsubToken String? @unique
+
+  confirmToken String?  @unique
+  confirmedAt  DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([createdAt])
+  @@index([status])
+}
+
+

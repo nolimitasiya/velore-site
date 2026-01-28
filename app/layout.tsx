@@ -5,8 +5,14 @@ import HeaderNav from "../components/HeaderNav";
 import HeaderSearch from "../components/HeaderSearch";
 import StickyHeader from "../components/StickyHeader";
 import CookieBanner from "../components/CookieBanner";
+import { NewsletterSignup } from "@/components/NewsletterSignup";
+import { NewsletterModal } from "@/components/newsletter/NewsletterModal";
+
+
 import Link from "next/link";
 import { Playfair_Display, Inter } from "next/font/google";
+
+
 
 
 
@@ -29,13 +35,13 @@ const SITE_URL =
 
 export const metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "VÉLORE",
+  title: "Veilora Club",
   description: "Where global brands and international style meet",
   openGraph: {
-    title: "VÉLORE",
+    title: "Veilora Club",
     description: "Where global brands and international style meet",
     url: SITE_URL,
-    siteName: "VÉLORE",
+    siteName: "Veilora Club",
   },
 };
 
@@ -79,7 +85,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="/"
           className="font-display text-4xl md:text-5xl leading-none tracking-[0.06em] text-white"
         >
-          VÉLORE
+          Veilora Club
         </Link>
       </div>
 
@@ -102,7 +108,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     {/* Brand */}
     <div className="mb-10 text-center">
   <div className="font-heading text-2xl md:text-3xl tracking-[0.3em] text-white">
-    VÉLORE
+    Veilora Club
   </div>
       <div className="mt-3 text-sm md:text-base tracking-wide text-white/80">
     Where global brands and international style meet
@@ -145,17 +151,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       >
         Ethics &amp; Compliance
       </Link>
+      
     </div>
+    <div className="mt-6 max-w-md mx-auto">
+  <NewsletterSignup />
+</div>
 
     {/* Copyright */}
     <div className="mt-10 text-center text-xs text-white/50">
-      © {new Date().getFullYear()} VÉLORE
+      © {new Date().getFullYear()} Veilora Club
     </div>
   </div>
 </footer>
 
 <CookieBanner />
+<NewsletterModal />
+
       </body>
+      
     </html>
   );
 }

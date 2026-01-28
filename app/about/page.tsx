@@ -2,10 +2,10 @@ export default function AboutPage() {
   return (
     <main className="mx-auto w-full max-w-[1800px] px-8 py-16">
       <header className="max-w-2xl">
-        <h1 className="font-heading text-4xl mb-6">About VÉLORE</h1>
+        <h1 className="font-heading text-4xl mb-6">About Veilora Club</h1>
 
         <p className="text-black/70 leading-relaxed">
-          VÉLORE is a curated destination for modest fashion, bringing together
+          Veilora Club is a curated destination for modest fashion, bringing together
           global brands, contemporary silhouettes, and timeless design.
         </p>
       </header>
@@ -18,7 +18,7 @@ export default function AboutPage() {
         </p>
 
         <p>
-          VÉLORE exists to simplify discovery — so finding modest fashion feels
+          Veilora Club exists to simplify discovery — so finding modest fashion feels
           intuitive, inspiring, and beautifully curated.
         </p>
       </section>

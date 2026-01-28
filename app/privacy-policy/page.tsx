@@ -5,15 +5,15 @@ export default function PrivacyPolicyPage() {
 
       <div className="max-w-2xl space-y-6 text-black/70 leading-relaxed">
         <p>
-          VÉLORE respects your privacy and is committed to protecting your
+          Veilora Club respects your privacy and is committed to protecting your
           personal data. This Privacy Policy explains how we collect, use,
           and safeguard information when you interact with our platform.
         </p>
 
         <h2 className="font-heading text-xl text-black">Who we are</h2>
         <p>
-          VÉLORE is a curated fashion discovery platform showcasing products
-          from third-party retailers. VÉLORE does not sell products directly
+          Veilora Club is a curated fashion discovery platform showcasing products
+          from third-party retailers. Veilora Club does not sell products directly
           or process payments.
         </p>
 
@@ -71,7 +71,7 @@ export default function PrivacyPolicyPage() {
           Cookies
         </h2>
         <p>
-          VÉLORE uses essential cookies to ensure the website functions
+          Veilora Club uses essential cookies to ensure the website functions
           correctly. Optional cookies may be used in the future to improve
           performance and user experience.
         </p>

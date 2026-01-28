@@ -5,13 +5,13 @@ export default function EthicsPage() {
 
       <div className="max-w-2xl space-y-6 text-black/70 leading-relaxed">
         <p>
-          Dalra was created with intention to celebrate modest fashion
+          Veilora Club was created with intention to celebrate modest fashion
           through thoughtful design, global perspectives, and ethical
           awareness.
         </p>
 
         <p>
-          While Dalra does not manufacture products directly, we prioritise
+          While Veilora Club does not manufacture products directly, we prioritise
           partnerships with brands that demonstrate care for craftsmanship,
           responsible production, and transparency in their practices.
         </p>

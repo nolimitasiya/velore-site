@@ -27,7 +27,7 @@ export default function CookieBanner() {
   return (
     <div className="fixed bottom-4 left-1/2 z-50 w-[min(95%,720px)] -translate-x-1/2 rounded-2xl border bg-white p-5 shadow-sm">
       <p className="text-sm text-black/70">
-        Vélore uses essential cookies to ensure the website functions correctly. 
+        Veilora Club uses essential cookies to ensure the website functions correctly. 
         You may accept or reject optional cookies.
       </p>
 

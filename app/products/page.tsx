@@ -50,7 +50,7 @@ export default function Home() {
       <section className="mb-6">
         <h1 className="text-2xl font-semibold">Modest finds, curated.</h1>
         <p className="mt-2 text-gray-600">
-          VÉLORE helps you discover modest-friendly pieces across brands all in one place.
+          Veilora Club helps you discover modest-friendly pieces across brands all in one place.
         </p>
       </section>
 

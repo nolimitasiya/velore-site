@@ -5,12 +5,12 @@ export default function ShippingReturnsPage() {
 
       <div className="max-w-2xl space-y-6 text-black/70 leading-relaxed">
         <p>
-          Dalra operates as a curated fashion discovery platform. We do not
+          Veilora Club operates as a curated fashion discovery platform. We do not
           hold inventory or fulfil orders directly.
         </p>
 
         <p>
-          When you select a product on Dalra, you are redirected to the
+          When you select a product on Veilora Club, you are redirected to the
           retailer’s website to complete your purchase. Shipping, delivery
           times, customs duties, and returns are handled entirely by the
           retailer.
@@ -30,7 +30,7 @@ export default function ShippingReturnsPage() {
         </p>
 
         <p>
-          Dalra does not process payments, manage deliveries, or handle
+          Veilora Club does not process payments, manage deliveries, or handle
           refunds, but we are always happy to assist with general guidance
           if needed.
         </p>

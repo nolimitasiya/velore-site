@@ -8,7 +8,7 @@ export function DalrasDiary({ posts = [] }: { posts?: DemoDiaryPost[] }) {
       <div className="mx-auto w-full max-w-[1800px] px-8 py-16">
         <div className="text-center mb-10">
           <h2 className="font-display text-2xl sm:text-3xl text-black">
-            The Vélore Diary
+            The Veilora Club Diary
           </h2>
           <p className="mt-2 text-sm text-black/60">
             Editorial notes on modest style, global brands, and timeless silhouettes.

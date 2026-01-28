@@ -8,9 +8,9 @@ export function Header() {
         <Link
           href="/"
           className="text-3xl tracking-[0.35em] font-light text-black"
-          aria-label="Dalra home"
+          aria-label="Veilora Club home"
         >
-          DALRA
+          Veilora Club
         </Link>
 
         <div className="w-[120px] flex justify-end">

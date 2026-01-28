@@ -2,10 +2,14 @@ import { NextResponse } from "next/server";
 import Papa from "papaparse";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
+
+
+// Ensure route runs on Node (file parsing)
+export const runtime = "nodejs";
 
 const CurrencyEnum = z.enum(["GBP", "EUR", "CHF", "USD"]);
 
-// must match your Prisma enum Badge EXACTLY
 const AllowedBadges = [
   "bestseller",
   "new_in",
@@ -26,27 +30,27 @@ const RowSchema = z.object({
 
   product_slug: z.string().min(1),
   product_name: z.string().min(1),
-  product_url: z.string().url().optional().or(z.literal("")).transform(v => (v ? v : null)),
+  product_url: z.string().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
 
-  image_url_1: z.string().url().optional().or(z.literal("")).transform(v => (v ? v : null)),
-  image_url_2: z.string().url().optional().or(z.literal("")).transform(v => (v ? v : null)),
-  image_url_3: z.string().url().optional().or(z.literal("")).transform(v => (v ? v : null)),
-  image_url_4: z.string().url().optional().or(z.literal("")).transform(v => (v ? v : null)),
+  image_url_1: z.string().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
+  image_url_2: z.string().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
+  image_url_3: z.string().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
+  image_url_4: z.string().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
 
-  category_slug: z.string().optional().or(z.literal("")).transform(v => (v ? v : null)),
-  occasion_slug: z.string().optional().or(z.literal("")).transform(v => (v ? v : null)),
-  material_slug: z.string().optional().or(z.literal("")).transform(v => (v ? v : null)),
+  category_slug: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
+  occasion_slug: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
+  material_slug: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
 
-  tags: z.string().optional().or(z.literal("")).transform(v => (v ? v : "")),
-  badges: z.string().optional().or(z.literal("")).transform(v => (v ? v : "")),
-  note: z.string().optional().or(z.literal("")).transform(v => (v ? v : null)),
+  tags: z.string().optional().or(z.literal("")).transform((v) => (v ? v : "")),
+  badges: z.string().optional().or(z.literal("")).transform((v) => (v ? v : "")),
+  note: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
 
-  price: z.string().optional().or(z.literal("")).transform(v => (v ? v : null)),
-  currency: CurrencyEnum.optional().or(z.literal("")).transform(v => (v ? v : "GBP")),
+  price: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
+  currency: CurrencyEnum.optional().or(z.literal("")).transform((v) => (v ? v : "GBP")),
 
-  colour: z.string().optional().or(z.literal("")).transform(v => (v ? v : null)),
-  stock: z.string().optional().or(z.literal("")).transform(v => (v ? v : null)),
-  shipping_region: z.string().optional().or(z.literal("")).transform(v => (v ? v : null)),
+  colour: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
+  stock: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
+  shipping_region: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
 });
 
 function slugify(input: string) {
@@ -58,18 +62,35 @@ function slugify(input: string) {
     .replace(/^_+|_+$/g, "");
 }
 
+function prettyNameFromSlug(s: string) {
+  return s
+    .replace(/[_-]/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim();
+}
+
 function parseCommaList(s: string) {
   return s
     .split(",")
-    .map(x => x.trim())
+    .map((x) => x.trim())
     .filter(Boolean);
 }
 
 export async function POST(req: Request) {
+  let jobId: string | null = null;
+
   try {
-    // Expect multipart/form-data with a "file"
+    // 🔐 Auth
+    const token = req.headers.get("x-admin-token");
+    if (token !== process.env.ADMIN_IMPORT_TOKEN) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Multipart file
     const formData = await req.formData();
     const file = formData.get("file");
+    const syncMissing = formData.get("syncMissing") === "1";
+
 
     if (!(file instanceof File)) {
       return NextResponse.json(
@@ -78,20 +99,73 @@ export async function POST(req: Request) {
       );
     }
 
+    // ✅ Create ImportJob after auth + file check
+    const job = await prisma.importJob.create({
+      data: {
+        type: "products",
+        filename: file.name,
+        status: "running",
+      },
+      select: { id: true },
+    });
+    jobId = job.id;
+
     const text = await file.text();
     const parsed = Papa.parse<Record<string, string>>(text, {
       header: true,
       skipEmptyLines: true,
+      transformHeader: (h) => h.trim(),
     });
 
-    if (parsed.errors?.length) {
-      return NextResponse.json(
-        { ok: false, error: "CSV parse error", details: parsed.errors },
-        { status: 400 }
-      );
-    }
+   if (parsed.errors?.length) {
+  const details = parsed.errors.map((e) => ({
+    type: e.type,
+    code: e.code,
+    message: e.message,
+    row: e.row ?? null,
+  }));
+
+  await prisma.importJob.update({
+    where: { id: jobId },
+    data: {
+      status: "failed",
+      meta: {
+        error: "CSV parse error",
+        details,
+      },
+    },
+  });
+
+  return NextResponse.json(
+    { ok: false, error: "CSV parse error", details },
+    { status: 400 }
+  );
+}
+
 
     const rows = parsed.data ?? [];
+
+    // 🔄 Brand sync: deactivate products missing from this CSV (only for this brand)
+const brandSlugForSync = slugify(rows[0]?.brand_slug ?? "");
+let deactivatedCount = 0;
+
+if (syncMissing && brandSlugForSync) {
+  const csvProductSlugs = Array.from(
+    new Set(rows.map((r) => slugify(r.product_slug ?? "")).filter(Boolean))
+  );
+
+  const res = await prisma.product.updateMany({
+    where: {
+      brand: { slug: brandSlugForSync },
+      slug: { notIn: csvProductSlugs },
+    },
+    data: { isActive: false },
+  });
+
+  deactivatedCount = res.count;
+}
+
+
     const results = {
       total: rows.length,
       createdBrands: 0,
@@ -103,13 +177,16 @@ export async function POST(req: Request) {
       rowErrors: [] as Array<{ row: number; error: string }>,
     };
 
-    // Process sequentially (safer for early stage + clearer errors)
+    // Process sequentially
     for (let i = 0; i < rows.length; i++) {
       const raw = rows[i];
 
       const safe = RowSchema.safeParse(raw);
       if (!safe.success) {
-        results.rowErrors.push({ row: i + 2, error: safe.error.message }); // +2: header + 1-index
+        results.rowErrors.push({
+          row: i + 2,
+          error: safe.error.issues[0]?.message ?? safe.error.message,
+        });
         continue;
       }
 
@@ -121,8 +198,10 @@ export async function POST(req: Request) {
       // tags
       const tags = parseCommaList(r.tags).map(slugify);
 
+
+      
       // badges (validate strictly)
-      const badgeListRaw = parseCommaList(r.badges).map(x => x.trim());
+      const badgeListRaw = parseCommaList(r.badges).map((x) => x.trim());
       const badges: typeof AllowedBadges[number][] = [];
       for (const b of badgeListRaw) {
         const bSafe = BadgeEnum.safeParse(b);
@@ -131,7 +210,6 @@ export async function POST(req: Request) {
             row: i + 2,
             error: `Invalid badge "${b}". Allowed: ${AllowedBadges.join(", ")}`,
           });
-          // skip this row
           badges.length = 0;
           break;
         }
@@ -140,14 +218,18 @@ export async function POST(req: Request) {
       if (badgeListRaw.length && badges.length === 0) continue;
 
       // price (optional)
-      const price =
-        r.price === null
-          ? null
-          : (() => {
-              const n = Number(r.price);
-              if (!Number.isFinite(n)) return null;
-              return n;
-            })();
+
+const price =
+  r.price === null
+    ? null
+    : (() => {
+        try {
+          return new Prisma.Decimal(r.price);
+        } catch {
+          return null;
+        }
+      })();
+
 
       // stock (optional)
       const stock =
@@ -159,7 +241,7 @@ export async function POST(req: Request) {
               return Math.max(0, Math.floor(n));
             })();
 
-      // Upsert brand
+      // Brand upsert
       const brand = await prisma.brand.upsert({
         where: { slug: brandSlug },
         update: { name: r.brand_name },
@@ -167,7 +249,7 @@ export async function POST(req: Request) {
         select: { id: true },
       });
 
-      // category/occasion/material: auto-create if slug provided
+      // Category/Occasion/Material upsert
       const categoryId = r.category_slug
         ? (
             await prisma.category.upsert({
@@ -175,7 +257,7 @@ export async function POST(req: Request) {
               update: {},
               create: {
                 slug: slugify(r.category_slug),
-                name: r.category_slug.replace(/[_-]/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+                name: prettyNameFromSlug(r.category_slug),
               },
               select: { id: true },
             })
@@ -189,7 +271,7 @@ export async function POST(req: Request) {
               update: {},
               create: {
                 slug: slugify(r.occasion_slug),
-                name: r.occasion_slug.replace(/[_-]/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+                name: prettyNameFromSlug(r.occasion_slug),
               },
               select: { id: true },
             })
@@ -203,20 +285,20 @@ export async function POST(req: Request) {
               update: {},
               create: {
                 slug: slugify(r.material_slug),
-                name: r.material_slug.replace(/[_-]/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+                name: prettyNameFromSlug(r.material_slug),
               },
               select: { id: true },
             })
           ).id
         : null;
 
-      // Upsert product by slug
-      // NOTE: because slug is unique globally in your schema.
+      // Product exists?
       const exists = await prisma.product.findUnique({
         where: { slug: productSlug },
         select: { id: true },
       });
 
+      // Product upsert (slug is globally unique in your schema)
       const product = await prisma.product.upsert({
         where: { slug: productSlug },
         update: {
@@ -257,12 +339,11 @@ export async function POST(req: Request) {
         select: { id: true },
       });
 
-      // Images: replace with the four columns (simple, predictable)
+      // Images: replace
       const imageUrls = [r.image_url_1, r.image_url_2, r.image_url_3, r.image_url_4].filter(
         (u): u is string => !!u
       );
 
-      // Clear existing and reinsert (simple + consistent)
       await prisma.productImage.deleteMany({ where: { productId: product.id } });
       if (imageUrls.length) {
         await prisma.productImage.createMany({
@@ -274,11 +355,47 @@ export async function POST(req: Request) {
       else results.createdProducts += 1;
     }
 
+    // ✅ Finalize ImportJob
+    const invalid =
+    results.rowErrors.length > 0
+    ? new Set(results.rowErrors.map((e) => e.row)).size
+    : 0;
+    const valid = results.total - invalid;
+
+
+    await prisma.importJob.update({
+  where: { id: jobId },
+  data: {
+    status: "success",
+    total: results.total,
+    valid,
+    invalid,
+    createdBrands: results.createdBrands,
+    createdProducts: results.createdProducts,
+    updatedProducts: results.updatedProducts,
+    rowErrors: results.rowErrors,
+    meta: {
+  syncMissing,
+  brandSlug: brandSlugForSync || null,
+  deactivatedCount,
+},
+
+  },
+});
+
+
     return NextResponse.json({ ok: true, results });
   } catch (e: any) {
-    return NextResponse.json(
-      { ok: false, error: e?.message ?? "Unknown error" },
-      { status: 500 }
-    );
+    // ✅ Mark job failed if created
+    if (jobId) {
+      try {
+        await prisma.importJob.update({
+          where: { id: jobId },
+          data: { status: "failed", meta: { error: e?.message ?? "Unknown error" } },
+        });
+      } catch {}
+    }
+
+    return NextResponse.json({ ok: false, error: e?.message ?? "Unknown error" }, { status: 500 });
   }
 }
