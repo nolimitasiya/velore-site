@@ -39,7 +39,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    
+
     const json = await req.json();
     const body = BodySchema.parse(json);
 
@@ -110,10 +110,25 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, status: "pending" });
   } catch (err: any) {
-    console.error("❌ subscribe error:", err);
-    if (err?.name === "ZodError") {
-      return NextResponse.json({ ok: false, error: "Invalid input." }, { status: 400 });
-    }
-    return NextResponse.json({ ok: false, error: "Something went wrong." }, { status: 500 });
+  const debugId = crypto.randomBytes(6).toString("hex");
+
+  // This prints the full error to Vercel logs (safe)
+  console.error(`❌ subscribe error [${debugId}]`, err);
+
+  // Zod validation stays 400
+  if (err?.name === "ZodError") {
+    return NextResponse.json({ ok: false, error: "Invalid input." }, { status: 400 });
   }
-}
+
+  // Prisma unique constraint (email exists) shouldn't be a 500
+  if (err?.code === "P2002") {
+    return NextResponse.json({ ok: true, status: "pending" }, { status: 200 });
+  }
+
+  // Client only gets a debugId, not the stacktrace
+  return NextResponse.json(
+    { ok: false, error: "Something went wrong.", debugId },
+    { status: 500 }
+  );
+  }}
+
