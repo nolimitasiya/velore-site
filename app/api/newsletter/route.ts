@@ -26,4 +26,4 @@ export async function POST(req: Request) {
     console.error("newsletter route error:", e);
     return NextResponse.json({ ok: false, error: "Server error" }, { status: 500 });
   }
-
+}
