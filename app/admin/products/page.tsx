@@ -1,8 +1,7 @@
+"use client";
+
 // app/admin/products/page.tsx
 export const dynamic = "force-dynamic";
-
-
-"use client";
 
 
 const ADMIN_TOKEN = process.env.NEXT_PUBLIC_ADMIN_IMPORT_TOKEN ?? "";
