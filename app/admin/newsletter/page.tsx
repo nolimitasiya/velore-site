@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { prisma } from "@/lib/prisma";
 // TODO: protect this route (middleware / auth). Keeping simple for now.
 
