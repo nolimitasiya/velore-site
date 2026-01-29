@@ -16,14 +16,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Enter a valid email" }, { status: 400 });
   }
 
-  try {
-    await prisma.newsletterSubscriber.create({
-      data: { email, source },
-    });
+    try {
+    await prisma.newsletterSubscriber.create({ data: { email, source } });
+    return NextResponse.json({ ok: true });
   } catch (e: any) {
-    // unique violation -> already subscribed
-    return NextResponse.json({ ok: true, already: true });
+    if (e?.code === "P2002") {
+      return NextResponse.json({ ok: true, already: true });
+    }
+    console.error("newsletter route error:", e);
+    return NextResponse.json({ ok: false, error: "Server error" }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true });
-}

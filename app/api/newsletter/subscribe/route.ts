@@ -13,7 +13,33 @@ const BodySchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (!siteUrl?.startsWith("https://")) {
+    console.error("Invalid NEXT_PUBLIC_SITE_URL:", siteUrl);
+    return NextResponse.json(
+      { ok: false, error: "Server misconfigured: invalid NEXT_PUBLIC_SITE_URL" },
+      { status: 500 }
+    );
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    console.error("Missing RESEND_API_KEY");
+    return NextResponse.json(
+      { ok: false, error: "Server misconfigured: missing RESEND_API_KEY" },
+      { status: 500 }
+    );
+  }
+
+  if (!process.env.RESEND_FROM_MARKETING && !process.env.RESEND_FROM_ONBOARDING) {
+    console.error("Missing RESEND_FROM_*");
+    return NextResponse.json(
+      { ok: false, error: "Server misconfigured: missing RESEND_FROM" },
+      { status: 500 }
+    );
+  }
+
   try {
+    
     const json = await req.json();
     const body = BodySchema.parse(json);
 
