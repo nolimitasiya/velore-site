@@ -21,8 +21,6 @@ export const prisma =
   });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
-console.log("DB URL (masked):", process.env.DATABASE_URL?.slice(0, 30));
-console.log("DIRECT URL (masked):", process.env.DIRECT_URL?.slice(0, 30));
 
 
 
