@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import crypto from "crypto";
+
 import { sendNewsletterWelcomeEmail } from "@/lib/resend/templates/marketing/newsletterWelcome";
 
 export const runtime = "nodejs";
@@ -8,7 +10,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const token = searchParams.get("token");
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.veiloraclub.com";
 
   if (!token) {
     return NextResponse.redirect(`${baseUrl}/newsletter/confirm?status=missing`);
@@ -33,7 +35,8 @@ export async function GET(req: Request) {
   });
 
     try {
-    const unsubToken = subscriber.unsubToken ?? crypto.randomUUID();
+      const unsubToken = subscriber.unsubToken ?? globalThis.crypto.randomUUID();
+
 
     // If legacy row has null, store a token so unsubscribe always works
     if (!subscriber.unsubToken) {

@@ -1,12 +1,11 @@
 import Link from "next/link";
 
-export default async function ConfirmPage({
+export default function ConfirmPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: { status?: string };
 }) {
-  const { status } = await searchParams;
-
+  const { status } = searchParams;
   const title =
     status === "ok"
       ? "You’re confirmed 💌"
