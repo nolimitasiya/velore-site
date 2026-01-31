@@ -6,9 +6,13 @@ export async function sendNewsletterConfirmEmail(opts: {
   confirmToken: string;
   unsubToken: string;
 }) {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-  const confirmUrl = `${baseUrl}/api/newsletter/confirm?token=${opts.confirmToken}`;
-  const unsubscribeUrl = `${baseUrl}/api/newsletter/unsubscribe?token=${opts.unsubToken}`;
+const baseUrl =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://www.veiloraclub.com";
+  const confirmUrl =
+  `${baseUrl}/api/newsletter/confirm?token=${encodeURIComponent(opts.confirmToken)}`;
+const unsubscribeUrl =
+  `${baseUrl}/api/newsletter/unsubscribe?token=${encodeURIComponent(opts.unsubToken)}`;
+
 
   const subject = "Confirm your subscription 💌";
 

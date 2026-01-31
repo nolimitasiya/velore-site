@@ -6,8 +6,11 @@ export async function sendNewsletterWelcomeEmail(opts: {
   unsubToken: string;
 }) {
   const subject = "Welcome — you’re in 💌";
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-  const unsubscribeUrl = `${baseUrl}/api/newsletter/unsubscribe?token=${opts.unsubToken}`;
+const baseUrl =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://www.veiloraclub.com";
+const unsubscribeUrl =
+  `${baseUrl}/api/newsletter/unsubscribe?token=${encodeURIComponent(opts.unsubToken)}`;
+
 
   const html = `
   <div style="font-family: ui-sans-serif, system-ui; line-height: 1.5;">

@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import crypto from "crypto";
-
 import { sendNewsletterWelcomeEmail } from "@/lib/resend/templates/marketing/newsletterWelcome";
 
 export const runtime = "nodejs";
@@ -55,4 +53,5 @@ export async function GET(req: Request) {
   }
 
   return NextResponse.redirect(`${baseUrl}/newsletter/confirm?status=ok`);
+  
 }
