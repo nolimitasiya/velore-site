@@ -1,13 +1,16 @@
+"use client";
+
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 type Status = "ok" | "invalid" | "missing";
 
-export default function ConfirmPage({
-  searchParams,
-}: {
-  searchParams: { status?: string };
-}) {
-  const status = (searchParams?.status ?? "missing") as Status;
+export default function ConfirmPage() {
+  const sp = useSearchParams();
+
+  const raw = sp.get("status");
+  const status: Status =
+    raw === "ok" || raw === "invalid" || raw === "missing" ? raw : "missing";
 
   const copy: Record<Status, { title: string; body: string }> = {
     ok: {
