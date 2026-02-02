@@ -20,6 +20,7 @@ const AllowedBadges = [
   "ramadan_edit",
   "eid_edit",
   "workwear",
+  "next_day",
 ] as const;
 
 const BadgeEnum = z.enum(AllowedBadges);
@@ -51,6 +52,8 @@ const RowSchema = z.object({
   colour: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
   stock: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
   shipping_region: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
+  affiliate_url: z.string().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
+
 });
 
 function slugify(input: string) {
@@ -302,40 +305,44 @@ const price =
       const product = await prisma.product.upsert({
         where: { slug: productSlug },
         update: {
-          brandId: brand.id,
-          title: r.product_name,
-          sourceUrl: r.product_url ?? undefined,
-          price: price ?? undefined,
-          currency: r.currency as any,
-          colour: r.colour ?? undefined,
-          stock: stock ?? undefined,
-          shippingRegion: r.shipping_region ?? undefined,
-          tags,
-          badges: badges as any,
-          note: r.note ?? undefined,
-          categoryId: categoryId ?? undefined,
-          occasionId: occasionId ?? undefined,
-          materialId: materialId ?? undefined,
-          isActive: true,
-        },
+  brandId: brand.id,
+  title: r.product_name,
+  sourceUrl: r.product_url ?? undefined,
+  affiliateUrl: r.affiliate_url ?? undefined, // ✅ ADD THIS
+  price: price ?? undefined,
+  currency: r.currency as any,
+  colour: r.colour ?? undefined,
+  stock: stock ?? undefined,
+  shippingRegion: r.shipping_region ?? undefined,
+  tags,
+  badges: badges as any,
+  note: r.note ?? undefined,
+  categoryId: categoryId ?? undefined,
+  occasionId: occasionId ?? undefined,
+  materialId: materialId ?? undefined,
+  isActive: true,
+},
+
         create: {
-          brandId: brand.id,
-          title: r.product_name,
-          slug: productSlug,
-          sourceUrl: r.product_url ?? undefined,
-          price: price ?? undefined,
-          currency: r.currency as any,
-          colour: r.colour ?? undefined,
-          stock: stock ?? undefined,
-          shippingRegion: r.shipping_region ?? undefined,
-          tags,
-          badges: badges as any,
-          note: r.note ?? undefined,
-          categoryId: categoryId ?? undefined,
-          occasionId: occasionId ?? undefined,
-          materialId: materialId ?? undefined,
-          isActive: true,
-        },
+  brandId: brand.id,
+  title: r.product_name,
+  slug: productSlug,
+  sourceUrl: r.product_url ?? undefined,
+  affiliateUrl: r.affiliate_url ?? undefined, // ✅ ADD THIS
+  price: price ?? undefined,
+  currency: r.currency as any,
+  colour: r.colour ?? undefined,
+  stock: stock ?? undefined,
+  shippingRegion: r.shipping_region ?? undefined,
+  tags,
+  badges: badges as any,
+  note: r.note ?? undefined,
+  categoryId: categoryId ?? undefined,
+  occasionId: occasionId ?? undefined,
+  materialId: materialId ?? undefined,
+  isActive: true,
+},
+
         select: { id: true },
       });
 

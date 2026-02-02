@@ -32,6 +32,7 @@ enum Badge {
   ramadan_edit
   eid_edit
   workwear
+  next_day
 }
 
 /**
@@ -173,6 +174,8 @@ model Product {
 
   // links
   sourceUrl String?
+  affiliateUrl String?
+
   isActive  Boolean @default(true)
   publishedAt DateTime?
 
@@ -185,6 +188,8 @@ model Product {
 
   materialId String?   @db.Uuid
   material   Material? @relation(fields: [materialId], references: [id])
+
+  productType String?  // e.g. "abaya", "dress", "skirt", "top", "hijab"
 
   // flexible filters
   colour String?
@@ -209,6 +214,8 @@ model Product {
   @@index([categoryId])
   @@index([occasionId])
   @@index([materialId])
+  @@index([productType])      
+  @@index([affiliateUrl])  
 }
 
 model ProductImage {
@@ -281,3 +288,27 @@ model NewsletterSubscriber {
 }
 
 
+model BrandApplication {
+  id           String   @id @default(cuid())
+  brandName    String
+  website      String?  // website or instagram
+  email        String
+  productTypes String[] // store multiple selections
+  notes        String?
+
+  status       BrandApplicationStatus @default(new)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([email])
+}
+
+enum BrandApplicationStatus {
+  new
+  contacted
+  invited
+  onboarded
+  rejected
+}
