@@ -152,11 +152,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         Ethics &amp; Compliance
       </Link>
       <Link
-  href="/admin"
-  className="text-xs text-white/60 hover:text-white transition"
+      href="/admin"
+      className="text-xs text-white/60 hover:text-white transition"
 >
   Admin
 </Link>
+
+      <Link 
+      href="/brand/login"
+      className="text-xs text-white/60 hover:text-white transition"
+      >Brand Portal
+      </Link>
+
       
     </div>
     <div className="mt-6 max-w-md mx-auto">

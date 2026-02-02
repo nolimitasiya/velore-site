@@ -1,12 +1,9 @@
-export const dynamic = "force-dynamic";
-
-import { prisma } from "@/lib/prisma";
 import NewsletterTableClient from "./NewsletterTableClient";
+import { prisma } from "@/lib/prisma";
 
 export default async function AdminNewsletterPage() {
   const subs = await prisma.newsletterSubscriber.findMany({
     orderBy: { createdAt: "desc" },
-    take: 200,
     select: {
       id: true,
       email: true,
@@ -17,10 +14,10 @@ export default async function AdminNewsletterPage() {
   });
 
   return (
-    <div className="mx-auto max-w-5xl p-6">
-      <h1 className="text-2xl font-semibold">Newsletter subscribers</h1>
-      <p className="mt-1 text-sm text-black/60">
-        Total shown: {subs.length}
+    <div className="p-6">
+      <h1 className="text-xl font-semibold">admin/newsletter</h1>
+      <p className="mt-1 text-sm text-zinc-600">
+        Subscribers, confirmations, exports, reminders.
       </p>
 
       <NewsletterTableClient
