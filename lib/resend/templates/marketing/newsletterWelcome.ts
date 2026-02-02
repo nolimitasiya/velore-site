@@ -3,13 +3,13 @@ import { sendEmail } from "../../send";
 
 export async function sendNewsletterWelcomeEmail(opts: {
   to: string;
-  unsubToken: string;
+  unsubscribeToken: string;
 }) {
   const subject = "Welcome — you’re in 💌";
 const baseUrl =
   process.env.NEXT_PUBLIC_SITE_URL || "https://www.veiloraclub.com";
 const unsubscribeUrl =
-  `${baseUrl}/api/newsletter/unsubscribe?token=${encodeURIComponent(opts.unsubToken)}`;
+  `${baseUrl}/api/newsletter/unsubscribe?token=${encodeURIComponent(opts.unsubscribeToken)}`;
 
 
   const html = `

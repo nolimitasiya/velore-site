@@ -15,7 +15,7 @@ export async function POST(req: Request) {
 
   // ✅ Match your schema: unsubToken (based on your old working code)
   const subscriber = await prisma.newsletterSubscriber.findFirst({
-    where: { unsubToken: token },
+    where: { unsubscribeToken: token },
     select: { id: true, email: true, status: true },
   });
 

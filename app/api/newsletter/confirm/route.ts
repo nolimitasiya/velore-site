@@ -16,7 +16,7 @@ export async function GET(req: Request) {
 
   const subscriber = await prisma.newsletterSubscriber.findFirst({
     where: { confirmToken: token },
-    select: { id: true, email: true, status: true, unsubToken: true },
+    select: { id: true, email: true, status: true, unsubscribeToken: true },
   });
 
   if (!subscriber || subscriber.status !== "pending") {
@@ -33,20 +33,20 @@ export async function GET(req: Request) {
   });
 
     try {
-      const unsubToken = subscriber.unsubToken ?? globalThis.crypto.randomUUID();
+      const unsubscribeToken = subscriber.unsubscribeToken ?? globalThis.crypto.randomUUID();
 
 
     // If legacy row has null, store a token so unsubscribe always works
-    if (!subscriber.unsubToken) {
+    if (!subscriber.unsubscribeToken) {
       await prisma.newsletterSubscriber.update({
         where: { id: subscriber.id },
-        data: { unsubToken },
+        data: { unsubscribeToken },
       });
     }
 
     await sendNewsletterWelcomeEmail({
       to: subscriber.email,
-      unsubToken,
+      unsubscribeToken,
     });
   } catch (e) {
     console.error("❌ welcome email failed:", e);
