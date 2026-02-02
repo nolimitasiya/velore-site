@@ -21,7 +21,8 @@ export async function POST(req: Request) {
 
   const sub = await prisma.newsletterSubscriber.findUnique({
     where: { id },
-    select: { id: true, email: true, status: true, unsubToken: true },
+    select: { id: true, email: true, status: true, unsubscribeToken: true }
+
   });
 
   if (!sub) {
@@ -37,17 +38,17 @@ export async function POST(req: Request) {
   const updated = await prisma.newsletterSubscriber.update({
     where: { id: sub.id },
     data: { confirmToken },
-    select: { email: true, confirmToken: true, unsubToken: true },
+    select: { email: true, confirmToken: true, unsubscribeToken: true },
   });
 
-  if (!updated.unsubToken) {
+  if (!updated.unsubscribeToken) {
     return NextResponse.json({ ok: false, error: "Missing unsub token" }, { status: 500 });
   }
 
   await sendNewsletterConfirmEmail({
     to: updated.email,
     confirmToken: updated.confirmToken!,
-    unsubToken: updated.unsubToken,
+    unsubscribeTokenn: updated.unsubscribeToken,
   });
 
   return NextResponse.json({ ok: true });
