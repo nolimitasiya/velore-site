@@ -46,6 +46,8 @@ export function AdminHeader() {
         <NavLink href="/admin/products" label="Products" />
         <NavLink href="/admin/import" label="Imports" />
         <NavLink href="/admin/brand-invites" label="Brand Invites" />
+        <NavLink href="/admin/newsletter" label= "Newsletter"/>
+
 
         <button
           onClick={logout}
