@@ -48,7 +48,7 @@ export async function POST(req: Request) {
   await sendNewsletterConfirmEmail({
     to: updated.email,
     confirmToken: updated.confirmToken!,
-    unsubscribeTokenn: updated.unsubscribeToken,
+    unsubscribeToken: updated.unsubscribeToken,
   });
 
   return NextResponse.json({ ok: true });
