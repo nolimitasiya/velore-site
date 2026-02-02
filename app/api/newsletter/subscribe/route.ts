@@ -47,7 +47,7 @@ export async function POST(req: Request) {
 
     const existing = await prisma.newsletterSubscriber.findUnique({
       where: { email },
-      select: { id: true, status: true, unsubToken: true },
+      select: { id: true, status: true, unsubscribeToken: true },
     });
 
     const makeToken = () => crypto.randomBytes(24).toString("hex");
@@ -60,16 +60,16 @@ export async function POST(req: Request) {
           source: body.source ?? "unknown",
           tags: body.tags ?? [],
           status: "pending",
-          unsubToken: makeToken(),
+          unsubscribeToken: makeToken(),
           confirmToken: makeToken(),
         },
-        select: { email: true, confirmToken: true, unsubToken: true },
+        select: { email: true, confirmToken: true, unsubscribeToken: true },
       });
 
       await sendNewsletterConfirmEmail({
         to: subscriber.email,
         confirmToken: subscriber.confirmToken!, // should exist right after create
-        unsubToken: subscriber.unsubToken!,
+        unsubscribeToken: subscriber.unsubscribeToken!,
       });
 
       return NextResponse.json({ ok: true, status: "pending" });
@@ -90,12 +90,12 @@ export async function POST(req: Request) {
         confirmToken: makeToken(),
         // keep existing unsubToken (don’t rotate it)
       },
-      select: { email: true, confirmToken: true, unsubToken: true },
+      select: { email: true, confirmToken: true, unsubscribeToken: true },
     });
 
     // Safety (in case unsubToken is nullable during your migration phase)
-    const unsubToken = updated.unsubToken ?? existing.unsubToken;
-    if (!unsubToken || !updated.confirmToken) {
+    const unsubscribeToken = updated.unsubscribeToken ?? existing.unsubscribeToken;
+    if (!unsubscribeToken || !updated.confirmToken) {
       return NextResponse.json(
         { ok: false, error: "Failed to create confirmation link." },
         { status: 500 }
@@ -105,7 +105,7 @@ export async function POST(req: Request) {
     await sendNewsletterConfirmEmail({
       to: updated.email,
       confirmToken: updated.confirmToken,
-      unsubToken,
+      unsubscribeToken,
     });
 
     return NextResponse.json({ ok: true, status: "pending" });
