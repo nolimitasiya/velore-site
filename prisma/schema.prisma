@@ -266,22 +266,18 @@ model ImportJob {
  * =========================
  */
 
- model NewsletterSubscriber {
-  id          String   @id @default(cuid())
-  email       String   @unique
-  source      String?  // e.g. "popup", "footer", "checkout"
-  tags        String[] // optional segmentation, postgres supports this well
-  status      String   @default("subscribed") // subscribed | unsubscribed | bounced
-  unsubToken String? @unique
-
-  confirmToken String?  @unique
-  confirmedAt  DateTime?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([createdAt])
-  @@index([status])
+model NewsletterSubscriber {
+  id               String   @id @default(cuid())
+  email            String   @unique
+  source           String?  // e.g. "popup", "footer", "checkout"
+  tags             String[] // optional segmentation, postgres supports this well
+  status           String   @default("pending") // pending|subscribed|unsubscribed
+  confirmToken     String?  @unique
+  confirmedAt      DateTime?
+  unsubscribeToken String? @unique
+  unsubscribedAt   DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 

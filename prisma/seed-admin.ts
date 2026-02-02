@@ -12,20 +12,28 @@ const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const email = "admin@velore.com";
-  const password = "super-strong-password";
+ const email = process.env.ADMIN_SEED_EMAIL;
+const password = process.env.ADMIN_SEED_PASSWORD;
+
+if (!email || !password) {
+  throw new Error("Missing ADMIN_SEED_EMAIL / ADMIN_SEED_PASSWORD");
+}
 
   const hash = await bcrypt.hash(password, 12);
 
-  const user = await prisma.adminUser.upsert({
-    where: { email },
-    update: {},
-    create: {
-      email,
-      password: hash,
-      name: "Asiya",
-    },
-  });
+ const user = await prisma.adminUser.upsert({
+  where: { email },
+  update: {
+    password: hash,
+    name: "Asiya",
+  },
+  create: {
+    email,
+    password: hash,
+    name: "Asiya",
+  },
+});
+
 
   console.log("Admin user ready:", user.email);
 }

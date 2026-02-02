@@ -8,19 +8,17 @@ export function middleware(req: NextRequest) {
   const isAdminApi = pathname.startsWith("/api/admin");
 
   const isBrandPage = pathname.startsWith("/brand");
-  const isBrandAuthApi = pathname.startsWith("/api/auth");
+  const isBrandApi = pathname.startsWith("/api/brand");
 
-  // allow unauth endpoints
   const allowUnauthed =
     pathname === "/admin/login" ||
     pathname === "/api/admin/auth/login" ||
     pathname === "/api/admin/auth/logout" ||
     pathname === "/brand/login" ||
-    pathname === "/api/auth/login" ||
-    pathname === "/api/auth/logout"||
+    pathname === "/api/brand/auth/login" ||
+    pathname === "/api/brand/auth/logout" ||
     pathname === "/brand/onboarding" ||
-    pathname === "/api/brand/onboarding" ;
-
+    pathname === "/api/brand/onboarding";
 
   // ✅ Admin protection
   if ((isAdminPage || isAdminApi) && !allowUnauthed) {
@@ -37,8 +35,8 @@ export function middleware(req: NextRequest) {
   }
 
   // ✅ Brand protection
-  if ((isBrandPage || isBrandAuthApi) && !allowUnauthed) {
-    const authed = Boolean(req.cookies.get("user_authed")?.value);
+  if ((isBrandPage || isBrandApi) && !allowUnauthed) {
+    const authed = Boolean(req.cookies.get("brand_authed")?.value);
     if (!authed) {
       if (isBrandPage) {
         const url = req.nextUrl.clone();
@@ -54,5 +52,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*", "/brand/:path*", "/api/auth/:path*"],
+  matcher: ["/admin/:path*", "/api/admin/:path*", "/brand/:path*", "/api/brand/:path*"],
 };

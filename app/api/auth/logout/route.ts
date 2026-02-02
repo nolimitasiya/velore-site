@@ -1,23 +1,8 @@
 import { NextResponse } from "next/server";
 
 export async function POST() {
-  const res = NextResponse.json({ ok: true });
-
-  res.cookies.set("user_authed", "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
-
-  res.cookies.set("company_id", "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
-
-  return res;
+  return NextResponse.json(
+    { ok: false, error: "Shopper accounts not enabled yet." },
+    { status: 501 }
+  );
 }

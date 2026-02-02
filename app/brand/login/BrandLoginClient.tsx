@@ -21,7 +21,7 @@ export default function BrandLoginClient() {
     setErr(null);
 
     try {
-      const r = await fetch("/api/auth/login", {
+      const r = await fetch("/api/brand/auth/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ email, password }),

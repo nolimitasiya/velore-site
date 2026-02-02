@@ -1,22 +1,49 @@
+"use client";
 
-import Link from "next/link";
-export const dynamic = "force-dynamic";
+import { useSearchParams, useRouter } from "next/navigation";
 
 export default function UnsubscribedPage() {
-  return (
-    <div className="mx-auto max-w-md px-6 py-24 text-center">
-      <h1 className="text-2xl font-semibold">You’re unsubscribed</h1>
-      <p className="mt-3 text-sm text-black/70">
-        You won’t receive any more newsletter emails from Veilora Club.
-      </p>
+  const sp = useSearchParams();
+  const router = useRouter();
+  const status = sp.get("status") || "ok";
 
-      <div className="mt-8">
-        <Link
-          href="/"
-          className="inline-flex items-center justify-center rounded-xl bg-black px-4 py-2 text-sm text-white"
+  const title =
+    status === "ok"
+      ? "You're unsubscribed"
+      : status === "missing"
+      ? "Unsubscribe link is missing"
+      : status === "invalid"
+      ? "Unsubscribe link is invalid"
+      : "You're unsubscribed";
+
+  const message =
+    status === "ok"
+      ? "We’re sorry to see you go 💔. You won’t receive any more Veilora Club emails."
+      : status === "missing"
+      ? "This unsubscribe link is missing a token. Please use the link from the email."
+      : status === "invalid"
+      ? "This unsubscribe link is invalid or expired. Please use the link from the email."
+      : "We’re sorry to see you go.";
+
+  return (
+    <div className="mx-auto max-w-lg px-6 py-14">
+      <h1 className="text-2xl font-semibold">{title}</h1>
+      <p className="mt-2 text-sm text-zinc-600">{message}</p>
+
+      <div className="mt-6 flex gap-3">
+        <button
+          onClick={() => router.push("/")}
+          className="rounded-md bg-black px-4 py-2 text-white"
         >
           Back to home
-        </Link>
+        </button>
+
+        <button
+          onClick={() => router.push("/products")}
+          className="rounded-md border px-4 py-2"
+        >
+          Browse products
+        </button>
       </div>
     </div>
   );
