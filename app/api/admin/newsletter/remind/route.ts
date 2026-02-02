@@ -49,6 +49,7 @@ export async function POST(req: Request) {
     to: updated.email,
     confirmToken: updated.confirmToken!,
     unsubscribeToken: updated.unsubscribeToken,
+    
   });
 
   return NextResponse.json({ ok: true });

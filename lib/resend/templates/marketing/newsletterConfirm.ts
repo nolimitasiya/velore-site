@@ -4,14 +4,14 @@ import { sendEmail } from "../../send";
 export async function sendNewsletterConfirmEmail(opts: {
   to: string;
   confirmToken: string;
-  unsubToken: string;
+  unsubscribeToken: string;
 }) {
 const baseUrl =
   process.env.NEXT_PUBLIC_SITE_URL || "https://www.veiloraclub.com";
   const confirmUrl =
   `${baseUrl}/api/newsletter/confirm?token=${encodeURIComponent(opts.confirmToken)}`;
 const unsubscribeUrl =
-  `${baseUrl}/api/newsletter/unsubscribe?token=${encodeURIComponent(opts.unsubToken)}`;
+  `${baseUrl}/api/newsletter/unsubscribe?token=${encodeURIComponent(opts.unsubscribeToken)}`;
 
 
   const subject = "Confirm your subscription 💌";
