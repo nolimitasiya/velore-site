@@ -38,8 +38,9 @@ export async function POST(req: Request) {
     );
   }
 
-  try {
+  const makeToken = () => crypto.randomBytes(24).toString("hex");
 
+  try {
     const json = await req.json();
     const body = BodySchema.parse(json);
 
@@ -49,8 +50,6 @@ export async function POST(req: Request) {
       where: { email },
       select: { id: true, status: true, unsubscribeToken: true },
     });
-
-    const makeToken = () => crypto.randomBytes(24).toString("hex");
 
     // NEW subscriber -> create as pending + send confirm email
     if (!existing) {
@@ -80,22 +79,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, status: "subscribed" });
     }
 
-    // Existing but pending/unsubscribed -> rotate confirm token + send again
+    // Existing but pending/unsubscribed -> rotate confirm token + ensure unsubscribe token exists
+    const newConfirmToken = makeToken();
+    const ensuredUnsubscribeToken = existing.unsubscribeToken ?? makeToken();
+
     const updated = await prisma.newsletterSubscriber.update({
       where: { email },
       data: {
         source: body.source ?? undefined,
         tags: body.tags ?? undefined,
         status: "pending",
-        confirmToken: makeToken(),
-        // keep existing unsubToken (don’t rotate it)
+        confirmToken: newConfirmToken,
+        // If legacy row has null, store a token so unsubscribe always works
+        unsubscribeToken: existing.unsubscribeToken ? undefined : ensuredUnsubscribeToken,
       },
       select: { email: true, confirmToken: true, unsubscribeToken: true },
     });
 
-    // Safety (in case unsubToken is nullable during your migration phase)
-    const unsubscribeToken = updated.unsubscribeToken ?? existing.unsubscribeToken;
-    if (!unsubscribeToken || !updated.confirmToken) {
+    const unsubscribeToken = updated.unsubscribeToken ?? ensuredUnsubscribeToken;
+
+    if (!updated.confirmToken || !unsubscribeToken) {
       return NextResponse.json(
         { ok: false, error: "Failed to create confirmation link." },
         { status: 500 }
@@ -110,25 +113,21 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, status: "pending" });
   } catch (err: any) {
-  const debugId = crypto.randomBytes(6).toString("hex");
+    const debugId = crypto.randomBytes(6).toString("hex");
+    console.error(`❌ subscribe error [${debugId}]`, err);
 
-  // This prints the full error to Vercel logs (safe)
-  console.error(`❌ subscribe error [${debugId}]`, err);
+    if (err?.name === "ZodError") {
+      return NextResponse.json({ ok: false, error: "Invalid input." }, { status: 400 });
+    }
 
-  // Zod validation stays 400
-  if (err?.name === "ZodError") {
-    return NextResponse.json({ ok: false, error: "Invalid input." }, { status: 400 });
+    if (err?.code === "P2002") {
+      // Rare race-condition: treat as pending (client can retry)
+      return NextResponse.json({ ok: true, status: "pending" }, { status: 200 });
+    }
+
+    return NextResponse.json(
+      { ok: false, error: "Something went wrong.", debugId },
+      { status: 500 }
+    );
   }
-
-  // Prisma unique constraint (email exists) shouldn't be a 500
-  if (err?.code === "P2002") {
-    return NextResponse.json({ ok: true, status: "pending" }, { status: 200 });
-  }
-
-  // Client only gets a debugId, not the stacktrace
-  return NextResponse.json(
-    { ok: false, error: "Something went wrong.", debugId },
-    { status: 500 }
-  );
-  }}
-
+}
