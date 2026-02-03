@@ -4,10 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
 
 const schema = z.object({
-  brandName: z.string().min(2).max(120),
-  website: z.string().max(300).optional().or(z.literal("")),
+  firstName: z.string().min(1).max(80),
+  lastName: z.string().min(1).max(80),
   email: z.string().email().max(200),
-  productTypes: z.array(z.string().min(1).max(80)).min(1).max(10),
+
+  phone: z.string().max(60).optional().or(z.literal("")),
+  website: z.string().max(300).optional().or(z.literal("")),
+  socialMedia: z.string().max(300).optional().or(z.literal("")),
   notes: z.string().max(2000).optional().or(z.literal("")),
 });
 
@@ -18,17 +21,19 @@ export async function POST(req: Request) {
 
     const created = await prisma.brandApplication.create({
       data: {
-        brandName: data.brandName.trim(),
-        website: data.website?.trim() || null,
+        firstName: data.firstName.trim(),
+        lastName: data.lastName.trim(),
         email: data.email.trim().toLowerCase(),
-        productTypes: data.productTypes,
+        phone: data.phone?.trim() || null,
+        website: data.website?.trim() || null,
+        socialMedia: data.socialMedia?.trim() || null,
         notes: data.notes?.trim() || null,
       },
     });
 
     // Email you (optional but recommended)
     const resendKey = process.env.RESEND_API_KEY;
-    const to = process.env.BRAND_APPLY_NOTIFY_TO; // e.g. "info@veiloraclub.com"
+    const to = process.env.BRAND_APPLY_NOTIFY_TO; // e.g. info@veiloraclub.com
     const from = process.env.BRAND_APPLY_FROM || "onboarding@veiloraclub.com";
 
     if (resendKey && to) {
@@ -36,15 +41,16 @@ export async function POST(req: Request) {
       await resend.emails.send({
         from,
         to,
-        subject: `New Brand Application – ${created.brandName}`,
+        subject: `New Brand Apply – ${created.firstName} ${created.lastName}`,
         html: `
           <div style="font-family:ui-sans-serif,system-ui; line-height:1.5">
-            <h2 style="margin:0 0 12px">New Brand Application</h2>
-            <p><strong>Brand:</strong> ${escapeHtml(created.brandName)}</p>
+            <h2 style="margin:0 0 12px">New Brand Apply</h2>
+            <p><strong>Name:</strong> ${escapeHtml(created.firstName)} ${escapeHtml(created.lastName)}</p>
             <p><strong>Email:</strong> ${escapeHtml(created.email)}</p>
-            <p><strong>Website/IG:</strong> ${escapeHtml(created.website ?? "-")}</p>
-            <p><strong>Product types:</strong> ${created.productTypes.map(escapeHtml).join(", ")}</p>
-            <p><strong>Notes:</strong><br/>${escapeHtml(created.notes ?? "-").replace(/\n/g, "<br/>")}</p>
+            <p><strong>Phone:</strong> ${escapeHtml(created.phone ?? "-")}</p>
+            <p><strong>Company website:</strong> ${escapeHtml(created.website ?? "-")}</p>
+            <p><strong>Social media:</strong> ${escapeHtml(created.socialMedia ?? "-")}</p>
+            <p><strong>Notes:</strong><br/>${escapeHtml(created.notes ?? "-").replace(/\\n/g, "<br/>")}</p>
             <hr style="margin:16px 0"/>
             <p style="color:#666; font-size:12px">
               Status: ${created.status} • Created: ${created.createdAt.toISOString()} • ID: ${created.id}

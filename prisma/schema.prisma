@@ -289,17 +289,21 @@ model NewsletterSubscriber {
 
 
 model BrandApplication {
-  id           String   @id @default(cuid())
-  brandName    String
-  website      String?  // website or instagram
-  email        String
-  productTypes String[] // store multiple selections
-  notes        String?
+  id          String   @id @default(cuid())
 
-  status       BrandApplicationStatus @default(new)
+  firstName   String
+  lastName    String
+  email       String
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  phone       String?
+  website     String?
+  socialMedia String?
+  notes       String?
+
+  status      BrandApplicationStatus @default(new)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([status, createdAt])
   @@index([email])
