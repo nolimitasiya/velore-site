@@ -24,6 +24,7 @@ export default function BrandLoginClient() {
       const r = await fetch("/api/brand/auth/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
+        credentials: "include", // ✅
         body: JSON.stringify({ email, password }),
       });
 
@@ -33,7 +34,7 @@ export default function BrandLoginClient() {
         return;
       }
 
-      router.push(next);
+      window.location.assign(next);
     } finally {
       setBusy(false);
     }

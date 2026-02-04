@@ -23,6 +23,7 @@ export default function AdminLoginClient() {
       const r = await fetch("/api/admin/auth/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
+        credentials: "include", // ✅
         body: JSON.stringify({ email, password }),
       });
 
@@ -37,7 +38,7 @@ export default function AdminLoginClient() {
         return;
       }
 
-      router.push(next);
+      window.location.assign(next);
     } catch (e: any) {
       setErr(e?.message ?? "Login failed");
     } finally {

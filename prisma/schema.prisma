@@ -4,12 +4,205 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")   // pooler (runtime)
-  directUrl = env("DIRECT_URL")     // direct (migrations)
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
+model AdminUser {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+}
 
+model Company {
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String
+  slug         String        @unique
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  brands       Brand[]
+  brandInvites BrandInvite[]
+  importJobs   ImportJob[]
+  memberships  Membership[]
+}
 
+model User {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email       String       @unique
+  createdAt   DateTime     @default(now())
+  password    String
+  name        String?
+  importJobs  ImportJob[]
+  memberships Membership[]
+}
+
+model Membership {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String  @db.Uuid
+  companyId String  @db.Uuid
+  role      Role    @default(viewer)
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+}
+
+model BrandInvite {
+  id        String    @id @default(cuid())
+  email     String
+  tokenHash String    @unique
+  companyId String    @db.Uuid
+  role      Role      @default(owner)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([companyId])
+}
+
+/// *
+///  * =========================
+///  * Catalog models
+///  * =========================
+model Brand {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String
+  slug       String    @unique
+  websiteUrl String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  companyId  String?   @db.Uuid
+  company    Company?  @relation(fields: [companyId], references: [id])
+  products   Product[]
+}
+
+model Category {
+  id       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name     String
+  slug     String    @unique
+  products Product[]
+}
+
+model Occasion {
+  id       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name     String
+  slug     String    @unique
+  products Product[]
+}
+
+model Material {
+  id       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name     String
+  slug     String    @unique
+  products Product[]
+}
+
+model Product {
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brandId        String         @db.Uuid
+  title          String
+  slug           String
+  currency       Currency       @default(GBP)
+  sourceUrl      String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @default(now()) @updatedAt
+  isActive       Boolean        @default(true)
+  badges         Badge[]        @default([])
+  categoryId     String?        @db.Uuid
+  colour         String?
+  materialId     String?        @db.Uuid
+  note           String?
+  occasionId     String?        @db.Uuid
+  price          Decimal?       @db.Decimal(10, 2)
+  shippingRegion String?
+  stock          Int?
+  tags           String[]       @default([])
+  publishedAt    DateTime?
+  affiliateUrl   String?
+  productType    String?
+  brand          Brand          @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  category       Category?      @relation(fields: [categoryId], references: [id])
+  material       Material?      @relation(fields: [materialId], references: [id])
+  occasion       Occasion?      @relation(fields: [occasionId], references: [id])
+  images         ProductImage[]
+
+  @@unique([brandId, sourceUrl], name: "brandId_sourceUrl")
+  @@index([brandId, slug])
+  @@index([categoryId])
+  @@index([occasionId])
+  @@index([materialId])
+  @@index([productType])
+  @@index([affiliateUrl])
+}
+
+model ProductImage {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId String  @db.Uuid
+  url       String
+  sortOrder Int     @default(0)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model ImportJob {
+  id              String   @id @default(cuid())
+  type            String
+  filename        String?
+  status          String
+  total           Int      @default(0)
+  valid           Int      @default(0)
+  invalid         Int      @default(0)
+  createdBrands   Int      @default(0)
+  createdProducts Int      @default(0)
+  updatedProducts Int      @default(0)
+  rowErrors       Json?
+  meta            Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  companyId       String?  @db.Uuid
+  userId          String?  @db.Uuid
+  company         Company? @relation(fields: [companyId], references: [id])
+  user            User?    @relation(fields: [userId], references: [id])
+
+  @@index([companyId])
+  @@index([userId])
+}
+
+model NewsletterSubscriber {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  source           String?
+  createdAt        DateTime  @default(now())
+  status           String    @default("pending")
+  tags             String[]
+  updatedAt        DateTime  @updatedAt
+  confirmToken     String?   @unique
+  confirmedAt      DateTime?
+  unsubscribeToken String?   @unique
+  unsubscribedAt   DateTime?
+}
+
+model BrandApplication {
+  id          String                 @id @default(cuid())
+  website     String?
+  email       String
+  notes       String?
+  status      BrandApplicationStatus @default(new)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  firstName   String
+  lastName    String
+  phone       String?
+  socialMedia String?
+
+  @@index([status, createdAt])
+  @@index([email])
+}
 
 enum Role {
   owner
@@ -37,283 +230,6 @@ enum Badge {
   eid_edit
   workwear
   next_day
-}
-
-/**
- * =========================
- * Logins (Companies)
- * =========================
- */
-
-model AdminUser {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String   // hashed
-  name      String?
-  createdAt DateTime @default(now())
-}
-
-/**
- * =========================
- * Multi-tenant (Companies)
- * =========================
- */
-
-model Company {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name      String
-  slug      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  memberships Membership[]
-  brands      Brand[] // optional: link Company -> Brand
-  importJobs  ImportJob[]
-  brandInvites BrandInvite[]   // ✅ add this
-
-}
-
-model User {
-  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String?
-  email       String       @unique
-  password    String
-  createdAt   DateTime     @default(now())
-  memberships Membership[]
-  importJobs  ImportJob[]
-}
-
-
-model Membership {
-  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String @db.Uuid
-  companyId String @db.Uuid
-  role      Role   @default(viewer)
-
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, companyId])
-}
-
-/**
- * =========================
- * Inviting Brands
- * =========================
- */
-
-
- model BrandInvite {
-  id          String   @id @default(cuid())
-  email       String
-  tokenHash   String   @unique
-  companyId   String   @db.Uuid
-  role        Role     @default(owner)
-  expiresAt   DateTime
-  usedAt      DateTime?
-  createdAt   DateTime @default(now())
-
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  @@index([email])
-  @@index([companyId])
-}
-
-
-/**
- * =========================
- * Catalog models
- * =========================
- */
-model Brand {
-  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name       String
-  slug       String  @unique
-  websiteUrl String?
-
-  companyId String?  @db.Uuid
-  company   Company? @relation(fields: [companyId], references: [id])
-
-  products Product[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Category {
-  id   String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name String
-  slug String @unique
-
-  products Product[]
-}
-
-model Occasion {
-  id   String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name String
-  slug String @unique
-
-  products Product[]
-}
-
-model Material {
-  id   String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name String
-  slug String @unique
-
-  products Product[]
-}
-
-model Product {
-  id      String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  brandId String @db.Uuid
-  brand   Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
-
-  title String
-  slug  String
-
-  // money
-  price    Decimal? @db.Decimal(10, 2)
-  currency Currency @default(GBP)
-
-  // links
-  sourceUrl String?
-  affiliateUrl String?
-
-  isActive  Boolean @default(true)
-  publishedAt DateTime?
-
-  // controlled lists (pick-from-a-list)
-  categoryId String?   @db.Uuid
-  category   Category? @relation(fields: [categoryId], references: [id])
-
-  occasionId String?   @db.Uuid
-  occasion   Occasion? @relation(fields: [occasionId], references: [id])
-
-  materialId String?   @db.Uuid
-  material   Material? @relation(fields: [materialId], references: [id])
-
-  productType String?  // e.g. "abaya", "dress", "skirt", "top", "hijab"
-
-  // flexible filters
-  colour String?
-  tags   String[] @default([]) // Postgres only ✅
-  badges Badge[]  @default([])
-  note   String?
-
-  // stock
-  stock Int?
-
-  // shipping
-  shippingRegion String?
-
-  images ProductImage[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-  
-
-
-  @@unique([brandId, sourceUrl], name: "brandId_sourceUrl")
-  @@unique([brandId, slug], name: "brandId_slug")
-  @@index([brandId, slug])
-  @@index([categoryId])
-  @@index([occasionId])
-  @@index([materialId])
-  @@index([productType])
-  @@index([affiliateUrl])
-
-}
-
-model ProductImage {
-  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  productId String  @db.Uuid
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  url       String
-  sortOrder Int    @default(0)
-
-  @@index([productId])
-}
-
-/**
- * =========================
- * Imports
- * =========================
- */
-
-model ImportJob {
-  id       String  @id @default(cuid())
-  type     String // "products"
-  filename String?
-  status   String // "running" | "success" | "failed"
-
-  // ✅ company-scoped
-  companyId String?  @db.Uuid
-  company   Company? @relation(fields: [companyId], references: [id])
-
-  // ✅ who ran it
-  userId String? @db.Uuid
-  user   User?   @relation(fields: [userId], references: [id])
-
-  total   Int @default(0)
-  valid   Int @default(0)
-  invalid Int @default(0)
-
-  createdBrands   Int @default(0)
-  createdProducts Int @default(0)
-  updatedProducts Int @default(0)
-
-  rowErrors Json?
-  meta      Json?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([companyId])
-  @@index([userId])
-}
-
-/**
- * =========================
- * NewsLetter
- * =========================
- */
-
-model NewsletterSubscriber {
-  id               String   @id @default(cuid())
-  email            String   @unique
-  source           String?  // e.g. "popup", "footer", "checkout"
-  tags             String[] // optional segmentation, postgres supports this well
-  status           String   @default("pending") // pending|subscribed|unsubscribed
-  confirmToken     String?  @unique
-  confirmedAt      DateTime?
-  unsubscribeToken String? @unique
-  unsubscribedAt   DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-}
-
-
-model BrandApplication {
-  id          String   @id @default(cuid())
-
-  firstName   String
-  lastName    String
-  email       String
-
-  phone       String?
-  website     String?
-  socialMedia String?
-  notes       String?
-
-  status      BrandApplicationStatus @default(new)
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([status, createdAt])
-  @@index([email])
 }
 
 enum BrandApplicationStatus {
