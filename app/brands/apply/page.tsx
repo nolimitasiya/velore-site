@@ -11,7 +11,7 @@ export default function Page() {
         Brand Apply
       </h1>
       <p className="mx-auto mt-3 max-w-2xl text-center text-sm text-neutral-600">
-        Tell us a bit about your brand and how to reach you. We’ll follow up personally — no auto-booking.
+        Tell us a bit about your brand and how to reach you. We’ll follow up personally.
       </p>
 
       <div className="mt-10">

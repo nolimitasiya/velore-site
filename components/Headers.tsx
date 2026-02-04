@@ -12,6 +12,7 @@ export function Header() {
         >
           Veilora Club
         </Link>
+        
 
         <div className="w-[120px] flex justify-end">
           <button
@@ -21,7 +22,9 @@ export function Header() {
           >
             Search
           </button>
-        </div>
+        
+</div>
+
       </div>
     </header>
   );

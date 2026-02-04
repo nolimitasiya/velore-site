@@ -3,7 +3,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AdminHeader } from "@/components/admin/AdminHeader";
 
 type InviteRow = {
   id: string;
@@ -158,16 +157,8 @@ export default function AdminBrandInvitesPage() {
   return (
     <main className="max-w-5xl mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
-          <AdminHeader />
         <h1 className="text-2xl font-semibold"> Brand Invites</h1>
 
-        <button
-          className="rounded-lg border px-3 py-2 text-sm disabled:opacity-50"
-          disabled={busy}
-          onClick={loadInvites}
-        >
-          Refresh
-        </button>
       </div>
 
       <div className="rounded-2xl border p-4 space-y-3">

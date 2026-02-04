@@ -4,8 +4,6 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 
-
-// Ensure route runs on Node (file parsing)
 export const runtime = "nodejs";
 
 const CurrencyEnum = z.enum(["GBP", "EUR", "CHF", "USD"]);
@@ -26,16 +24,16 @@ const AllowedBadges = [
 const BadgeEnum = z.enum(AllowedBadges);
 
 const RowSchema = z.object({
-  brand_slug: z.string().min(1),
-  brand_name: z.string().min(1),
-
   product_slug: z.string().min(1),
   product_name: z.string().min(1),
+  
   product_url: z
   .string()
   .trim()
   .url()
   .transform((v) => v.replace(/\/+$/, "")),
+
+
 
   image_url_1: z.string().url(),
   image_url_2: z.string().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
@@ -57,7 +55,6 @@ const RowSchema = z.object({
   stock: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
   shipping_region: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
   affiliate_url: z.string().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
-
 });
 
 function slugify(input: string) {
@@ -70,93 +67,55 @@ function slugify(input: string) {
 }
 
 function prettyNameFromSlug(s: string) {
-  return s
-    .replace(/[_-]/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-    .trim();
+  return s.replace(/[_-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()).trim();
 }
 
 function parseCommaList(s: string) {
-  return s
-    .split(",")
-    .map((x) => x.trim())
-    .filter(Boolean);
+  return s.split(",").map((x) => x.trim()).filter(Boolean);
 }
 
+// ✅ You already have brand auth in your brand portal.
+// Implement this based on your existing brand login/cookies.
+import { requireBrandSession } from "@/lib/auth/BrandSession";
+
 export async function POST(req: Request) {
-  let jobId: string | null = null;
-
   try {
-    // 🔐 Auth
-    const token = req.headers.get("x-admin-token");
-    if (token !== process.env.ADMIN_IMPORT_TOKEN) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-    }
+    const { brandId } = await requireBrandSession(req);
 
-    // Multipart file
     const formData = await req.formData();
     const file = formData.get("file");
     const syncMissing = formData.get("syncMissing") === "1";
 
-
     if (!(file instanceof File)) {
+      return NextResponse.json({ ok: false, error: "No file uploaded. Use form-data key: file" }, { status: 400 });
+    }
+
+    const text = await file.text();
+
+    // ✅ hard block brand columns to avoid confusion
+    const firstLine = text.split(/\r?\n/)[0] ?? "";
+    if (/\bbrand_slug\b/i.test(firstLine) || /\bbrand_name\b/i.test(firstLine)) {
       return NextResponse.json(
-        { ok: false, error: "No file uploaded. Use form-data key: file" },
+        { ok: false, error: "brand_slug/brand_name are not allowed in Brand imports. Use the Brand template." },
         { status: 400 }
       );
     }
 
-    // ✅ Create ImportJob after auth + file check
-    const job = await prisma.importJob.create({
-      data: {
-        type: "products",
-        filename: file.name,
-        status: "running",
-      },
-      select: { id: true },
-    });
-    jobId = job.id;
-
-    const text = await file.text();
     const parsed = Papa.parse<Record<string, string>>(text, {
       header: true,
       skipEmptyLines: true,
       transformHeader: (h) => h.trim(),
     });
 
-   if (parsed.errors?.length) {
-  const details = parsed.errors.map((e) => ({
-    type: e.type,
-    code: e.code,
-    message: e.message,
-    row: e.row ?? null,
-  }));
-
-  await prisma.importJob.update({
-    where: { id: jobId },
-    data: {
-      status: "failed",
-      meta: {
-        error: "CSV parse error",
-        details,
-      },
-    },
-  });
-
-  return NextResponse.json(
-    { ok: false, error: "CSV parse error", details },
-    { status: 400 }
-  );
-}
-
+    if (parsed.errors?.length) {
+      return NextResponse.json({ ok: false, error: "CSV parse error", details: parsed.errors }, { status: 400 });
+    }
 
     const rows = parsed.data ?? [];
 
-    // 🔄 Brand sync: deactivate products missing from this CSV (only for this brand)
-const brandSlugForSync = slugify(rows[0]?.brand_slug ?? "");
-let deactivatedCount = 0;
-
-if (syncMissing && brandSlugForSync) {
+    // ✅ optional syncMissing only within THIS brand
+    let deactivatedCount = 0;
+    if (syncMissing && rows.length) {
   const csvSourceUrls = Array.from(
     new Set(
       rows
@@ -166,10 +125,7 @@ if (syncMissing && brandSlugForSync) {
   );
 
   const res = await prisma.product.updateMany({
-    where: {
-      brand: { slug: brandSlugForSync },
-      sourceUrl: { notIn: csvSourceUrls },
-    },
+    where: { brandId, sourceUrl: { notIn: csvSourceUrls } },
     data: { isActive: false },
   });
 
@@ -177,19 +133,17 @@ if (syncMissing && brandSlugForSync) {
 }
 
 
-
     const results = {
       total: rows.length,
-      createdBrands: 0,
       createdProducts: 0,
       updatedProducts: 0,
       createdCategories: 0,
       createdOccasions: 0,
       createdMaterials: 0,
       rowErrors: [] as Array<{ row: number; error: string }>,
+      deactivatedCount,
     };
 
-    // Process sequentially
     for (let i = 0; i < rows.length; i++) {
       const raw = rows[i];
 
@@ -204,15 +158,9 @@ if (syncMissing && brandSlugForSync) {
 
       const r = safe.data;
 
-      const brandSlug = slugify(r.brand_slug);
       const productSlug = slugify(r.product_slug);
-
-      // tags
       const tags = parseCommaList(r.tags).map(slugify);
 
-
-      
-      // badges (validate strictly)
       const badgeListRaw = parseCommaList(r.badges).map((x) => x.trim());
       const badges: typeof AllowedBadges[number][] = [];
       for (const b of badgeListRaw) {
@@ -229,21 +177,17 @@ if (syncMissing && brandSlugForSync) {
       }
       if (badgeListRaw.length && badges.length === 0) continue;
 
-      // price (optional)
+      const price =
+        r.price === null
+          ? null
+          : (() => {
+              try {
+                return new Prisma.Decimal(r.price);
+              } catch {
+                return null;
+              }
+            })();
 
-const price =
-  r.price === null
-    ? null
-    : (() => {
-        try {
-          return new Prisma.Decimal(r.price);
-        } catch {
-          return null;
-        }
-      })();
-
-
-      // stock (optional)
       const stock =
         r.stock === null
           ? null
@@ -253,24 +197,12 @@ const price =
               return Math.max(0, Math.floor(n));
             })();
 
-      // Brand upsert
-      const brand = await prisma.brand.upsert({
-        where: { slug: brandSlug },
-        update: { name: r.brand_name },
-        create: { slug: brandSlug, name: r.brand_name },
-        select: { id: true },
-      });
-
-      // Category/Occasion/Material upsert
       const categoryId = r.category_slug
         ? (
             await prisma.category.upsert({
               where: { slug: slugify(r.category_slug) },
               update: {},
-              create: {
-                slug: slugify(r.category_slug),
-                name: prettyNameFromSlug(r.category_slug),
-              },
+              create: { slug: slugify(r.category_slug), name: prettyNameFromSlug(r.category_slug) },
               select: { id: true },
             })
           ).id
@@ -281,10 +213,7 @@ const price =
             await prisma.occasion.upsert({
               where: { slug: slugify(r.occasion_slug) },
               update: {},
-              create: {
-                slug: slugify(r.occasion_slug),
-                name: prettyNameFromSlug(r.occasion_slug),
-              },
+              create: { slug: slugify(r.occasion_slug), name: prettyNameFromSlug(r.occasion_slug) },
               select: { id: true },
             })
           ).id
@@ -295,31 +224,27 @@ const price =
             await prisma.material.upsert({
               where: { slug: slugify(r.material_slug) },
               update: {},
-              create: {
-                slug: slugify(r.material_slug),
-                name: prettyNameFromSlug(r.material_slug),
-              },
+              create: { slug: slugify(r.material_slug), name: prettyNameFromSlug(r.material_slug) },
               select: { id: true },
             })
           ).id
         : null;
 
-      // Product exists?
-      const sourceUrl = (r.product_url ?? "").trim().replace(/\/+$/, "");
-if (!sourceUrl) {
-  results.rowErrors.push({ row: i + 2, error: "Missing product_url (required for import)" });
-  continue;
-}
+      // ⚠️ IMPORTANT: your admin route says product.slug is globally unique.
+      // For brand portal, you really want uniqueness per brand (brandId + slug).
+      // If you haven't changed schema yet, this lookup will still work but can collide across brands.
+      
+const sourceUrl = r.product_url; // already normalized by schema transform
+
 
 const existed = await prisma.product.findUnique({
-  where: { brandId_sourceUrl: { brandId: brand.id, sourceUrl } },
+  where: { brandId_sourceUrl: { brandId, sourceUrl } },
   select: { id: true },
 });
 
 const product = await prisma.product.upsert({
-  where: { brandId_sourceUrl: { brandId: brand.id, sourceUrl } },
+  where: { brandId_sourceUrl: { brandId, sourceUrl } },
   update: {
-    brandId: brand.id,
     title: r.product_name,
     slug: productSlug,
     sourceUrl,
@@ -338,7 +263,7 @@ const product = await prisma.product.upsert({
     isActive: true,
   },
   create: {
-    brandId: brand.id,
+    brandId,
     title: r.product_name,
     slug: productSlug,
     sourceUrl,
@@ -359,64 +284,23 @@ const product = await prisma.product.upsert({
   select: { id: true },
 });
 
+const imageUrls = [r.image_url_1, r.image_url_2, r.image_url_3, r.image_url_4].filter(
+  (u): u is string => !!u
+);
+
+await prisma.productImage.deleteMany({ where: { productId: product.id } });
+if (imageUrls.length) {
+  await prisma.productImage.createMany({
+    data: imageUrls.map((url, idx) => ({ productId: product.id, url, sortOrder: idx })),
+  });
+}
+
 if (existed) results.updatedProducts += 1;
 else results.createdProducts += 1;
-
-
-      // Images: replace
-      const imageUrls = [r.image_url_1, r.image_url_2, r.image_url_3, r.image_url_4].filter(
-        (u): u is string => !!u
-      );
-
-      await prisma.productImage.deleteMany({ where: { productId: product.id } });
-      if (imageUrls.length) {
-        await prisma.productImage.createMany({
-          data: imageUrls.map((url, idx) => ({ productId: product.id, url, sortOrder: idx })),
-        });
-      }
-  }
-
-    // ✅ Finalize ImportJob
-    const invalid =
-    results.rowErrors.length > 0
-    ? new Set(results.rowErrors.map((e) => e.row)).size
-    : 0;
-    const valid = results.total - invalid;
-
-
-    await prisma.importJob.update({
-  where: { id: jobId },
-  data: {
-    status: "success",
-    total: results.total,
-    valid,
-    invalid,
-    createdBrands: results.createdBrands,
-    createdProducts: results.createdProducts,
-    updatedProducts: results.updatedProducts,
-    rowErrors: results.rowErrors,
-    meta: {
-  syncMissing,
-  brandSlug: brandSlugForSync || null,
-  deactivatedCount,
-},
-
-  },
-});
-
+    }
 
     return NextResponse.json({ ok: true, results });
   } catch (e: any) {
-    // ✅ Mark job failed if created
-    if (jobId) {
-      try {
-        await prisma.importJob.update({
-          where: { id: jobId },
-          data: { status: "failed", meta: { error: e?.message ?? "Unknown error" } },
-        });
-      } catch {}
-    }
-
     return NextResponse.json({ ok: false, error: e?.message ?? "Unknown error" }, { status: 500 });
   }
 }

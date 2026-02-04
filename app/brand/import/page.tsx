@@ -1,8 +1,14 @@
-export default function BrandImportPage() {
+import ImportClient from "@/components/import/ImportClient";
+
+export default function Page() {
   return (
-    <main style={{ padding: 24 }}>
-      <h1>Brand Import</h1>
-      <p>Coming soon.</p>
-    </main>
+    <ImportClient
+      mode="brand"
+      title="Import"
+      validateUrl="/api/brand/import/validate"
+      importUrl="/api/brand/import"
+      historyUrl="/api/brand/import/history"
+      requireToken={false}
+    />
   );
 }

@@ -16,7 +16,6 @@ import {
   getUserTimeZone,
 } from "@/lib/adminTime";
 import { formatMoney } from "@/lib/money";
-import { AdminHeader } from "@/components/admin/AdminHeader";
 
 type BrandOption = { slug: string; name: string };
 
@@ -151,16 +150,9 @@ async function setProductActive(id: string, isActive: boolean) {
   return (
     <main className="max-w-6xl mx-auto p-6 space-y-6">
        <div className="flex items-center justify-between gap-3">
-          <AdminHeader />
 
         <h1 className="text-2xl font-semibold">Products</h1>
-         <button
-          onClick={load}
-          className="rounded-lg border px-3 py-2 text-sm disabled:opacity-50"
-          disabled={busy}
-        >
-          {busy ? "Loading..." : "Refresh"}
-        </button>
+         
       </div>
 
       <div className="rounded-2xl border p-4 flex flex-wrap gap-2 items-center">

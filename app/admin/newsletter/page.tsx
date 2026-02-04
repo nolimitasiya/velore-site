@@ -18,10 +18,7 @@ export default async function AdminNewsletterPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-xl font-semibold">admin/newsletter</h1>
-      <p className="mt-1 text-sm text-zinc-600">
-        Subscribers, confirmations, exports, reminders.
-      </p>
+      
 
       <NewsletterTableClient
         subs={subs.map((s) => ({

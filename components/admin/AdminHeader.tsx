@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 function NavLink({ href, label }: { href: string; label: string }) {
   const pathname = usePathname();
@@ -12,7 +11,9 @@ function NavLink({ href, label }: { href: string; label: string }) {
     <Link
       href={href}
       className={`rounded-lg px-3 py-2 text-sm border transition-colors ${
-        active ? "bg-black text-white border-black" : "hover:bg-black/5 border-black/10"
+        active
+          ? "bg-black text-white border-black"
+          : "hover:bg-black/5 border-black/10"
       }`}
     >
       {label}
@@ -22,41 +23,42 @@ function NavLink({ href, label }: { href: string; label: string }) {
 
 export function AdminHeader() {
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  async function logout() {
-    setBusy(true);
-    try {
-      await fetch("/api/admin/auth/logout", { method: "POST" });
-      router.push("/admin/login");
-      router.refresh();
-    } finally {
-      setBusy(false);
-    }
-  }
+  function refreshNow() {
+  const url = new URL(window.location.href);
+  url.searchParams.set("r", String(Date.now())); // cache-buster param
+  window.location.assign(url.toString()); // full reload, always works
+}
+
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex items-center gap-2">
+    <div className="flex items-center gap-6">
+      {/* Left label */}
+      <div className="flex items-center gap-2 whitespace-nowrap">
         <div className="font-semibold">Admin</div>
         <div className="hidden sm:block text-xs text-black/50">Veilora Club</div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Nav pills */}
+      <nav className="flex flex-wrap items-center gap-2">
         <NavLink href="/admin/products" label="Products" />
-        <NavLink href="/admin/import" label="Imports" />
+        <NavLink href="/admin/import" label="Import" />
         <NavLink href="/admin/brand-invites" label="Brand Invites" />
-        <NavLink href="/admin/newsletter" label= "Newsletter"/>
-
+        <NavLink href="/admin/brands/applications" label="Applications" />
+        <NavLink href="/admin/newsletter" label="Newsletter" />
 
         <button
-          onClick={logout}
-          disabled={busy}
-          className="rounded-lg px-3 py-2 text-sm border border-black/10 hover:bg-black/5 disabled:opacity-50"
+          type="button"
+          onClick={refreshNow}
+          className="rounded-lg px-3 py-2 text-sm border border-black/10 hover:bg-black/5"
+          aria-label="Refresh"
+          title="Refresh"
         >
-          {busy ? "..." : "Logout"}
+          Refresh
         </button>
-      </div>
+      </nav>
     </div>
   );
 }
