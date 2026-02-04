@@ -80,7 +80,8 @@ import { requireBrandSession } from "@/lib/auth/BrandSession";
 
 export async function POST(req: Request) {
   try {
-    const { brandId } = await requireBrandSession(req);
+    const { brandId } = await requireBrandSession();
+
 
     const formData = await req.formData();
     const file = formData.get("file");
