@@ -215,6 +215,7 @@ model Product {
 
 
   @@unique([brandId, sourceUrl], name: "brandId_sourceUrl")
+  @@unique([brandId, slug], name: "brandId_slug")
   @@index([brandId, slug])
   @@index([categoryId])
   @@index([occasionId])

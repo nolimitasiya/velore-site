@@ -3,6 +3,7 @@ import Link from "next/link";
 type ProductCard = {
   slug: string;
   brand: string;
+  brandSlug: string;   // ✅ add
   title: string;
   price: string;
   imageUrl: string;
@@ -13,6 +14,7 @@ const MOCK_PRODUCTS: ProductCard[] = [
   {
     slug: "sand-maxi-dress",
     brand: "Amani Studio",
+    brandSlug: "amani_studio",
     title: "Sand Maxi Dress",
     price: "£65.00",
     imageUrl: "https://picsum.photos/seed/dalra1/800/1100",
@@ -21,6 +23,7 @@ const MOCK_PRODUCTS: ProductCard[] = [
   {
     slug: "black-abaya",
     brand: "Noor London",
+    brandSlug: "noor_london",
     title: "Black Abaya",
     price: "£89.00",
     imageUrl: "https://picsum.photos/seed/dalra2/800/1100",
@@ -29,6 +32,7 @@ const MOCK_PRODUCTS: ProductCard[] = [
   {
     slug: "linen-co-ord",
     brand: "Mina Maison",
+    brandSlug: "mina_maison",
     title: "Linen Co-ord Set",
     price: "£72.00",
     imageUrl: "https://picsum.photos/seed/dalra3/800/1100",
@@ -37,6 +41,7 @@ const MOCK_PRODUCTS: ProductCard[] = [
   {
     slug: "pleated-skirt",
     brand: "Safa Collective",
+    brandSlug: "safa_collective",
     title: "Pleated Skirt",
     price: "£49.00",
     imageUrl: "https://picsum.photos/seed/dalra4/800/1100",
@@ -58,7 +63,7 @@ export default function Home() {
         {MOCK_PRODUCTS.map((p) => (
           <Link
             key={p.slug}
-            href={`/p/${p.slug}`}
+            href={`/b/${p.brandSlug}/p/${p.slug}`}
             className="rounded-2xl border p-3 hover:shadow-sm"
           >
             <div className="aspect-[3/4] overflow-hidden rounded-xl bg-gray-50">
