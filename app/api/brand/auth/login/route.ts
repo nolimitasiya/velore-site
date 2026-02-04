@@ -28,19 +28,39 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Invalid email or password" }, { status: 401 });
   }
 
-  // ✅ Option A: user -> brand via BrandMembership
-  const membership = await prisma.brandMembership.findFirst({
+  // ✅ deterministic: fetch all memberships
+  const memberships = await prisma.brandMembership.findMany({
     where: { userId: user.id },
     select: {
       role: true,
       brand: { select: { id: true, slug: true, name: true } },
     },
-    orderBy: { id: "asc" },
   });
 
-  if (!membership?.brand) {
+  const validMemberships = memberships.filter((m) => m.brand?.id);
+
+  if (validMemberships.length === 0) {
     return NextResponse.json({ ok: false, error: "No brand access" }, { status: 403 });
   }
+
+  // ✅ if more than 1 brand, force explicit selection (safer than guessing)
+  if (validMemberships.length > 1) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Multiple brands found. Brand selection required.",
+        brands: validMemberships.map((m) => ({
+          id: m.brand.id,
+          slug: m.brand.slug,
+          name: m.brand.name,
+          role: m.role,
+        })),
+      },
+      { status: 409 }
+    );
+  }
+
+  const membership = validMemberships[0];
 
   const res = NextResponse.json({
     ok: true,
