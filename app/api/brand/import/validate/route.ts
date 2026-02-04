@@ -24,17 +24,27 @@ const AllowedBadges = [
 const BadgeEnum = z.enum(AllowedBadges);
 
 const RowSchema = z.object({
-  brand_slug: z.string().min(1),
-  brand_name: z.string().min(1),
+  product_slug: z.string().min(1, "product_slug is required"),
+  product_name: z.string().min(1, "product_name is required"),
 
-  product_slug: z.string().min(1),
-  product_name: z.string().min(1),
-  product_url: z.string().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
+  product_url: z
+    .string()
+    .trim()
+    .min(1, "product_url is required")
+    .url("product_url must be a valid URL")
+    .transform((v) => v.replace(/\/+$/, "")),
 
-  image_url_1: z.string().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
-  image_url_2: z.string().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
-  image_url_3: z.string().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
-  image_url_4: z.string().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
+  // ✅ mandatory
+  image_url_1: z
+    .string()
+    .trim()
+    .min(1, "image_url_1 is required")
+    .url("image_url_1 must be a valid URL"),
+
+  // optional
+  image_url_2: z.string().trim().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
+  image_url_3: z.string().trim().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
+  image_url_4: z.string().trim().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
 
   category_slug: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
   occasion_slug: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
@@ -50,7 +60,8 @@ const RowSchema = z.object({
   colour: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
   stock: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
   shipping_region: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
-  affiliate_url: z.string().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
+
+  affiliate_url: z.string().trim().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
 });
 
 function slugify(input: string) {
@@ -68,17 +79,33 @@ function parseCommaList(s: string) {
 
 export async function POST(req: Request) {
   try {
-    const { companyId } = await requireBrandSession();
+    const { userId, brandId } = await requireBrandSession();
 
     const formData = await req.formData();
     const file = formData.get("file");
     const syncMissing = formData.get("syncMissing") === "1";
 
     if (!(file instanceof File)) {
-      return NextResponse.json({ ok: false, error: "No file uploaded. Use form-data key: file" }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: "No file uploaded. Use form-data key: file" },
+        { status: 400 }
+      );
     }
 
     const text = await file.text();
+
+    // ✅ HARD BLOCK: brand columns should never appear in brand mode
+    const firstLine = text.split(/\r?\n/)[0] ?? "";
+    if (/\bbrand_slug\b/i.test(firstLine) || /\bbrand_name\b/i.test(firstLine)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "brand_slug/brand_name are not allowed in Brand imports. Please use the Brand template.",
+        },
+        { status: 400 }
+      );
+    }
+
     const parsed = Papa.parse<Record<string, string>>(text, {
       header: true,
       skipEmptyLines: true,
@@ -99,28 +126,8 @@ export async function POST(req: Request) {
     const rowErrors: Array<{ row: number; error: string }> = [];
     const warnings: Array<{ row: number; warning: string }> = [];
 
-    const csvBrandSlug = slugify(rows[0]?.brand_slug ?? "");
-    if (!csvBrandSlug) {
-      rowErrors.push({ row: 2, error: "Missing brand_slug on first row" });
-    }
-
-    // ✅ Brand must belong to this company
-    const brand = csvBrandSlug
-      ? await prisma.brand.findFirst({
-          where: { slug: csvBrandSlug, companyId },
-          select: { id: true, slug: true },
-        })
-      : null;
-
-    if (csvBrandSlug && !brand) {
-      rowErrors.push({
-        row: 2,
-        error: `Brand "${csvBrandSlug}" is not linked to your company. Please contact Veilora support.`,
-      });
-    }
-
-    const seenFinalSlugs = new Set<string>();
-    const validFinalSlugs: string[] = [];
+    const seenSourceUrls = new Set<string>();
+    const validSourceUrls: string[] = [];
 
     for (let i = 0; i < rows.length; i++) {
       const raw = rows[i];
@@ -135,25 +142,27 @@ export async function POST(req: Request) {
       }
 
       const r = safe.data;
-      const productSlug = slugify(r.product_slug);
 
-      if (!productSlug) {
-        rowErrors.push({ row: i + 2, error: "product_slug becomes empty after slugify" });
+      const sourceUrl = r.product_url.trim().replace(/\/+$/, "");
+      if (!sourceUrl) {
+        rowErrors.push({ row: i + 2, error: "Missing product_url (required)" });
         continue;
       }
 
-      // ✅ Collision-proof slug
-      const finalSlug = csvBrandSlug ? `${csvBrandSlug}__${productSlug}` : productSlug;
-
-      if (seenFinalSlugs.has(finalSlug)) {
-        rowErrors.push({ row: i + 2, error: `Duplicate product_slug in CSV: "${productSlug}"` });
-      } else {
-        seenFinalSlugs.add(finalSlug);
+      // ✅ duplicates in CSV by the DB unique key (brandId + sourceUrl)
+      if (seenSourceUrls.has(sourceUrl)) {
+        rowErrors.push({ row: i + 2, error: `Duplicate product_url in CSV: "${sourceUrl}"` });
+        continue;
       }
+      seenSourceUrls.add(sourceUrl);
 
+      // product_slug sanity
+      const productSlug = slugify(r.product_slug);
+      if (!productSlug) rowErrors.push({ row: i + 2, error: "product_slug becomes empty after slugify" });
+
+      // badges validation
       for (const b of parseCommaList(r.badges)) {
-        const bSafe = BadgeEnum.safeParse(b);
-        if (!bSafe.success) {
+        if (!BadgeEnum.safeParse(b).success) {
           rowErrors.push({
             row: i + 2,
             error: `Invalid badge "${b}". Allowed: ${AllowedBadges.join(", ")}`,
@@ -161,6 +170,7 @@ export async function POST(req: Request) {
         }
       }
 
+      // price/stock checks
       if (r.price !== null) {
         const n = Number(r.price);
         if (!Number.isFinite(n)) rowErrors.push({ row: i + 2, error: `Invalid price "${r.price}"` });
@@ -173,48 +183,47 @@ export async function POST(req: Request) {
         }
       }
 
+      // warnings
       const imageCount = [r.image_url_1, r.image_url_2, r.image_url_3, r.image_url_4].filter(Boolean).length;
-      if (imageCount === 0) warnings.push({ row: i + 2, warning: "No images provided" });
       if (imageCount === 1) warnings.push({ row: i + 2, warning: "Only one image provided" });
       if (!r.stock) warnings.push({ row: i + 2, warning: "Stock not provided" });
       if (!r.tags) warnings.push({ row: i + 2, warning: "No tags provided" });
 
-      validFinalSlugs.push(finalSlug);
+      validSourceUrls.push(sourceUrl);
     }
 
     const total = rows.length;
     const invalid = rowErrors.length ? new Set(rowErrors.map((e) => e.row)).size : 0;
     const valid = total - invalid;
 
-    const uniqueValidFinalSlugs = Array.from(new Set(validFinalSlugs));
+    const uniqueSourceUrls = Array.from(new Set(validSourceUrls));
 
-    const existing = brand && uniqueValidFinalSlugs.length
+    const existing = uniqueSourceUrls.length
       ? await prisma.product.findMany({
-          where: { brandId: brand.id, slug: { in: uniqueValidFinalSlugs } },
-          select: { slug: true },
+          where: { brandId, sourceUrl: { in: uniqueSourceUrls } },
+          select: { sourceUrl: true },
         })
       : [];
 
-    const existingSet = new Set(existing.map((p) => p.slug));
+    const existingSet = new Set(existing.map((p) => p.sourceUrl));
     let willCreate = 0;
     let willUpdate = 0;
 
-    for (const s of uniqueValidFinalSlugs) {
-      if (existingSet.has(s)) willUpdate++;
+    for (const u of uniqueSourceUrls) {
+      if (existingSet.has(u)) willUpdate++;
       else willCreate++;
     }
 
     let willDeactivate = 0;
-    if (syncMissing && brand && uniqueValidFinalSlugs.length) {
+    if (syncMissing && uniqueSourceUrls.length) {
       willDeactivate = await prisma.product.count({
-        where: { brandId: brand.id, slug: { notIn: uniqueValidFinalSlugs }, isActive: true },
+        where: { brandId, sourceUrl: { notIn: uniqueSourceUrls }, isActive: true },
       });
     }
 
     return NextResponse.json({
       ok: true,
       summary: { total, valid, invalid, willCreate, willUpdate, willDeactivate },
-      brand: { slug: csvBrandSlug || null },
       rowErrors,
       warnings,
     });

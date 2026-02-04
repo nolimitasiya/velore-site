@@ -16,52 +16,45 @@ model AdminUser {
   createdAt DateTime @default(now())
 }
 
-model Company {
-  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name         String
-  slug         String        @unique
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  brands       Brand[]
-  brandInvites BrandInvite[]
-  importJobs   ImportJob[]
-  memberships  Membership[]
-}
-
 model User {
-  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email       String       @unique
-  createdAt   DateTime     @default(now())
-  password    String
-  name        String?
-  importJobs  ImportJob[]
-  memberships Membership[]
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+
+  brandMemberships BrandMembership[]
+  importJobs       ImportJob[]
 }
 
-model Membership {
-  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String  @db.Uuid
-  companyId String  @db.Uuid
-  role      Role    @default(viewer)
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+model BrandMembership {
+  id      String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId  String @db.Uuid
+  brandId String @db.Uuid
+  role    Role   @default(viewer)
 
-  @@unique([userId, companyId])
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, brandId])
+  @@index([brandId])
+  @@index([userId])
 }
 
 model BrandInvite {
   id        String    @id @default(cuid())
   email     String
   tokenHash String    @unique
-  companyId String    @db.Uuid
+  brandId   String    @db.Uuid
   role      Role      @default(owner)
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
-  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
   @@index([email])
-  @@index([companyId])
+  @@index([brandId])
 }
 
 /// *
@@ -69,15 +62,17 @@ model BrandInvite {
 ///  * Catalog models
 ///  * =========================
 model Brand {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name       String
-  slug       String    @unique
+  slug       String   @unique
   websiteUrl String?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  companyId  String?   @db.Uuid
-  company    Company?  @relation(fields: [companyId], references: [id])
-  products   Product[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  products    Product[]
+  memberships BrandMembership[]
+  invites     BrandInvite[]
+  importJobs  ImportJob[]
 }
 
 model Category {
@@ -164,12 +159,13 @@ model ImportJob {
   meta            Json?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  companyId       String?  @db.Uuid
-  userId          String?  @db.Uuid
-  company         Company? @relation(fields: [companyId], references: [id])
-  user            User?    @relation(fields: [userId], references: [id])
 
-  @@index([companyId])
+  brandId String? @db.Uuid
+  userId  String? @db.Uuid
+  brand   Brand?  @relation(fields: [brandId], references: [id])
+  user    User?   @relation(fields: [userId], references: [id])
+
+  @@index([brandId])
   @@index([userId])
 }
 

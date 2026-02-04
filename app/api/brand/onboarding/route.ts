@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     select: {
       id: true,
       email: true,
-      companyId: true,
+      brandId: true,
       role: true,
       expiresAt: true,
       usedAt: true,
@@ -61,10 +61,10 @@ export async function POST(req: Request) {
   });
 
   // membership
-  await prisma.membership.upsert({
-    where: { userId_companyId: { userId: user.id, companyId: invite.companyId } },
+  await prisma.brandMembership.upsert({
+    where: { userId_brandId: { userId: user.id, brandId: invite.brandId } },
     update: { role: invite.role },
-    create: { userId: user.id, companyId: invite.companyId, role: invite.role },
+    create: { userId: user.id, brandId: invite.brandId, role: invite.role },
   });
 
   // mark invite used
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
     maxAge: 60 * 60 * 12,
   });
 
-  res.cookies.set("company_id", invite.companyId, {
+  res.cookies.set("company_id", invite.brandId, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",

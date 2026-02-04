@@ -56,63 +56,96 @@ export default function ImportClient({
       : "";
 
   const templateCsv = useMemo(() => {
-    const header = [
-      "brand_slug",
-      "brand_name",
-      "product_slug",
-      "product_name",
-      "product_url",
-      "image_url_1",
-      "image_url_2",
-      "image_url_3",
-      "image_url_4",
-      "category_slug",
-      "occasion_slug",
-      "material_slug",
-      "tags",
-      "badges",
-      "note",
-      "price",
-      "currency",
-      "colour",
-      "stock",
-      "shipping_region",
-    ];
+  const common = [
+    "product_slug",
+    "product_name",
+    "product_url",
+    "image_url_1",
+    "image_url_2",
+    "image_url_3",
+    "image_url_4",
+    "category_slug",
+    "occasion_slug",
+    "material_slug",
+    "tags",
+    "badges",
+    "note",
+    "price",
+    "currency",
+    "colour",
+    "stock",
+    "shipping_region",
+    "affiliate_url",
+  ];
 
-    const example = [
-      {
-        brand_slug: "velore",
-        brand_name: "Vélore",
-        product_slug: "abaya_satin_black",
-        product_name: "Satin Abaya (Black)",
-        product_url: "https://brand.com/products/abaya",
-        image_url_1: "https://brand.com/img/1.jpg",
-        image_url_2: "https://brand.com/img/2.jpg",
-        image_url_3: "",
-        image_url_4: "",
-        category_slug: "abayas",
-        occasion_slug: "everyday",
-        material_slug: "satin",
-        tags: "fully-modest,workwear",
-        badges: "new_in,editor_pick",
-        note: "Short note",
-        price: "89.99",
-        currency: "GBP",
-        colour: "Black",
-        stock: "10",
-        shipping_region: "UK,EU,CH",
-      },
-    ];
+  const header =
+    mode === "admin"
+      ? ["brand_slug", "brand_name", ...common]
+      : common;
 
-    return Papa.unparse(example, { columns: header, quotes: true });
-  }, []);
+  const example =
+    mode === "admin"
+      ? [
+          {
+            brand_slug: "veilora_club",
+            brand_name: "Veilora Club",
+            product_slug: "abaya_satin_black",
+            product_name: "Satin Abaya (Black)",
+            product_url: "https://brand.com/products/abaya",
+            image_url_1: "https://brand.com/img/1.jpg",
+            image_url_2: "",
+            image_url_3: "",
+            image_url_4: "",
+            category_slug: "abayas",
+            occasion_slug: "",
+            material_slug: "satin",
+            tags: "fully-modest,workwear",
+            badges: "new_in,editor_pick",
+            note: "Short note",
+            price: "89.99",
+            currency: "GBP",
+            colour: "Black",
+            stock: "10",
+            shipping_region: "UK,EU,CH",
+            affiliate_url: "",
+          },
+        ]
+      : [
+          {
+            product_slug: "abaya_satin_black",
+            product_name: "Satin Abaya (Black)",
+            product_url: "https://brand.com/products/abaya",
+            image_url_1: "https://brand.com/img/1.jpg",
+            image_url_2: "",
+            image_url_3: "",
+            image_url_4: "",
+            category_slug: "abayas",
+            occasion_slug: "",
+            material_slug: "satin",
+            tags: "fully-modest,workwear",
+            badges: "new_in,editor_pick",
+            note: "Short note",
+            price: "89.99",
+            currency: "GBP",
+            colour: "Black",
+            stock: "10",
+            shipping_region: "UK,EU,CH",
+            affiliate_url: "",
+          },
+        ];
+
+  return Papa.unparse(example, { columns: header, quotes: true });
+}, [mode]);
+
 
   function downloadTemplate() {
     const blob = new Blob([templateCsv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "veilora_import_template.csv";
+    a.download = mode === "admin"
+  ? "veilora_admin_import_template.csv"
+  : "veilora_brand_import_template.csv";
     a.click();
     URL.revokeObjectURL(url);
   }

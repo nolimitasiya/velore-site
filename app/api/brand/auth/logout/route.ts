@@ -1,4 +1,8 @@
+// app/api/brand/auth/logout/route.ts
 import { NextResponse } from "next/server";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST() {
   const res = NextResponse.json({ ok: true });
@@ -11,7 +15,7 @@ export async function POST() {
     maxAge: 0,
   });
 
-  res.cookies.set("brand_company_id", "", {
+  res.cookies.set("brand_id", "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",

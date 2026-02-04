@@ -3,46 +3,53 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { Role } from "@prisma/client";
-import { sendBrandInviteEmail } from "@/lib/email/resend";
+import { sendBrandInviteEmail } from "@/lib/resend/templates/onboarding/brandInvite";
 
 function sha256(s: string) {
   return crypto.createHash("sha256").update(s).digest("hex");
 }
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
 
     const email = String(body.email || "").trim().toLowerCase();
-    const companyId = String(body.companyId || "").trim();
+
+    // ✅ tolerate old payloads (brandId) while UI is being updated
+    const brandId = String(body.brandId || "").trim();
+
 
     const role: Role =
       (Object.values(Role) as string[]).includes(body.role)
         ? (body.role as Role)
         : Role.owner;
 
-    if (!email || !companyId) {
+    if (!email || !brandId) {
       return NextResponse.json(
-        { ok: false, error: "Missing email/companyId" },
+        { ok: false, error: "Missing email/brandId" },
         { status: 400 }
       );
     }
 
-    const company = await prisma.company.findUnique({
-      where: { id: companyId },
-      select: { id: true, name: true },
+    const brand = await prisma.brand.findUnique({
+      where: { id: brandId },
+      select: { id: true, name: true, slug: true },
     });
 
-    if (!company) {
+    if (!brand) {
       return NextResponse.json(
-        { ok: false, error: "Company not found" },
+        { ok: false, error: "Brand not found" },
         { status: 404 }
       );
     }
 
-    // revoke any previous unused invites for this email+company
+    // revoke any previous unused invites for this email+brand
+    // (Assuming your schema has usedAt nullable — keep as-is)
     await prisma.brandInvite.updateMany({
-      where: { email, companyId, usedAt: null },
+      where: { email, brandId: brand.id, usedAt: null },
       data: { usedAt: new Date() },
     });
 
@@ -51,7 +58,13 @@ export async function POST(req: Request) {
     const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7);
 
     await prisma.brandInvite.create({
-      data: { email, companyId, tokenHash, expiresAt, role },
+      data: {
+        email,
+        brandId: brand.id,
+        tokenHash,
+        expiresAt,
+        role,
+      },
     });
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
@@ -59,15 +72,21 @@ export async function POST(req: Request) {
 
     await sendBrandInviteEmail({
       to: email,
-      companyName: company.name,
-      onboardingUrl,
-      expiresAt,
+      brandName: brand.name,
+      inviteLink: onboardingUrl,
+      senderName: "Asiya",
     });
 
     return NextResponse.json({ ok: true, onboardingUrl, expiresAt, sent: true });
   } catch (e: any) {
+    console.error("[admin-brand-invite-resend] error:", e);
     return NextResponse.json(
-      { ok: false, error: e?.message ?? "Failed to resend invite" },
+      {
+        ok: false,
+        error: e?.message ?? "Failed to resend invite",
+        code: e?.code,
+        meta: e?.meta,
+      },
       { status: 500 }
     );
   }

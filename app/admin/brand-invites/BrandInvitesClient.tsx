@@ -10,7 +10,11 @@ type InviteRow = {
   expiresAt: string;
   usedAt: string | null;
   createdAt: string;
-  company: { name: string; slug: string };
+  brandId: string;
+  brand: {
+    name: string;
+    slug: string;
+  };
 };
 
 export default function AdminBrandInvitesPage() {
@@ -120,8 +124,8 @@ export default function AdminBrandInvitesPage() {
     setOnboardingUrl(null);
     setExpiresAt(null);
 
-    // Note: resend endpoint wants companyId, but list endpoint currently returns company slug+name only.
-    // Easiest fix: change list endpoint to also include companyId.
+    // Note: resend endpoint wants brandId, but list endpoint currently returns brand slug+name only.
+    // Easiest fix: change list endpoint to also include brandId.
     // For now, we’ll call create again (same effect).
     const r = await fetch("/api/admin/brand-invites/create", {
       method: "POST",
@@ -130,8 +134,9 @@ export default function AdminBrandInvitesPage() {
         "x-admin-token": ADMIN_TOKEN,
       },
       body: JSON.stringify({
-        companyName: row.company.name,
-        companySlug: row.company.slug,
+        companyName: row.brand.name,
+        companySlug: row.brand.slug,
+
         email: row.email,
         role,
       }),
@@ -250,8 +255,8 @@ export default function AdminBrandInvitesPage() {
                 return (
                   <tr key={row.id} className="border-t">
                     <td className="py-2 pr-4">
-                      <div className="font-medium">{row.company.name}</div>
-                      <div className="text-xs text-black/60">{row.company.slug}</div>
+                      <div className="font-medium">{row.brand.name}</div>
+                      <div className="text-xs text-black/60">{row.brand.slug}</div>
                     </td>
                     <td className="py-2 pr-4">{row.email}</td>
                     <td className="py-2 pr-4">{status}</td>

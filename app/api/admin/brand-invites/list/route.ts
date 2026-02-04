@@ -1,5 +1,9 @@
+// app/api/admin/brand-invites/list/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   const token = req.headers.get("x-admin-token");
@@ -9,15 +13,18 @@ export async function GET(req: Request) {
 
   const invites = await prisma.brandInvite.findMany({
     orderBy: { createdAt: "desc" },
+    take: 100,
     select: {
       id: true,
       email: true,
       expiresAt: true,
       usedAt: true,
       createdAt: true,
-      company: { select: { name: true, slug: true } },
+
+      // ✅ new world: invite belongs to Brand
+      brandId: true,
+      brand: { select: { name: true, slug: true } },
     },
-    take: 100,
   });
 
   return NextResponse.json({ ok: true, invites });
