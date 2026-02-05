@@ -3,6 +3,8 @@ import Papa from "papaparse";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { requireBrandContext } from "@/lib/auth/BrandSession";
+
 
 export const runtime = "nodejs";
 
@@ -80,7 +82,8 @@ import { requireBrandSession } from "@/lib/auth/BrandSession";
 
 export async function POST(req: Request) {
   try {
-    const { brandId } = await requireBrandSession();
+    const { brandId } = await requireBrandContext();
+
 
 
     const formData = await req.formData();

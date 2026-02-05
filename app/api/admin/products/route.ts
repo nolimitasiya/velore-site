@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdminSession } from "@/lib/auth/AdminSession";
 
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
   try {
+    await requireAdminSession();
+
     const { searchParams } = new URL(req.url);
 
     const q = (searchParams.get("q") || "").trim();
@@ -54,9 +57,11 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ ok: true, products, brands });
   } catch (e: any) {
-    return NextResponse.json(
-      { ok: false, error: e?.message ?? "Failed to load products" },
-      { status: 500 }
-    );
-  }
+  const status = e?.message === "UNAUTHENTICATED" ? 401 : 500;
+  return NextResponse.json(
+    { ok: false, error: e?.message ?? "Failed to load products" },
+    { status }
+  );
+}
+
 }

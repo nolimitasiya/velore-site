@@ -1,6 +1,7 @@
 // app/api/admin/products/[id]/active/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdminSession } from "@/lib/auth/AdminSession";
 
 export const runtime = "nodejs";
 
@@ -9,6 +10,8 @@ export async function POST(
   ctx: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdminSession();
+
     const { id } = await ctx.params;
 
     if (!id) {

@@ -73,6 +73,14 @@ model Brand {
   memberships BrandMembership[]
   invites     BrandInvite[]
   importJobs  ImportJob[]
+
+  defaultCommissionRate Decimal? @db.Decimal(5, 4) // e.g. 0.08
+  aovEstimate           Decimal? @db.Decimal(12, 2) // e.g. 65.00
+
+  // ✅ ADD THESE (opposite relations)
+  affiliateClicks   AffiliateClick[]
+  affiliateEarnings AffiliateEarning[]
+  payouts           BrandPayout[]
 }
 
 model Category {
@@ -97,33 +105,34 @@ model Material {
 }
 
 model Product {
-  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  brandId        String         @db.Uuid
-  title          String
-  slug           String
-  currency       Currency       @default(GBP)
-  sourceUrl      String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @default(now()) @updatedAt
-  isActive       Boolean        @default(true)
-  badges         Badge[]        @default([])
-  categoryId     String?        @db.Uuid
-  colour         String?
-  materialId     String?        @db.Uuid
-  note           String?
-  occasionId     String?        @db.Uuid
-  price          Decimal?       @db.Decimal(10, 2)
-  shippingRegion String?
-  stock          Int?
-  tags           String[]       @default([])
-  publishedAt    DateTime?
-  affiliateUrl   String?
-  productType    String?
-  brand          Brand          @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  category       Category?      @relation(fields: [categoryId], references: [id])
-  material       Material?      @relation(fields: [materialId], references: [id])
-  occasion       Occasion?      @relation(fields: [occasionId], references: [id])
-  images         ProductImage[]
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brandId         String           @db.Uuid
+  title           String
+  slug            String
+  currency        Currency         @default(GBP)
+  sourceUrl       String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @default(now()) @updatedAt
+  isActive        Boolean          @default(true)
+  badges          Badge[]          @default([])
+  categoryId      String?          @db.Uuid
+  colour          String?
+  materialId      String?          @db.Uuid
+  note            String?
+  occasionId      String?          @db.Uuid
+  price           Decimal?         @db.Decimal(10, 2)
+  shippingRegion  String?
+  stock           Int?
+  tags            String[]         @default([])
+  publishedAt     DateTime?
+  affiliateUrl    String?
+  productType     String?
+  brand           Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  category        Category?        @relation(fields: [categoryId], references: [id])
+  material        Material?        @relation(fields: [materialId], references: [id])
+  occasion        Occasion?        @relation(fields: [occasionId], references: [id])
+  images          ProductImage[]
+  affiliateClicks AffiliateClick[]
 
   @@unique([brandId, sourceUrl], name: "brandId_sourceUrl")
   @@index([brandId, slug])
@@ -234,4 +243,56 @@ enum BrandApplicationStatus {
   invited
   onboarded
   rejected
+}
+
+model AffiliateClick {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId String?  @db.Uuid
+  brandId   String   @db.Uuid
+  clickedAt DateTime @default(now())
+
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  brand   Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@index([brandId, clickedAt])
+  @@index([productId, clickedAt])
+}
+
+model AffiliateEarning {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brandId   String   @db.Uuid
+  month     DateTime // store as first day of month (e.g. 2026-02-01)
+  amount    Decimal  @db.Decimal(12, 2)
+  currency  Currency @default(GBP)
+  reference String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, month])
+  @@index([month])
+}
+
+model BrandPayout {
+  id        String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brandId   String       @db.Uuid
+  month     DateTime
+  status    PayoutStatus @default(pending)
+  method    String?
+  notes     String?
+  updatedAt DateTime     @updatedAt
+  createdAt DateTime     @default(now())
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, month])
+  @@index([month])
+}
+
+
+enum PayoutStatus {
+  pending
+  approved
+  paid
 }

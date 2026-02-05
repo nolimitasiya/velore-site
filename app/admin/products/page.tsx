@@ -15,7 +15,7 @@ import {
   getUserLocale,
   getUserTimeZone,
 } from "@/lib/adminTime";
-import { formatMoney } from "@/lib/money";
+import { formatMoney } from "@/lib/formatMoney";
 
 type BrandOption = { slug: string; name: string };
 

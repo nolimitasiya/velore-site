@@ -40,6 +40,7 @@ export function AdminHeader() {
       </div>
 
       <nav className="flex flex-wrap items-center gap-2">
+        <NavLink href="/admin/revenue" label="Revenue" />
         <NavLink href="/admin/products" label="Products" />
         <NavLink href="/admin/import" label="Import" />
         <NavLink href="/admin/brand-invites" label="Brand Invites" />

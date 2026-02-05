@@ -1,32 +1,29 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(
-  _req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
-  const { id } = await context.params;
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-  const p = await prisma.product.findUnique({
+export async function GET(_: Request, { params }: { params: { id: string } }) {
+  const id = params.id;
+
+  const product = await prisma.product.findUnique({
     where: { id },
     select: {
+      id: true,
+      brandId: true,
       affiliateUrl: true,
-      sourceUrl: true,
-      publishedAt: true,
-      isActive: true,
     },
   });
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.veiloraclub.com";
-
-  if (!p || !p.publishedAt || !p.isActive) {
-    return NextResponse.redirect(new URL("/", siteUrl));
+  if (!product?.affiliateUrl) {
+    return NextResponse.redirect(new URL("/", process.env.NEXT_PUBLIC_SITE_URL));
   }
 
-  const target = p.affiliateUrl || p.sourceUrl;
-  if (!target) {
-    return NextResponse.redirect(new URL("/", siteUrl));
-  }
+  // ✅ track click
+  await prisma.affiliateClick.create({
+    data: { brandId: product.brandId, productId: product.id },
+  });
 
-  return NextResponse.redirect(target);
+  return NextResponse.redirect(product.affiliateUrl);
 }

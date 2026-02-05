@@ -19,8 +19,7 @@ function NavLink({ href, label }: { href: string; label: string }) {
     </Link>
   );
 }
-
-export function BrandHeader() {
+export function BrandHeader({ brandName }: { brandName: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
@@ -34,27 +33,47 @@ export function BrandHeader() {
       setBusy(false);
     }
   }
-
+function refreshNow() {
+    const url = new URL(window.location.href);
+    url.searchParams.set("r", String(Date.now()));
+    window.location.assign(url.toString());
+  }
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex items-center gap-2">
-        <div className="font-semibold">Brand Portal</div>
-        <div className="hidden sm:block text-xs text-black/50">Veilora Club</div>
-      </div>
+  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:items-center">
+    {/* left: title */}
+    <div className="flex items-center gap-2">
+      <div className="font-semibold">Brand Portal</div>
+      <div className="hidden sm:block text-xs text-black/50" />
+      <div className="hidden sm:block text-xs text-black/50">{brandName}</div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <NavLink href="/brand" label="Dashboard" />
-        <NavLink href="/brand/products" label="Products" />
-        <NavLink href="/brand/import" label="Import" />
-
-        <button
-          onClick={logout}
-          disabled={busy}
-          className="rounded-lg px-3 py-2 text-sm border border-black/10 hover:bg-black/5 disabled:opacity-50"
-        >
-          {busy ? "..." : "Logout"}
-        </button>
-      </div>
     </div>
-  );
+
+    {/* center: tabs */}
+    <div className="flex flex-wrap justify-start sm:justify-center gap-2">
+      <NavLink href="/brand/revenue" label="Analytics" />
+      <NavLink href="/brand/products" label="Products" />
+      <NavLink href="/brand/import" label="Import" />
+
+      <button
+          type="button"
+          onClick={refreshNow}
+          className="rounded-lg px-3 py-2 text-sm border border-black/10 hover:bg-black/5"
+        >
+          Refresh
+        </button>
+    </div>
+
+    {/* right: logout */}
+    <div className="flex sm:justify-end">
+      <button
+        onClick={logout}
+        disabled={busy}
+        className="rounded-lg px-3 py-2 text-sm border border-black/10 hover:bg-black/5 disabled:opacity-50"
+
+      >
+        {busy ? "..." : "Logout"}
+      </button>
+    </div>
+  </div>
+);
 }

@@ -1,13 +1,12 @@
-// app/api/brand/products/list/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireBrandSession } from "@/lib/auth/BrandSession";
+import { requireBrandContext } from "@/lib/auth/BrandSession";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const { brandId } = await requireBrandSession();
+  const { brandId } = await requireBrandContext();
 
   const products = await prisma.product.findMany({
     where: { brandId },
@@ -22,13 +21,10 @@ export async function GET() {
       sourceUrl: true,
       affiliateUrl: true,
       createdAt: true,
-
       images: {
         orderBy: { sortOrder: "asc" },
         take: 1,
-        select: {
-          url: true,
-        },
+        select: { url: true },
       },
     },
   });
@@ -44,7 +40,7 @@ export async function GET() {
       createdAt: p.createdAt,
       sourceUrl: p.sourceUrl,
       affiliateUrl: p.affiliateUrl,
-      imageUrl: p.images[0]?.url ?? null,
+      imageUrl: p.images?.[0]?.url ?? null,
     })),
   });
 }

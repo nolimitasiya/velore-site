@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdminSession } from "@/lib/auth/AdminSession";
 
 export const runtime = "nodejs";
 
@@ -9,6 +10,8 @@ function csvEscape(v: string) {
 }
 
 export async function GET() {
+  await requireAdminSession();
+
   const subs = await prisma.newsletterSubscriber.findMany({
     where: { status: "subscribed" },
     orderBy: { createdAt: "desc" },

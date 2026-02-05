@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import Papa from "papaparse";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireBrandSession } from "@/lib/brandAuth";
+import { requireBrandContext } from "@/lib/auth/BrandSession";
 
 export const runtime = "nodejs";
 
@@ -79,7 +79,7 @@ function parseCommaList(s: string) {
 
 export async function POST(req: Request) {
   try {
-    const { userId, brandId } = await requireBrandSession();
+    const { brandId } = await requireBrandContext();
 
     const formData = await req.formData();
     const file = formData.get("file");

@@ -1,13 +1,12 @@
 // app/api/brand/import/history/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireBrandSession } from "@/lib/auth/BrandSession";
-
+import { requireBrandContext } from "@/lib/auth/BrandSession";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const { brandId } = await requireBrandSession();
+  const { brandId } = await requireBrandContext();
 
   const jobs = await prisma.importJob.findMany({
     where: { brandId },

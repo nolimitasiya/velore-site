@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { Role } from "@prisma/client";
 import { sendBrandInviteEmail } from "@/lib/resend/templates/onboarding/brandInvite";
+import { requireAdminSession } from "@/lib/auth/AdminSession";
 
 function sha256(s: string) {
   return crypto.createHash("sha256").update(s).digest("hex");
@@ -14,6 +15,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
+    await requireAdminSession();
     const body = await req.json().catch(() => ({}));
 
     const email = String(body.email || "").trim().toLowerCase();

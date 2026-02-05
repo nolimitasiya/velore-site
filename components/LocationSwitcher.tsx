@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   DEFAULT_LOCATION,
@@ -43,6 +44,7 @@ function setCookie(name: string, value: string, days = 365) {
 }
 
 export default function LocationSwitcher() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [current, setCurrent] = useState<Location>(DEFAULT_LOCATION);
@@ -100,7 +102,8 @@ export default function LocationSwitcher() {
     return ordered;
   }, [query]);
 
-  function choose(loc: Location) {
+  // ✅ THIS is where it goes (client-side)
+  async function choose(loc: Location) {
     setCurrent(loc);
     setOpen(false);
     setQuery("");
@@ -109,8 +112,18 @@ export default function LocationSwitcher() {
       localStorage.setItem(LS_KEY, JSON.stringify(loc));
     } catch {}
 
+    // ✅ Set cookies for country
     setCookie("dalra_country", loc.code);
-    setCookie("dalra_currency", loc.currency);
+
+    // ✅ Set currency via API (sets vc_currency + dalra_currency on the server response)
+    await fetch("/api/currency/set", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ currency: loc.currency }),
+    });
+
+    // ✅ Force server components (categories pages) to re-read cookies
+    router.refresh();
   }
 
   return (

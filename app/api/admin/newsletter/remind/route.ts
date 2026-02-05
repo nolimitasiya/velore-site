@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
+import { requireAdminSession } from "@/lib/auth/AdminSession";
 
 import { sendNewsletterConfirmEmail } from "@/lib/resend/templates/marketing/newsletterConfirm";
 
 export const runtime = "nodejs";
+await requireAdminSession();
 
 export async function POST(req: Request) {
   const adminId = req.headers.get("cookie")?.includes("admin_authed=");

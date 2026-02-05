@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { getEcbRates, convert, safeCurrency } from "@/lib/currency/rates";
+import { formatMoney } from "@/lib/formatMoney";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -16,10 +19,9 @@ function toStr(v: unknown) {
 export default async function ClothingPage({
   searchParams,
 }: {
-  // ✅ Next 16 can pass this as a Promise
   searchParams: Promise<{ type?: string | string[] }> | { type?: string | string[] };
 }) {
-  // ✅ Handle BOTH: object or Promise
+  // ✅ handle object OR Promise (Next 16)
   const sp = await Promise.resolve(searchParams);
 
   const rawType = toStr(sp?.type);
@@ -28,6 +30,23 @@ export default async function ClothingPage({
     ? (type as ProductType)
     : "";
 
+  /* ===========================
+     🌍 Currency (SHOPPER SIDE)
+     =========================== */
+  const jar = await cookies();
+  const chosenCurrency =
+  safeCurrency(
+    jar.get("vc_currency")?.value ||
+    jar.get("dalra_currency")?.value ||
+    ""
+  ) ?? "GBP";
+
+
+  const rates = await getEcbRates();
+
+  /* ===========================
+     📦 Fetch products
+     =========================== */
   const clothing = await prisma.category.findUnique({
     where: { slug: "clothing" },
     select: { id: true },
@@ -41,17 +60,41 @@ export default async function ClothingPage({
       ...(selectedType ? { productType: selectedType } : {}),
     },
     orderBy: { updatedAt: "desc" },
-    include: { brand: true, images: true },
+    include: {
+      brand: true,
+      images: { take: 1 },
+    },
     take: 120,
+  });
+
+  /* ===========================
+     💱 Convert prices for display
+     =========================== */
+  const mapped = products.map((p) => {
+    const baseAmount = p.price ? Number(p.price) : null;
+
+    const converted =
+      baseAmount != null
+        ? convert(baseAmount, p.currency, chosenCurrency, rates)
+        : null;
+
+    const displayAmount = converted ?? baseAmount;
+
+    return {
+      ...p,
+      imageUrl: p.images?.[0]?.url ?? null,
+      displayPriceLabel:
+        displayAmount != null
+          ? formatMoney(displayAmount, chosenCurrency)
+          : null,
+    };
   });
 
   return (
     <div className="mx-auto max-w-6xl p-6">
       <h1 className="text-center text-2xl font-semibold">Clothing</h1>
 
-      
-
-      {/* Filter chips (centered + active state) */}
+      {/* Filter chips */}
       <div className="mt-6 flex justify-center">
         <div className="inline-flex flex-wrap justify-center gap-2 text-sm">
           <Link
@@ -84,49 +127,47 @@ export default async function ClothingPage({
 
       {/* Product grid */}
       <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {products.map((p) => {
-          const img = p.images?.[0]?.url;
-          const price = p.price ? `${p.currency} ${Number(p.price).toFixed(2)}` : null;
-
-          return (
-            <div key={p.id} className="rounded-2xl border border-black/10 bg-white">
-              <Link href={`/p/${p.slug}`} className="block">
-                <div className="aspect-[3/4] w-full overflow-hidden rounded-t-2xl bg-black/5">
-                  {img ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={img}
-                      alt={p.title}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-xs text-black/40">
-                      No image
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-4">
-                  <div className="text-sm font-medium">{p.title}</div>
-                  <div className="mt-1 text-xs text-black/60 uppercase tracking-wide">
-                    {p.brand?.name ?? ""}
+        {mapped.map((p) => (
+          <div key={p.id} className="rounded-2xl border border-black/10 bg-white">
+            <Link href={`/p/${p.slug}`} className="block">
+              <div className="aspect-[3/4] w-full overflow-hidden rounded-t-2xl bg-black/5">
+                {p.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={p.imageUrl}
+                    alt={p.title}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-xs text-black/40">
+                    No image
                   </div>
-                  {price && <div className="mt-2 text-sm">{price}</div>}
-                </div>
-              </Link>
-
-              <div className="px-4 pb-4">
-                <Link
-                  href={`/out/${p.id}`}
-                  className="inline-flex w-full items-center justify-center rounded-md bg-black px-4 py-2 text-sm text-white"
-                >
-                  Buy Now
-                </Link>
+                )}
               </div>
+
+              <div className="p-4">
+                <div className="text-sm font-medium">{p.title}</div>
+                <div className="mt-1 text-xs text-black/60 uppercase tracking-wide">
+                  {p.brand?.name ?? ""}
+                </div>
+
+                {p.displayPriceLabel && (
+                  <div className="mt-2 text-sm">{p.displayPriceLabel}</div>
+                )}
+              </div>
+            </Link>
+
+            <div className="px-4 pb-4">
+              <Link
+                href={`/out/${p.id}`}
+                className="inline-flex w-full items-center justify-center rounded-md bg-black px-4 py-2 text-sm text-white"
+              >
+                Buy Now
+              </Link>
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
     </div>
   );
