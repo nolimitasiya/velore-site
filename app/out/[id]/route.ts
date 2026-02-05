@@ -1,26 +1,23 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
-  const id = params.id;
+export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const { id } = await ctx.params;
 
+  // ... your existing logic here (lookup product, record click, redirect)
+  // Example skeleton:
   const product = await prisma.product.findUnique({
     where: { id },
-    select: {
-      id: true,
-      brandId: true,
-      affiliateUrl: true,
-    },
+    select: { id: true, affiliateUrl: true, brandId: true },
   });
 
   if (!product?.affiliateUrl) {
-    return NextResponse.redirect(new URL("/", process.env.NEXT_PUBLIC_SITE_URL));
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
-  // ✅ track click
   await prisma.affiliateClick.create({
     data: { brandId: product.brandId, productId: product.id },
   });
