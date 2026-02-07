@@ -84,7 +84,9 @@ useEffect(() => {
     </button>
 
     <button
-      onClick={() => router.push("/brand-apply")}
+      onClick={() => {
+            console.log("Brand button clicked - going to /brand-apply");
+            router.push("/brands/apply");}}
       className="rounded-2xl border px-6 py-4 text-base font-medium hover:bg-neutral-50 transition"
     >
       I’m a brand

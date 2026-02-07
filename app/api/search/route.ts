@@ -1,3 +1,4 @@
+// app/api/search/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -10,39 +11,51 @@ export async function GET(req: Request) {
   const q = (url.searchParams.get("q") ?? "").trim();
   const category = (url.searchParams.get("category") ?? "").trim();
   const occasion = (url.searchParams.get("occasion") ?? "").trim();
+  const material = (url.searchParams.get("material") ?? "").trim();
   const type = (url.searchParams.get("type") ?? "").trim();
 
-  const where: any = {
-    isActive: true,
-  };
-
-  // text search (basic + good enough for V1)
-  if (q) {
-    where.OR = [
-      { title: { contains: q, mode: "insensitive" } },
-      { brand: { name: { contains: q, mode: "insensitive" } } },
-      { tags: { has: q.toLowerCase() } }, // if you store tags as string[]
-    ];
-  }
-
-  if (category) where.categorySlug = category;
-  if (occasion) where.occasionSlugs = { has: occasion }; // if array
-  if (type) where.typeSlug = type;
-
   const products = await prisma.product.findMany({
-    where,
-    take: 60,
+    where: {
+      isActive: true,
+      publishedAt: { not: null }, // ✅ hide unpublished in search too
+
+      ...(q && {
+        OR: [
+          { title: { contains: q, mode: "insensitive" } },
+          { brand: { name: { contains: q, mode: "insensitive" } } },
+          { tags: { has: q.toLowerCase() } },
+        ],
+      }),
+
+      ...(category && { category: { slug: category } }),
+      ...(occasion && { occasion: { slug: occasion } }),
+      ...(material && { material: { slug: material } }),
+      ...(type && { productType: type }),
+    },
+
     orderBy: { createdAt: "desc" },
+    take: 60,
+
     select: {
       id: true,
       title: true,
       slug: true,
-      images: true,
       price: true,
       currency: true,
-      brand: { select: { id: true, name: true, slug: true } },
+      affiliateUrl: true,
+      brand: { select: { name: true, slug: true } },
+      images: {
+        take: 1,
+        orderBy: { sortOrder: "asc" },
+        select: { url: true },
+      },
     },
   });
 
-  return NextResponse.json({ ok: true, q, filters: { category, occasion, type }, products });
+  return NextResponse.json({
+    ok: true,
+    q,
+    filters: { category, occasion, material, type },
+    products,
+  });
 }

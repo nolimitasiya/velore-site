@@ -1,16 +1,28 @@
+// C:\Users\Asiya\projects\dalra\app\categories\clothing\page.tsx
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { getEcbRates, convert, safeCurrency } from "@/lib/currency/rates";
 import { formatMoney } from "@/lib/formatMoney";
+import { ProductType } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
+// URL values (lowercase)
 const TYPES = ["abaya", "dress", "skirt", "top", "hijab"] as const;
-type ProductType = (typeof TYPES)[number];
-const ALLOWED_TYPES = new Set<ProductType>(TYPES);
+type UrlType = (typeof TYPES)[number];
+const ALLOWED_TYPES = new Set<UrlType>(TYPES);
+
+// Map URL -> Prisma enum
+const TYPE_TO_ENUM: Record<UrlType, ProductType> = {
+  abaya: ProductType.ABAYA,
+  dress: ProductType.DRESS,
+  skirt: ProductType.SKIRT,
+  top: ProductType.TOP,
+  hijab: ProductType.HIJAB,
+};
 
 function toStr(v: unknown) {
   return Array.isArray(v) ? String(v[0] ?? "") : String(v ?? "");
@@ -21,26 +33,18 @@ export default async function ClothingPage({
 }: {
   searchParams: Promise<{ type?: string | string[] }> | { type?: string | string[] };
 }) {
-  // ✅ handle object OR Promise (Next 16)
   const sp = await Promise.resolve(searchParams);
 
   const rawType = toStr(sp?.type);
   const type = decodeURIComponent(rawType).trim().toLowerCase();
-  const selectedType: ProductType | "" = ALLOWED_TYPES.has(type as ProductType)
-    ? (type as ProductType)
-    : "";
+  const selectedType: UrlType | "" = ALLOWED_TYPES.has(type as UrlType) ? (type as UrlType) : "";
 
   /* ===========================
      🌍 Currency (SHOPPER SIDE)
      =========================== */
   const jar = await cookies();
   const chosenCurrency =
-  safeCurrency(
-    jar.get("vc_currency")?.value ||
-    jar.get("dalra_currency")?.value ||
-    ""
-  ) ?? "GBP";
-
+    safeCurrency(jar.get("vc_currency")?.value || jar.get("dalra_currency")?.value || "") ?? "GBP";
 
   const rates = await getEcbRates();
 
@@ -52,19 +56,28 @@ export default async function ClothingPage({
     select: { id: true },
   });
 
+  const enumType = selectedType ? TYPE_TO_ENUM[selectedType] : undefined;
+
   const products = await prisma.product.findMany({
     where: {
       categoryId: clothing?.id,
       isActive: true,
       publishedAt: { not: null },
-      ...(selectedType ? { productType: selectedType } : {}),
+      ...(enumType ? { productType: enumType } : {}),
     },
     orderBy: { updatedAt: "desc" },
-    include: {
-      brand: true,
-      images: { take: 1 },
-    },
     take: 120,
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      price: true,
+      currency: true,
+      brand: { select: { name: true, slug: true } },
+      images: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true } },
+      // keep if you need
+      affiliateUrl: true,
+    },
   });
 
   /* ===========================
@@ -74,19 +87,14 @@ export default async function ClothingPage({
     const baseAmount = p.price ? Number(p.price) : null;
 
     const converted =
-      baseAmount != null
-        ? convert(baseAmount, p.currency, chosenCurrency, rates)
-        : null;
+      baseAmount != null ? convert(baseAmount, p.currency, chosenCurrency, rates) : null;
 
     const displayAmount = converted ?? baseAmount;
 
     return {
       ...p,
       imageUrl: p.images?.[0]?.url ?? null,
-      displayPriceLabel:
-        displayAmount != null
-          ? formatMoney(displayAmount, chosenCurrency)
-          : null,
+      displayPriceLabel: displayAmount != null ? formatMoney(displayAmount, chosenCurrency) : null,
     };
   });
 
@@ -152,9 +160,7 @@ export default async function ClothingPage({
                   {p.brand?.name ?? ""}
                 </div>
 
-                {p.displayPriceLabel && (
-                  <div className="mt-2 text-sm">{p.displayPriceLabel}</div>
-                )}
+                {p.displayPriceLabel && <div className="mt-2 text-sm">{p.displayPriceLabel}</div>}
               </div>
             </Link>
 

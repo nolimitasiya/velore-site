@@ -15,9 +15,11 @@ export function middleware(req: NextRequest) {
 
     // ✅ allow brand apply routes during launch
     const isBrandApply =
-    
-      pathname === "/brands/apply" ||
-      pathname.startsWith("/brands/apply/");
+  pathname === "/brand-apply" ||
+  pathname.startsWith("/brand-apply/") ||
+  pathname === "/brands/apply" ||
+  pathname.startsWith("/brands/apply/");
+
 
     const isNextAsset = pathname.startsWith("/_next");
     const isApi = pathname.startsWith("/api");

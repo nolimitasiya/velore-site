@@ -4,16 +4,16 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(
   req: Request,
-  ctx: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     await requireAdminSession();
 
-    const { id } = await ctx.params;
-
+    const id = params.id;
     if (!id) {
       return NextResponse.json({ ok: false, error: "Missing product id" }, { status: 400 });
     }
@@ -31,7 +31,7 @@ export async function POST(
   } catch (e: any) {
     return NextResponse.json(
       { ok: false, error: e?.message ?? "Failed to update publish status" },
-      { status: 500 }
+      { status: e?.message === "UNAUTHENTICATED" ? 401 : 500 }
     );
   }
 }
