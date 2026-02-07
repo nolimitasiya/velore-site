@@ -1,5 +1,6 @@
 // app/api/admin/products/[id]/active/route.ts
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
 
@@ -7,15 +8,19 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(
-  req: Request,
-  { params }: { params: { id: string } }
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdminSession();
 
-    const id = params.id;
+    const { id } = await context.params;
+
     if (!id) {
-      return NextResponse.json({ ok: false, error: "Missing product id" }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: "Missing product id" },
+        { status: 400 }
+      );
     }
 
     const body = await req.json().catch(() => ({}));
