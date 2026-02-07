@@ -1,6 +1,7 @@
 // app/api/search/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { ProductType } from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,7 +13,14 @@ export async function GET(req: Request) {
   const category = (url.searchParams.get("category") ?? "").trim();
   const occasion = (url.searchParams.get("occasion") ?? "").trim();
   const material = (url.searchParams.get("material") ?? "").trim();
-  const type = (url.searchParams.get("type") ?? "").trim();
+
+  const typeRaw = (url.searchParams.get("type") ?? "").trim();
+
+  const productType =
+    typeRaw &&
+    (Object.values(ProductType) as string[]).includes(typeRaw.toUpperCase())
+      ? (typeRaw.toUpperCase() as ProductType)
+      : undefined;
 
   const products = await prisma.product.findMany({
     where: {
@@ -30,7 +38,7 @@ export async function GET(req: Request) {
       ...(category && { category: { slug: category } }),
       ...(occasion && { occasion: { slug: occasion } }),
       ...(material && { material: { slug: material } }),
-      ...(type && { productType: type }),
+      ...(productType && { productType }),
     },
 
     orderBy: { createdAt: "desc" },
@@ -55,7 +63,7 @@ export async function GET(req: Request) {
   return NextResponse.json({
     ok: true,
     q,
-    filters: { category, occasion, material, type },
+    filters: { category, occasion, material, type: typeRaw },
     products,
   });
 }

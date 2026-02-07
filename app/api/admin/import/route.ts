@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import Papa from "papaparse";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { Prisma, ProductType } from "@prisma/client";
 
 
 // Ensure route runs on Node (file parsing)
 export const runtime = "nodejs";
+const ProductTypeEnum = z.enum(["ABAYA", "DRESS", "SKIRT", "TOP", "HIJAB"]);
 
 const CurrencyEnum = z.enum(["GBP", "EUR", "CHF", "USD"]);
 
@@ -52,6 +53,8 @@ const RowSchema = z.object({
 
   price: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
   currency: CurrencyEnum.optional().or(z.literal("")).transform((v) => (v ? v : "GBP")),
+  product_type: ProductTypeEnum.optional().or(z.literal("")).transform((v) => (v ? v : null)),
+
 
   colour: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
   stock: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
@@ -345,6 +348,7 @@ const product = await prisma.product.upsert({
     affiliateUrl: r.affiliate_url ?? undefined,
     price: price ?? undefined,
     currency: r.currency as any,
+    productType: (r.product_type as ProductType) ?? ProductType.ABAYA,
     colour: r.colour ?? undefined,
     stock: stock ?? undefined,
     shippingRegion: r.shipping_region ?? undefined,
