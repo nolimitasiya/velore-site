@@ -3,7 +3,7 @@ export const revalidate = 0;
 
 import { headers } from "next/headers";
 import LiveHome from "@/components/LiveHome";
-import Gate from "./(gate)/Gate";
+import Gate from "@/app/(gate)/Gate";
 import SiteShell from "@/components/SiteShell";
 
 export default function Page() {
