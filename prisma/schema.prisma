@@ -126,7 +126,7 @@ model Product {
   tags            String[]         @default([])
   publishedAt     DateTime?
   affiliateUrl    String?
-  productType     String?
+  productType     ProductType // start nullable to migrate safely?
   brand           Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
   category        Category?        @relation(fields: [categoryId], references: [id])
   material        Material?        @relation(fields: [materialId], references: [id])
@@ -139,8 +139,8 @@ model Product {
   @@index([categoryId])
   @@index([occasionId])
   @@index([materialId])
-  @@index([productType])
   @@index([affiliateUrl])
+  @@index([productType])
 }
 
 model ProductImage {
@@ -295,4 +295,18 @@ enum PayoutStatus {
   pending
   approved
   paid
+}
+enum ProductType {
+  ABAYA
+  DRESS
+  SKIRT
+  TOP
+  HIJAB
+}
+
+model WaitlistSubscriber {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  email     String   @unique
+  createdAt DateTime @default(now())
 }
