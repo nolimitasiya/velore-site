@@ -1,30 +1,20 @@
-import { demo } from "../data/demo";
-import { Hero } from "@/components/Hero";
-import { SaleTicker } from "@/components/SaleTicker";
-import { SectionTitle } from "@/components/SectionTitle";
-import { ProductRow } from "@/components/ProductRow";
-import { SloganAndContinents } from "@/components/SloganAndContinents";
-import { StyleFeed } from "@/components/StyleFeed";
-import { DalrasDiary } from "@/components/DalrasDiary";
-import { BrandMosaic } from "@/components/BrandMosaic";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-export default function HomePage() {
+import { headers } from "next/headers";
+import LiveHome from "@/components/LiveHome";
+import Gate from "./(gate)/Gate";
+import SiteShell from "@/components/SiteShell";
+
+export default function Page() {
+  headers(); // forces runtime, prevents static bake on Vercel
+
+  const launchMode = process.env.LAUNCH_MODE === "true"; // true = Gate
+  if (launchMode) return <Gate />;
+
   return (
-    <main className="min-h-screen w-full bg-[#eee]">
-      <Hero imageUrl={demo.heroImage} />
-      <SaleTicker />
-
-      <SectionTitle>SHOP TRENDY</SectionTitle>
-      <ProductRow products={demo.trendy} />
-
-      <SloganAndContinents
-        slogan="Where global brands and international style meet"
-        continents={demo.continents}
-      />
-
-      <StyleFeed posts={demo.styleFeed} />
-      <DalrasDiary posts={demo.diary} />
-      <BrandMosaic tiles={demo.brandTiles} />
-    </main>
+    <SiteShell>
+      <LiveHome />
+    </SiteShell>
   );
 }
