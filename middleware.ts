@@ -4,10 +4,49 @@ import type { NextRequest } from "next/server";
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  const isAdminPage = pathname.startsWith("/admin");
+  const launchMode = process.env.LAUNCH_MODE === "true"; // true = locked / gate
+  console.log("PROD LAUNCH_MODE:", process.env.LAUNCH_MODE);
+
+  // ---------------------------
+  // PUBLIC LOCKDOWN (only when launchMode = true)
+  // ---------------------------
+  if (launchMode) {
+    const isGate = pathname === "/";
+
+    // ✅ allow brand apply routes during launch
+    const isBrandApply =
+    
+      pathname === "/brands/apply" ||
+      pathname.startsWith("/brands/apply/");
+
+    const isNextAsset = pathname.startsWith("/_next");
+    const isApi = pathname.startsWith("/api");
+    const isPublicFile =
+      pathname === "/favicon.ico" ||
+      pathname === "/robots.txt" ||
+      pathname === "/sitemap.xml";
+
+    const allowPublic =
+      isGate || isBrandApply || isNextAsset || isApi || isPublicFile;
+      
+      
+
+    if (!allowPublic) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/";
+      url.searchParams.set("locked", "1");
+      url.searchParams.set("next", pathname);
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // ---------------------------
+  // ADMIN / BRAND AUTH (ALWAYS ON)
+  // ---------------------------
+const isAdminPage = pathname === "/admin" || pathname.startsWith("/admin/");
   const isAdminApi = pathname.startsWith("/api/admin");
 
-  const isBrandPage = pathname.startsWith("/brand");
+const isBrandPage = pathname === "/brand" || pathname.startsWith("/brand/");
   const isBrandApi = pathname.startsWith("/api/brand");
 
   const allowUnauthed =
@@ -20,7 +59,7 @@ export function middleware(req: NextRequest) {
     pathname === "/brand/onboarding" ||
     pathname === "/api/brand/onboarding";
 
-  // ✅ Admin protection
+  // Admin protection
   if ((isAdminPage || isAdminApi) && !allowUnauthed) {
     const authed = Boolean(req.cookies.get("admin_authed")?.value);
     if (!authed) {
@@ -30,11 +69,11 @@ export function middleware(req: NextRequest) {
         url.searchParams.set("next", pathname);
         return NextResponse.redirect(url);
       }
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ ok: false }, { status: 401 });
     }
   }
 
-  // ✅ Brand protection
+  // Brand protection
   if ((isBrandPage || isBrandApi) && !allowUnauthed) {
     const authed = Boolean(req.cookies.get("brand_authed")?.value);
     if (!authed) {
@@ -44,7 +83,7 @@ export function middleware(req: NextRequest) {
         url.searchParams.set("next", pathname);
         return NextResponse.redirect(url);
       }
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ ok: false }, { status: 401 });
     }
   }
 
@@ -52,5 +91,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*", "/brand/:path*", "/api/brand/:path*"],
+  matcher: ["/((?!.*\\..*).*)"],
 };
