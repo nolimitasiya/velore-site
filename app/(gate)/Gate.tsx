@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import BrandApplyForm from "@/app/(site)/brands/apply/BrandApplyForm";
 
 
 
