@@ -5,33 +5,60 @@ export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   const launchMode = process.env.LAUNCH_MODE === "true"; // true = locked / gate
-  console.log("PROD LAUNCH_MODE:", process.env.LAUNCH_MODE);
 
   // ---------------------------
   // PUBLIC LOCKDOWN (only when launchMode = true)
   // ---------------------------
   if (launchMode) {
+    
     const isGate = pathname === "/";
+    const isThanks = pathname === "/thanks" || pathname.startsWith("/thanks/");
 
-    // ✅ allow brand apply routes during launch
-    const isBrandApply =
-  pathname === "/brand-apply" ||
-  pathname.startsWith("/brand-apply/") ||
-  pathname === "/brands/apply" ||
-  pathname.startsWith("/brands/apply/");
+    
+    // ✅ allow admin + admin APIs during launch
+const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
+const isAdminApi = pathname.startsWith("/api/admin");
 
+// ✅ allow brand portal + brand APIs too (optional but usually desired)
+const isBrand = pathname === "/brand" || pathname.startsWith("/brand/");
+const isBrandApi = pathname.startsWith("/api/brand");
+
+    // pages you want visible during launch
+    const isBrandApplyPage =
+      pathname === "/brand-apply" ||
+      pathname.startsWith("/brand-apply/") ||
+      pathname === "/brands/apply" ||
+      pathname.startsWith("/brands/apply/");
 
     const isNextAsset = pathname.startsWith("/_next");
-    const isApi = pathname.startsWith("/api");
+
+    // ✅ allow specific public APIs during launch
+    const isPublicApi =
+      pathname === "/api/waitlist" ||
+      pathname.startsWith("/api/waitlist/") ||
+      pathname === "/api/brand-apply" ||
+      pathname.startsWith("/api/brand-apply/");
+
     const isPublicFile =
       pathname === "/favicon.ico" ||
       pathname === "/robots.txt" ||
       pathname === "/sitemap.xml";
 
-    const allowPublic =
-      isGate || isBrandApply || isNextAsset || isApi || isPublicFile;
-      
-      
+    // ✅ allow all APIs if you prefer (you previously did this)
+    // const isApi = pathname.startsWith("/api");
+
+
+const allowPublic =
+  isGate ||
+  isThanks ||
+  isBrandApplyPage ||
+  isNextAsset ||
+  isPublicApi ||
+  isPublicFile ||
+  isAdmin ||
+  isAdminApi ||
+  isBrand ||
+  isBrandApi;
 
     if (!allowPublic) {
       const url = req.nextUrl.clone();
@@ -45,12 +72,14 @@ export function middleware(req: NextRequest) {
   // ---------------------------
   // ADMIN / BRAND AUTH (ALWAYS ON)
   // ---------------------------
-const isAdminPage = pathname === "/admin" || pathname.startsWith("/admin/");
+  const isAdminPage = pathname === "/admin" || pathname.startsWith("/admin/");
   const isAdminApi = pathname.startsWith("/api/admin");
+  
 
-const isBrandPage = pathname === "/brand" || pathname.startsWith("/brand/");
+  const isBrandPage = pathname === "/brand" || pathname.startsWith("/brand/");
   const isBrandApi = pathname.startsWith("/api/brand");
 
+  // ✅ routes that must be accessible without auth
   const allowUnauthed =
     pathname === "/admin/login" ||
     pathname === "/api/admin/auth/login" ||
@@ -59,7 +88,10 @@ const isBrandPage = pathname === "/brand" || pathname.startsWith("/brand/");
     pathname === "/api/brand/auth/login" ||
     pathname === "/api/brand/auth/logout" ||
     pathname === "/brand/onboarding" ||
-    pathname === "/api/brand/onboarding";
+    pathname === "/api/brand/onboarding" ||
+    // ✅ public brand application endpoint (yours)
+    pathname === "/api/brand-apply" ||
+    pathname.startsWith("/api/brand-apply/");
 
   // Admin protection
   if ((isAdminPage || isAdminApi) && !allowUnauthed) {
@@ -71,7 +103,9 @@ const isBrandPage = pathname === "/brand" || pathname.startsWith("/brand/");
         url.searchParams.set("next", pathname);
         return NextResponse.redirect(url);
       }
-      return NextResponse.json({ ok: false }, { status: 401 });
+      const res = NextResponse.json({ ok: false }, { status: 401 });
+      res.headers.set("x-mw-block", "admin");
+      return res;
     }
   }
 
@@ -85,7 +119,9 @@ const isBrandPage = pathname === "/brand" || pathname.startsWith("/brand/");
         url.searchParams.set("next", pathname);
         return NextResponse.redirect(url);
       }
-      return NextResponse.json({ ok: false }, { status: 401 });
+      const res = NextResponse.json({ ok: false }, { status: 401 });
+      res.headers.set("x-mw-block", "brand");
+      return res;
     }
   }
 
@@ -93,5 +129,5 @@ const isBrandPage = pathname === "/brand" || pathname.startsWith("/brand/");
 }
 
 export const config = {
-  matcher: ["/((?!.*\\..*).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

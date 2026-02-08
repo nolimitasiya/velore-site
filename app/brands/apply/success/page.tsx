@@ -17,12 +17,7 @@ export default function Page() {
           Back to home
         </Link>
 
-        <Link
-          href="/"
-          className="rounded-full border px-5 py-2.5 text-sm hover:bg-black/5"
-        >
-          Browse
-        </Link>
+        
       </div>
     </main>
   );

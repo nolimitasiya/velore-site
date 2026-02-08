@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
+import { brandApplicationReceivedEmail } from "@/lib/resend/templates/brand/applicationReceived";
 
 const schema = z.object({
   firstName: z.string().min(1).max(80),
@@ -32,33 +33,50 @@ export async function POST(req: Request) {
     });
 
     // Email you (optional but recommended)
-    const resendKey = process.env.RESEND_API_KEY;
-    const to = process.env.BRAND_APPLY_NOTIFY_TO; // e.g. info@veiloraclub.com
+        const resendKey = process.env.RESEND_API_KEY;
+        const { subject, html } = brandApplicationReceivedEmail({ firstName: created.firstName });
+    const to = process.env.BRAND_APPLY_NOTIFY_TO; // your inbox
     const from = process.env.BRAND_APPLY_FROM || "onboarding@veiloraclub.com";
+    const replyTo = process.env.BRAND_APPLY_REPLY_TO || "info@veiloraclub.com";
 
-    if (resendKey && to) {
+    if (resendKey) {
       const resend = new Resend(resendKey);
+
+      // 1) Notify you (only if BRAND_APPLY_NOTIFY_TO is set)
+      if (to) {
+        await resend.emails.send({
+          from,
+          to,
+          replyTo,
+          subject: `New Brand Apply – ${created.firstName} ${created.lastName}`,
+          html: `
+            <div style="font-family:ui-sans-serif,system-ui; line-height:1.5">
+              <h2 style="margin:0 0 12px">New Brand Apply</h2>
+              <p><strong>Name:</strong> ${escapeHtml(created.firstName)} ${escapeHtml(created.lastName)}</p>
+              <p><strong>Email:</strong> ${escapeHtml(created.email)}</p>
+              <p><strong>Phone:</strong> ${escapeHtml(created.phone ?? "-")}</p>
+              <p><strong>Company website:</strong> ${escapeHtml(created.website ?? "-")}</p>
+              <p><strong>Social media:</strong> ${escapeHtml(created.socialMedia ?? "-")}</p>
+              <p><strong>Notes:</strong><br/>${escapeHtml(created.notes ?? "-").replace(/\\n/g, "<br/>")}</p>
+              <hr style="margin:16px 0"/>
+              <p style="color:#666; font-size:12px">
+                Status: ${escapeHtml(String(created.status))} • Created: ${created.createdAt.toISOString()} • ID: ${created.id}
+              </p>
+            </div>
+          `,
+        });
+      }
+
+      // 2) Auto-reply to applicant (always)
       await resend.emails.send({
-        from,
-        to,
-        subject: `New Brand Apply – ${created.firstName} ${created.lastName}`,
-        html: `
-          <div style="font-family:ui-sans-serif,system-ui; line-height:1.5">
-            <h2 style="margin:0 0 12px">New Brand Apply</h2>
-            <p><strong>Name:</strong> ${escapeHtml(created.firstName)} ${escapeHtml(created.lastName)}</p>
-            <p><strong>Email:</strong> ${escapeHtml(created.email)}</p>
-            <p><strong>Phone:</strong> ${escapeHtml(created.phone ?? "-")}</p>
-            <p><strong>Company website:</strong> ${escapeHtml(created.website ?? "-")}</p>
-            <p><strong>Social media:</strong> ${escapeHtml(created.socialMedia ?? "-")}</p>
-            <p><strong>Notes:</strong><br/>${escapeHtml(created.notes ?? "-").replace(/\\n/g, "<br/>")}</p>
-            <hr style="margin:16px 0"/>
-            <p style="color:#666; font-size:12px">
-              Status: ${created.status} • Created: ${created.createdAt.toISOString()} • ID: ${created.id}
-            </p>
-          </div>
-        `,
-      });
+  from: `Veilora Club <${from.includes("<") ? from : from}>`,
+  to: created.email,
+  replyTo,
+  subject,
+  html,
+});
     }
+
 
     return NextResponse.json({ ok: true, id: created.id });
   } catch (e: any) {
