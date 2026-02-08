@@ -46,6 +46,9 @@ export function AdminHeader() {
         <NavLink href="/admin/brand-invites" label="Brand Invites" />
         <NavLink href="/admin/brands/applications" label="Applications" />
         <NavLink href="/admin/newsletter" label="Newsletter" />
+        <NavLink href="/admin/waitlist" label="Waitlist" />
+
+
 
         <button
           type="button"
