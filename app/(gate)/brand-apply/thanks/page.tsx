@@ -8,7 +8,7 @@ export default function BrandApplyThanksPage() {
 
         <p className="mt-6 text-sm text-neutral-600">
           Application received ✨ <br />
-          Thank you for applying — we’ll review your details and get back to you shortly.
+          Thank you for applying, we’ll review your details and get back to you shortly.
         </p>
 
         <a
