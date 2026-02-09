@@ -22,7 +22,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "resend": "^6.7.0",
-    "xlsx": "^0.18.5",
+    "world-countries": "^5.1.0",
     "zod": "^4.3.5"
   },
   "devDependencies": {

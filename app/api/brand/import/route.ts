@@ -7,7 +7,6 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { requireBrandContext } from "@/lib/auth/BrandSession";
 import { Buffer as NodeBuffer } from "node:buffer";
-import * as XLSX from "xlsx";
 
 
 
@@ -143,47 +142,88 @@ function isProbablyXlsx(file: File) {
 }
 
 async function parseXlsxToRows(file: File): Promise<Record<string, string>[]> {
+  // Safety limits (tweak as you like)
+  const MAX_BYTES = 5 * 1024 * 1024; // 5MB
+  const MAX_ROWS = 2000;
+
   const ab = await file.arrayBuffer();
-  const u8 = new Uint8Array(ab);
+  if (ab.byteLength > MAX_BYTES) {
+    throw new Error("File too large. Please upload an XLSX under 5MB.");
+  }
 
-  // Read workbook from Uint8Array (no Buffer typing issues)
-  const wb = XLSX.read(u8, { type: "array" });
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(ab);
 
-  // Prefer sheet "Products", else first sheet
-  const sheetName = wb.SheetNames.includes("Products") ? "Products" : wb.SheetNames[0];
-  if (!sheetName) return [];
+  // Prefer sheet called "Products", else first worksheet
+  const ws =
+    wb.getWorksheet("Products") ??
+    wb.worksheets?.[0];
 
-  const ws = wb.Sheets[sheetName];
   if (!ws) return [];
 
-  // Convert sheet to JSON rows
-  // defval: "" ensures empty cells show as empty strings (so schema transforms work)
-  const json = XLSX.utils.sheet_to_json<Record<string, any>>(ws, {
-    defval: "",
-    raw: false,
+  // Row 1: headers
+  const headerRow = ws.getRow(1);
+  const headers: string[] = [];
+
+  headerRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+    const h = String(cell.value ?? "").trim();
+    headers[colNumber] = h; // 1-based indexing
   });
 
-  // Your template row 2 is "hints", so if the user uploads the template untouched,
-  // it'll appear as a row. We should remove it by detecting that row has "Optional;" etc.
-  // But easiest: since sheet_to_json starts at first row with headers automatically,
-  // it will treat row1 as headers and row2 as first data row.
-  // We want to skip row2 hints if present:
-  const rows = json.filter((r) => {
-    // if product_name looks like a hint row, skip it
-    const pn = String(r.product_name || "").toLowerCase();
-    const su = String(r.source_url || "").toLowerCase();
-    return !(pn.includes("optional") || su.includes("required"));
-  });
+  // No headers? bail
+  if (!headers.some(Boolean)) return [];
 
-  // Ensure keys are trimmed (Excel headers sometimes contain trailing spaces)
-  return rows.map((r) => {
-    const out: Record<string, string> = {};
-    for (const [k, v] of Object.entries(r)) {
-      out[String(k).trim()] = String(v ?? "").trim();
+  const rows: Record<string, string>[] = [];
+
+  // Data begins at row 3 (because row 2 is hints in your template)
+  // If a brand uploads a non-template xlsx with no hints row, row 2 will be real data.
+  // We'll detect and skip hint-like rows anyway.
+  for (let r = 2; r <= ws.rowCount; r++) {
+    if (rows.length >= MAX_ROWS) break;
+
+    const row = ws.getRow(r);
+    // skip fully empty rows
+    if (!row.hasValues) continue;
+
+    const obj: Record<string, string> = {};
+
+    for (let c = 1; c < headers.length; c++) {
+      const key = headers[c];
+      if (!key) continue;
+
+      const cell = row.getCell(c);
+
+      // Convert value safely
+      let value = "";
+      const v: any = cell.value;
+
+      if (v == null) value = "";
+      else if (typeof v === "object" && "text" in v) value = String((v as any).text ?? "");
+      else if (typeof v === "object" && "result" in v) value = String((v as any).result ?? "");
+      else value = String(v);
+
+      obj[key.trim()] = value.trim();
     }
-    return out;
-  });
+
+    // Detect your template hint row (Row 2)
+    const pn = String(obj["product_name"] ?? "").toLowerCase();
+    const su = String(obj["source_url"] ?? "").toLowerCase();
+    const pt = String(obj["productType"] ?? "").toLowerCase();
+
+    const looksLikeHintRow =
+      pn.includes("optional") ||
+      su.includes("required") ||
+      pt.includes("dropdown");
+
+    // If it’s a hint row, skip it
+    if (looksLikeHintRow) continue;
+
+    rows.push(obj);
+  }
+
+  return rows;
 }
+
 
 
 

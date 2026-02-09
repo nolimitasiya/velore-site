@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
+import { ProductStatus } from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,18 +14,26 @@ export async function POST(
 ) {
   try {
     await requireAdminSession();
-
     const { id } = await context.params;
-
-    if (!id) {
-      return NextResponse.json(
-        { ok: false, error: "Missing product id" },
-        { status: 400 }
-      );
-    }
 
     const body = await req.json().catch(() => ({}));
     const published = Boolean(body.published);
+
+    const existing = await prisma.product.findUnique({
+      where: { id },
+      select: { id: true, status: true },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+    }
+
+    if (published && existing.status !== ProductStatus.APPROVED) {
+      return NextResponse.json(
+        { ok: false, error: "You can only publish APPROVED products." },
+        { status: 400 }
+      );
+    }
 
     const product = await prisma.product.update({
       where: { id },

@@ -46,6 +46,10 @@ export async function GET(req: Request) {
         publishedAt: true,
         createdAt: true,
         updatedAt: true,
+         status: true,
+        submittedAt: true,
+        reviewNote: true,
+        lastApprovedAt: true,
         brand: { select: { name: true, slug: true } },
       },
     });

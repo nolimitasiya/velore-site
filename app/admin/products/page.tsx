@@ -3,11 +3,9 @@
 // app/admin/products/page.tsx
 export const dynamic = "force-dynamic";
 
-
 const ADMIN_TOKEN = process.env.NEXT_PUBLIC_ADMIN_IMPORT_TOKEN ?? "";
 
-
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AdminTable } from "@/components/admin/AdminTable";
 import {
   formatDateTime,
@@ -18,6 +16,9 @@ import {
 import { formatMoney } from "@/lib/formatMoney";
 
 type BrandOption = { slug: string; name: string };
+
+type Status = "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "NEEDS_CHANGES" | "REJECTED";
+type ReviewAction = "approve" | "needs_changes" | "reject";
 
 type ProductRow = {
   id: string;
@@ -30,7 +31,27 @@ type ProductRow = {
   createdAt: string;
   updatedAt: string;
   brand: { name: string; slug: string };
+
+  status: Status;
+  submittedAt: string | null;
+  reviewNote: string | null;
+  lastApprovedAt: string | null;
 };
+
+function statusPill(status: Status) {
+  switch (status) {
+    case "APPROVED":
+      return "bg-emerald-50 text-emerald-800 border-emerald-200";
+    case "PENDING_REVIEW":
+      return "bg-yellow-50 text-yellow-800 border-yellow-200";
+    case "NEEDS_CHANGES":
+      return "bg-orange-50 text-orange-800 border-orange-200";
+    case "REJECTED":
+      return "bg-red-50 text-red-700 border-red-200";
+    default:
+      return "bg-black/5 text-black/70 border-black/10";
+  }
+}
 
 export default function AdminProductsPage() {
   const [rows, setRows] = useState<ProductRow[]>([]);
@@ -45,6 +66,9 @@ export default function AdminProductsPage() {
   const [active, setActive] = useState<"all" | "true" | "false">("all");
   const [brand, setBrand] = useState("all");
 
+  // Inline review UI state
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState<Record<string, string>>({}); // per-product textarea
 
   useEffect(() => {
     setLocale(getUserLocale());
@@ -61,13 +85,9 @@ export default function AdminProductsPage() {
     if (brand !== "all") queryParams.set("brand", brand);
 
     const r = await fetch(`/api/admin/products?${queryParams.toString()}`);
+    const j = await r.json().catch(() => ({}));
 
-
-    const j = await r.json();
-
-
-
-    if (!r.ok) {
+    if (!r.ok || !j.ok) {
       setError(j?.error ?? "Failed to load products");
       setBusy(false);
       return;
@@ -75,72 +95,107 @@ export default function AdminProductsPage() {
 
     setRows(j.products ?? []);
     setBrands(j.brands ?? []);
+
+    // Initialize note drafts with existing notes (so admin can edit quickly)
+    const init: Record<string, string> = {};
+    for (const p of (j.products ?? []) as ProductRow[]) {
+      init[p.id] = p.reviewNote ?? "";
+    }
+    setNoteDraft(init);
+
     setBusy(false);
   }
 
-async function setProductPublished(id: string, published: boolean) {
-  setBusy(true);
-  setError(null);
+  async function setProductPublished(id: string, published: boolean) {
+    setBusy(true);
+    setError(null);
 
-  const r = await fetch(`/api/admin/products/${id}/publish`, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({ published }),
-});
+    const r = await fetch(`/api/admin/products/${id}/publish`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ published }),
+    });
 
+    const j = await r.json().catch(() => ({}));
 
-  const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.ok) {
+      setError(j?.error ?? `Failed to update publish status (${r.status})`);
+      setBusy(false);
+      return;
+    }
 
-  if (!r.ok || !j.ok) {
-    setError(j?.error ?? `Failed to update publish status (${r.status})`);
+    setRows((prev) =>
+      prev.map((p) =>
+        p.id === id ? { ...p, publishedAt: j.product.publishedAt } : p
+      )
+    );
+
     setBusy(false);
-    return;
   }
 
-  // ✅ update just that row instantly
-  setRows((prev) =>
-    prev.map((p) =>
-      p.id === id ? { ...p, publishedAt: j.product.publishedAt } : p
-    )
-  );
+  async function setProductActive(id: string, isActive: boolean) {
+    setBusy(true);
+    setError(null);
 
-  setBusy(false);
-}
+    const r = await fetch(`/api/admin/products/${id}/active`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isActive }),
+    });
 
-async function setProductActive(id: string, isActive: boolean) {
-  setBusy(true);
-  setError(null);
+    const j = await r.json().catch(() => ({}));
 
-  const r = await fetch(`/api/admin/products/${id}/active`, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({ isActive }),
-});
+    if (!r.ok || !j.ok) {
+      setError(j?.error ?? `Failed to update active status (${r.status})`);
+      setBusy(false);
+      return;
+    }
 
+    setRows((prev) =>
+      prev.map((p) =>
+        p.id === id ? { ...p, isActive: j.product.isActive } : p
+      )
+    );
 
-  const j = await r.json().catch(() => ({}));
-
-  if (!r.ok || !j.ok) {
-    setError(j?.error ?? `Failed to update active status (${r.status})`);
     setBusy(false);
-    return;
   }
 
-  // ✅ update just that row instantly
-  setRows((prev) =>
-    prev.map((p) =>
-      p.id === id ? { ...p, isActive: j.product.isActive } : p
-    )
-  );
+  async function reviewProduct(id: string, action: ReviewAction) {
+    setBusyId(id);
+    setError(null);
 
-  setBusy(false);
-}
+    const reviewNote = (noteDraft[id] ?? "").trim();
 
+    const r = await fetch(`/api/admin/products/${id}/review`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, reviewNote }),
+    });
 
+    const j = await r.json().catch(() => ({}));
+
+    if (!r.ok || !j.ok) {
+      setError(j?.error ?? `Failed to review (${r.status})`);
+      setBusyId(null);
+      return;
+    }
+
+    // Update row in-place (no full reload needed)
+    setRows((prev) =>
+      prev.map((p) =>
+        p.id === id
+          ? {
+              ...p,
+              status: j.product.status,
+              reviewNote: j.product.reviewNote ?? null,
+              lastApprovedAt: j.product.lastApprovedAt ?? p.lastApprovedAt,
+            }
+          : p
+      )
+    );
+
+    setBusyId(null);
+  }
 
   useEffect(() => {
     load();
@@ -149,10 +204,8 @@ async function setProductActive(id: string, isActive: boolean) {
 
   return (
     <main className="max-w-6xl mx-auto p-6 space-y-6">
-       <div className="flex items-center justify-between gap-3">
-
+      <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Products</h1>
-         
       </div>
 
       <div className="rounded-2xl border p-4 flex flex-wrap gap-2 items-center">
@@ -229,6 +282,25 @@ async function setProductActive(id: string, isActive: boolean) {
               <div className="leading-tight">
                 <div className="font-medium">{p.title}</div>
                 <div className="text-xs text-black/60">{p.slug}</div>
+
+                {/* Status pill */}
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className={`inline-flex rounded-full border px-3 py-1 text-xs ${statusPill(p.status)}`}>
+                    {p.status.replace("_", " ")}
+                  </span>
+
+                  {p.submittedAt && (
+                    <span className="text-xs text-black/60">
+                      Submitted {formatRelativeTime(p.submittedAt, locale)}
+                    </span>
+                  )}
+
+                  {p.lastApprovedAt && (
+                    <span className="text-xs text-black/60">
+                      Approved {formatRelativeTime(p.lastApprovedAt, locale)}
+                    </span>
+                  )}
+                </div>
               </div>
             ),
           },
@@ -252,36 +324,36 @@ async function setProductActive(id: string, isActive: boolean) {
           },
           {
             header: "Publish",
-            cell: (p) => (
-              <div className="flex items-center gap-2">
-                <span
-  className={`inline-flex rounded-full border px-3 py-1 text-xs ${
-    p.publishedAt
-      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-      : "bg-black/5 text-black/70 border-black/10"
-  }`}
->
-  {p.publishedAt ? "Published" : "Draft"}
-</span>
+            cell: (p) => {
+              const canPublish = p.status === "APPROVED";
+              const isPublished = Boolean(p.publishedAt);
 
+              return (
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-flex rounded-full border px-3 py-1 text-xs ${
+                      isPublished
+                        ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                        : "bg-black/5 text-black/70 border-black/10"
+                    }`}
+                  >
+                    {isPublished ? "Published" : "Draft"}
+                  </span>
 
-                <button
-                  className="rounded-lg border px-3 py-1 text-xs hover:bg-black/5 disabled:opacity-50"
-                  disabled={busy}
-                  onClick={() => {
-  console.log("CLICK publish id:", p.id);
-  setProductPublished(p.id, !p.publishedAt);
-}}
-
-                  //onClick={() => setProductPublished(p.id, !p.publishedAt)}
-                >
-                  {p.publishedAt ? "Unpublish" : "Publish"}
-                </button>
-              </div>
-            ),
+                  <button
+                    className="rounded-lg border px-3 py-1 text-xs hover:bg-black/5 disabled:opacity-50"
+                    disabled={busy || (!canPublish && !isPublished)} // allow unpublish anytime
+                    onClick={() => setProductPublished(p.id, !isPublished)}
+                    title={!canPublish && !isPublished ? "Approve the product before publishing" : ""}
+                  >
+                    {isPublished ? "Unpublish" : "Publish"}
+                  </button>
+                </div>
+              );
+            },
           },
           {
-            header: "Status",
+            header: "Active",
             cell: (p) => (
               <div className="flex items-center gap-2">
                 <span
@@ -303,6 +375,63 @@ async function setProductActive(id: string, isActive: boolean) {
                 </button>
               </div>
             ),
+          },
+          {
+            header: "Review",
+            cell: (p) => {
+              const disabled = busyId === p.id || busy;
+              const note = noteDraft[p.id] ?? "";
+
+              return (
+                <div className="min-w-[280px] space-y-2">
+                  <textarea
+                    value={note}
+                    onChange={(e) =>
+                      setNoteDraft((prev) => ({ ...prev, [p.id]: e.target.value }))
+                    }
+                    placeholder="Review note (required for Needs changes / Reject)"
+                    className="w-full rounded-lg border px-3 py-2 text-xs"
+                    rows={3}
+                  />
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      disabled={disabled}
+                      onClick={() => reviewProduct(p.id, "approve")}
+                      className="rounded-lg border px-3 py-1.5 text-xs hover:bg-black/5 disabled:opacity-50"
+                      title="Approve product (brand can be published after)"
+                    >
+                      {busyId === p.id ? "…" : "Approve"}
+                    </button>
+
+                    <button
+                      disabled={disabled}
+                      onClick={() => reviewProduct(p.id, "needs_changes")}
+                      className="rounded-lg border px-3 py-1.5 text-xs hover:bg-black/5 disabled:opacity-50"
+                      title="Send back to brand with note"
+                    >
+                      Needs changes
+                    </button>
+
+                    <button
+                      disabled={disabled}
+                      onClick={() => reviewProduct(p.id, "reject")}
+                      className="rounded-lg border px-3 py-1.5 text-xs hover:bg-black/5 disabled:opacity-50"
+                      title="Reject product with note"
+                    >
+                      Reject
+                    </button>
+                  </div>
+
+                  {p.reviewNote && (p.status === "NEEDS_CHANGES" || p.status === "REJECTED") && (
+                    <div className="rounded-lg border border-black/10 bg-black/5 p-2 text-xs text-black/80">
+                      <div className="font-medium mb-1">Last note sent</div>
+                      <div className="line-clamp-3">{p.reviewNote}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            },
           },
         ]}
       />
