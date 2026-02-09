@@ -31,7 +31,19 @@ export async function GET(req: Request) {
         OR: [
           { title: { contains: q, mode: "insensitive" } },
           { brand: { name: { contains: q, mode: "insensitive" } } },
-          { tags: { has: q.toLowerCase() } },
+          {
+  productTags: {
+    some: {
+      tag: {
+        slug: {
+          contains: q.toLowerCase(),
+          mode: "insensitive",
+        },
+      },
+    },
+  },
+},
+
         ],
       }),
 

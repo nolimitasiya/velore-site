@@ -8,9 +8,6 @@ import { Prisma } from "@prisma/client";
 import { requireBrandContext } from "@/lib/auth/BrandSession";
 import { Buffer as NodeBuffer } from "node:buffer";
 
-
-
-
 export const runtime = "nodejs";
 
 const ProductTypeEnum = z.enum(["ABAYA", "DRESS", "SKIRT", "TOP", "HIJAB"]);
@@ -155,10 +152,7 @@ async function parseXlsxToRows(file: File): Promise<Record<string, string>[]> {
   await wb.xlsx.load(ab);
 
   // Prefer sheet called "Products", else first worksheet
-  const ws =
-    wb.getWorksheet("Products") ??
-    wb.worksheets?.[0];
-
+  const ws = wb.getWorksheet("Products") ?? wb.worksheets?.[0];
   if (!ws) return [];
 
   // Row 1: headers
@@ -170,19 +164,14 @@ async function parseXlsxToRows(file: File): Promise<Record<string, string>[]> {
     headers[colNumber] = h; // 1-based indexing
   });
 
-  // No headers? bail
   if (!headers.some(Boolean)) return [];
 
   const rows: Record<string, string>[] = [];
 
-  // Data begins at row 3 (because row 2 is hints in your template)
-  // If a brand uploads a non-template xlsx with no hints row, row 2 will be real data.
-  // We'll detect and skip hint-like rows anyway.
   for (let r = 2; r <= ws.rowCount; r++) {
     if (rows.length >= MAX_ROWS) break;
 
     const row = ws.getRow(r);
-    // skip fully empty rows
     if (!row.hasValues) continue;
 
     const obj: Record<string, string> = {};
@@ -193,7 +182,6 @@ async function parseXlsxToRows(file: File): Promise<Record<string, string>[]> {
 
       const cell = row.getCell(c);
 
-      // Convert value safely
       let value = "";
       const v: any = cell.value;
 
@@ -210,12 +198,7 @@ async function parseXlsxToRows(file: File): Promise<Record<string, string>[]> {
     const su = String(obj["source_url"] ?? "").toLowerCase();
     const pt = String(obj["productType"] ?? "").toLowerCase();
 
-    const looksLikeHintRow =
-      pn.includes("optional") ||
-      su.includes("required") ||
-      pt.includes("dropdown");
-
-    // If it’s a hint row, skip it
+    const looksLikeHintRow = pn.includes("optional") || su.includes("required") || pt.includes("dropdown");
     if (looksLikeHintRow) continue;
 
     rows.push(obj);
@@ -223,9 +206,6 @@ async function parseXlsxToRows(file: File): Promise<Record<string, string>[]> {
 
   return rows;
 }
-
-
-
 
 async function parseCsvToRows(text: string): Promise<Record<string, string>[]> {
   const parsed = Papa.parse<Record<string, string>>(text, {
@@ -269,8 +249,7 @@ export async function POST(req: Request) {
         return NextResponse.json(
           {
             ok: false,
-            error:
-              "brand_slug/brand_name are not allowed in Brand imports. Use the Brand template.",
+            error: "brand_slug/brand_name are not allowed in Brand imports. Use the Brand template.",
           },
           { status: 400 }
         );
@@ -283,11 +262,7 @@ export async function POST(req: Request) {
     let deactivatedCount = 0;
     if (syncMissing && rows.length) {
       const csvSourceUrls = Array.from(
-        new Set(
-          rows
-            .map((r) => normalizeUrl(r.source_url || r.product_url || ""))
-            .filter(Boolean)
-        )
+        new Set(rows.map((r) => normalizeUrl(r.source_url || r.product_url || "")).filter(Boolean))
       );
 
       const res = await prisma.product.updateMany({
@@ -318,7 +293,7 @@ export async function POST(req: Request) {
       const safe = RowSchema.safeParse(raw);
       if (!safe.success) {
         results.rowErrors.push({
-          row: i + 2, // aligns with CSV rows; XLSX data starts at row 3 but this is "row index" not Excel row
+          row: i + 2,
           error: safe.error.issues[0]?.message ?? safe.error.message,
         });
         continue;
@@ -326,7 +301,7 @@ export async function POST(req: Request) {
 
       const r = safe.data;
 
-      const sourceUrl = r.source_url || r.product_url;
+      const sourceUrl = normalizeUrl(r.source_url || r.product_url || "");
       if (!sourceUrl) {
         results.rowErrors.push({ row: i + 2, error: "Missing source_url (or product_url)" });
         continue;
@@ -336,7 +311,7 @@ export async function POST(req: Request) {
 
       // Tags: prefer tag_1..tag_5, fallback to tags comma-list
       const tagCols = [r.tag_1, r.tag_2, r.tag_3, r.tag_4, r.tag_5].filter(Boolean);
-      const tags =
+      const tagSlugs =
         tagCols.length > 0
           ? Array.from(new Set(tagCols.map(slugify))).filter(Boolean)
           : parseCommaList(r.tags).map(slugify);
@@ -382,6 +357,7 @@ export async function POST(req: Request) {
               return Math.max(0, Math.floor(n));
             })();
 
+      // Upsert category / occasion / material (ids for join tables)
       const categoryId = r.category_slug
         ? (
             await prisma.category.upsert({
@@ -415,69 +391,101 @@ export async function POST(req: Request) {
           ).id
         : null;
 
+      // existed? (for counters)
       const existed = await prisma.product.findUnique({
         where: { brandId_sourceUrl: { brandId, sourceUrl } },
         select: { id: true },
       });
 
-      const product = await prisma.product.upsert({
-        where: { brandId_sourceUrl: { brandId, sourceUrl } },
-        update: {
-          title: r.product_name,
-          slug: productSlug,
-          sourceUrl,
-          affiliateUrl: r.affiliate_url ?? undefined,
-          price: price ?? undefined,
-          currency: r.currency as any,
-          colour: r.colour ?? undefined,
-          stock: stock ?? undefined,
-          shippingRegion: r.shipping_region ?? undefined,
-          tags,
-          badges: badges as any,
-          note: r.note ?? undefined,
-          categoryId: categoryId ?? undefined,
-          occasionId: occasionId ?? undefined,
-          materialId: materialId ?? undefined,
-          isActive: true,
-
-          // ✅ enum stored correctly
-          productType: r.productType,
-        },
-        create: {
-          brandId,
-          title: r.product_name,
-          slug: productSlug,
-          sourceUrl,
-          affiliateUrl: r.affiliate_url ?? undefined,
-          price: price ?? undefined,
-          currency: r.currency as any,
-          colour: r.colour ?? undefined,
-          stock: stock ?? undefined,
-          shippingRegion: r.shipping_region ?? undefined,
-          tags,
-          badges: badges as any,
-          note: r.note ?? undefined,
-          categoryId: categoryId ?? undefined,
-          occasionId: occasionId ?? undefined,
-          materialId: materialId ?? undefined,
-          isActive: true,
-
-          // ✅ enum stored correctly
-          productType: r.productType,
-        },
-        select: { id: true },
-      });
-
-      const imageUrls = [r.image_url_1, r.image_url_2, r.image_url_3, r.image_url_4].filter(
-        (u): u is string => !!u
-      );
-
-      await prisma.productImage.deleteMany({ where: { productId: product.id } });
-      if (imageUrls.length) {
-        await prisma.productImage.createMany({
-          data: imageUrls.map((url, idx) => ({ productId: product.id, url, sortOrder: idx })),
+      // ✅ One transaction per row: product + joins + images
+      const product = await prisma.$transaction(async (tx) => {
+        // 1) Upsert product (NO tags / occasionId / materialId fields)
+        const p = await tx.product.upsert({
+          where: { brandId_sourceUrl: { brandId, sourceUrl } },
+          update: {
+            title: r.product_name,
+            slug: productSlug,
+            sourceUrl,
+            affiliateUrl: r.affiliate_url ?? undefined,
+            price: price ?? undefined,
+            currency: r.currency as any,
+            colour: r.colour ?? undefined,
+            stock: stock ?? undefined,
+            badges: badges as any,
+            note: r.note ?? undefined,
+            categoryId: categoryId ?? undefined,
+            isActive: true,
+            productType: r.productType,
+          },
+          create: {
+            brandId,
+            title: r.product_name,
+            slug: productSlug,
+            sourceUrl,
+            affiliateUrl: r.affiliate_url ?? undefined,
+            price: price ?? undefined,
+            currency: r.currency as any,
+            colour: r.colour ?? undefined,
+            stock: stock ?? undefined,
+            badges: badges as any,
+            note: r.note ?? undefined,
+            categoryId: categoryId ?? undefined,
+            isActive: true,
+            productType: r.productType,
+          },
+          select: { id: true },
         });
-      }
+
+        // 2) TAGS: Tag + ProductTag (replace)
+        await tx.productTag.deleteMany({ where: { productId: p.id } });
+        if (tagSlugs.length) {
+          const tagRows = await Promise.all(
+            tagSlugs.map((slug) =>
+              tx.tag.upsert({
+                where: { slug },
+                update: {},
+                create: { slug, name: prettyNameFromSlug(slug) },
+                select: { id: true },
+              })
+            )
+          );
+
+          await tx.productTag.createMany({
+            data: tagRows.map((t) => ({ productId: p.id, tagId: t.id })),
+            skipDuplicates: true,
+          });
+        }
+
+        // 3) OCCASION: ProductOccasion (replace)
+        await tx.productOccasion.deleteMany({ where: { productId: p.id } });
+        if (occasionId) {
+          await tx.productOccasion.create({
+            data: { productId: p.id, occasionId },
+          });
+        }
+
+        // 4) MATERIAL: ProductMaterial (replace)
+        await tx.productMaterial.deleteMany({ where: { productId: p.id } });
+        if (materialId) {
+          await tx.productMaterial.create({
+            data: { productId: p.id, materialId },
+          });
+        }
+
+        // 5) IMAGES: replace
+        const imageUrls = [r.image_url_1, r.image_url_2, r.image_url_3, r.image_url_4].filter(
+          (u): u is string => !!u
+        );
+
+        await tx.productImage.deleteMany({ where: { productId: p.id } });
+        if (imageUrls.length) {
+          await tx.productImage.createMany({
+            data: imageUrls.map((url, idx) => ({ productId: p.id, url, sortOrder: idx })),
+          });
+        }
+
+        return p;
+      });
 
       if (existed) results.updatedProducts += 1;
       else results.createdProducts += 1;
@@ -485,9 +493,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, results });
   } catch (e: any) {
-    return NextResponse.json(
-      { ok: false, error: e?.message ?? "Unknown error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: false, error: e?.message ?? "Unknown error" }, { status: 500 });
   }
 }

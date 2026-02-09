@@ -58,7 +58,6 @@ const RowSchema = z.object({
 
   colour: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
   stock: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
-  shipping_region: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
   affiliate_url: z.string().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
 
 });
@@ -85,6 +84,13 @@ function parseCommaList(s: string) {
     .map((x) => x.trim())
     .filter(Boolean);
 }
+function parseTags(raw: string) {
+  const names = parseCommaList(raw);          // ["Summer Maxi", "Linen"]
+  const slugs = names.map(slugify).filter(Boolean); // ["summer_maxi", "linen"]
+  // keep aligned
+  return slugs.map((slug, idx) => ({ slug, name: names[idx] || slug }));
+}
+
 
 export async function POST(req: Request) {
   let jobId: string | null = null;
@@ -211,7 +217,7 @@ if (syncMissing && brandSlugForSync) {
       const productSlug = slugify(r.product_slug);
 
       // tags
-      const tags = parseCommaList(r.tags).map(slugify);
+     const tags = parseTags(r.tags); // [{slug, name}, ...]
 
 
       
@@ -313,55 +319,82 @@ if (!sourceUrl) {
   results.rowErrors.push({ row: i + 2, error: "Missing product_url (required for import)" });
   continue;
 }
-
 const existed = await prisma.product.findUnique({
   where: { brandId_sourceUrl: { brandId: brand.id, sourceUrl } },
   select: { id: true },
 });
 
-const product = await prisma.product.upsert({
-  where: { brandId_sourceUrl: { brandId: brand.id, sourceUrl } },
-  update: {
-    brandId: brand.id,
-    title: r.product_name,
-    slug: productSlug,
-    sourceUrl,
-    affiliateUrl: r.affiliate_url ?? undefined,
-    price: price ?? undefined,
-    currency: r.currency as any,
-    colour: r.colour ?? undefined,
-    stock: stock ?? undefined,
-    shippingRegion: r.shipping_region ?? undefined,
-    tags,
-    badges: badges as any,
-    note: r.note ?? undefined,
-    categoryId: categoryId ?? undefined,
-    occasionId: occasionId ?? undefined,
-    materialId: materialId ?? undefined,
-    isActive: true,
-  },
-  create: {
-    brandId: brand.id,
-    title: r.product_name,
-    slug: productSlug,
-    sourceUrl,
-    affiliateUrl: r.affiliate_url ?? undefined,
-    price: price ?? undefined,
-    currency: r.currency as any,
-    productType: (r.product_type as ProductType) ?? ProductType.ABAYA,
-    colour: r.colour ?? undefined,
-    stock: stock ?? undefined,
-    shippingRegion: r.shipping_region ?? undefined,
-    tags,
-    badges: badges as any,
-    note: r.note ?? undefined,
-    categoryId: categoryId ?? undefined,
-    occasionId: occasionId ?? undefined,
-    materialId: materialId ?? undefined,
-    isActive: true,
-  },
-  select: { id: true },
+const product = await prisma.$transaction(async (tx) => {
+  // 1) Upsert product (NO tags field!)
+  const p = await tx.product.upsert({
+    where: { brandId_sourceUrl: { brandId: brand.id, sourceUrl } },
+    update: {
+      brandId: brand.id,
+      title: r.product_name,
+      slug: productSlug,
+      sourceUrl,
+      affiliateUrl: r.affiliate_url ?? undefined,
+      price: price ?? undefined,
+      currency: r.currency as any,
+      colour: r.colour ?? undefined,
+      stock: stock ?? undefined,
+      badges: badges as any,
+      note: r.note ?? undefined,
+      categoryId: categoryId ?? undefined,
+      isActive: true,
+      // IMPORTANT: you currently try to set occasion/material on Product
+      // but your schema uses join tables (productOccasions/productMaterials).
+      // So remove these lines or you'll get the next TS error:
+      // occasionId: occasionId ?? undefined,
+      // materialId: materialId ?? undefined,
+    },
+    create: {
+      brandId: brand.id,
+      title: r.product_name,
+      slug: productSlug,
+      sourceUrl,
+      affiliateUrl: r.affiliate_url ?? undefined,
+      price: price ?? undefined,
+      currency: r.currency as any,
+      productType: (r.product_type as ProductType) ?? ProductType.ABAYA,
+      colour: r.colour ?? undefined,
+      stock: stock ?? undefined,
+      badges: badges as any,
+      note: r.note ?? undefined,
+      categoryId: categoryId ?? undefined,
+      isActive: true,
+      // same note: remove occasionId/materialId if they don't exist on Product
+    },
+    select: { id: true },
+  });
+
+  // 2) Upsert tags and replace ProductTag links
+  if (tags.length) {
+    const tagRows = await Promise.all(
+      tags.map((t) =>
+        tx.tag.upsert({
+          where: { slug: t.slug },
+          update: { name: t.name },
+          create: { slug: t.slug, name: t.name },
+          select: { id: true },
+        })
+      )
+    );
+
+    // replace links
+    await tx.productTag.deleteMany({ where: { productId: p.id } });
+    await tx.productTag.createMany({
+      data: tagRows.map((t) => ({ productId: p.id, tagId: t.id })),
+      skipDuplicates: true,
+    });
+  } else {
+    // no tags provided -> clear existing links (optional, but usually desired for "sync")
+    await tx.productTag.deleteMany({ where: { productId: p.id } });
+  }
+
+  return p;
 });
+
 
 if (existed) results.updatedProducts += 1;
 else results.createdProducts += 1;

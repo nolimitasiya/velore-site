@@ -3,6 +3,8 @@ import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireBrandContext } from "@/lib/auth/BrandSession";
 import { ProductStatus } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,13 +47,12 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
         publishedAt: true,
         worldwideShipping: true,
         badges: true,
-        tags: true,
         submittedAt: true,
         reviewNote: true,
         lastApprovedAt: true,
         images: { orderBy: { sortOrder: "asc" }, select: { url: true, sortOrder: true } },
         shippingCountries: { select: { countryCode: true } },
-        productTags: { select: { tag: { select: { id: true, slug: true, name: true } } } },
+        productTags : { select: { tag: { select: { id: true, slug: true, name: true } } } },
         productMaterials: { select: { material: { select: { id: true, slug: true, name: true } } } },
         productOccasions: { select: { occasion: { select: { id: true, slug: true, name: true } } } },
         category: { select: { id: true, slug: true, name: true } },
