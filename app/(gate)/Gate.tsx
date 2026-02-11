@@ -64,7 +64,7 @@ useEffect(() => {
   }
 
   return (
-    <main className="min-h-screen w-full bg-white flex items-center justify-center px-6">
+    <main className="min-h-screen w-full bg-white text-neutral-900 flex items-center justify-center px-6">
       <div
         className={[
           "w-full max-w-xl text-center transition-all duration-700 ease-out",
@@ -95,7 +95,7 @@ useEffect(() => {
 )}
 
 
-        <p className="mt-6 text-sm text-neutral-600">
+        <p className="mt-6 text-sm text-neutral-900">
           We’re launching soon{launchDate ? ` — ${launchDate}` : "."}
         </p>
 
@@ -166,3 +166,6 @@ useEffect(() => {
     </main>
   );
 }
+
+
+
