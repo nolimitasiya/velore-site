@@ -96,8 +96,15 @@ async function parseXlsxToRows(file: File): Promise<Record<string, string>[]> {
     // Skip hint row (your template row 2)
     const pn = String(obj["product_name"] ?? "").toLowerCase();
     const su = String(obj["source_url"] ?? "").toLowerCase();
+    const img = String(obj["image_url"] ?? obj["image_url_1"] ?? "").toLowerCase();
     const pt = String(obj["productType"] ?? "").toLowerCase();
-    const looksLikeHintRow = pn.includes("optional") || su.includes("required") || pt.includes("dropdown");
+    const looksLikeHintRow =
+    pn.includes("required") ||
+    su.includes("required") ||
+    img.includes("required") ||
+    pt.includes("dropdown") ||
+    pn.includes("optional");
+
     if (looksLikeHintRow) continue;
 
     rows.push(obj);
@@ -121,7 +128,24 @@ const RowSchema = z
   .object({
     product_slug: z.string().min(1, "product_slug is required"),
     product_name: z.string().min(1, "product_name is required"),
-    productType: ProductTypeEnum,
+
+    // ✅ productType OPTIONAL (simple template won't have it)
+    productType: z
+      .string()
+      .optional()
+      .or(z.literal(""))
+      .transform((v) => (v ? String(v).trim().toUpperCase() : ""))
+      .transform((pt) =>
+        pt === "SKIRTS" ? "SKIRT" :
+        pt === "ABAYAS" ? "ABAYA" :
+        pt === "TOPS" ? "TOP" :
+        pt === "HIJABS" ? "HIJAB" :
+        pt
+      )
+      .refine((v) => v === "" || ProductTypeEnum.safeParse(v).success, {
+        message: `productType must be one of ${ProductTypeEnum.options.join(", ")}`,
+      })
+      .transform((v) => (v ? (v as z.infer<typeof ProductTypeEnum>) : null)),
 
     // Prefer source_url, allow product_url legacy
     source_url: z
@@ -138,7 +162,11 @@ const RowSchema = z
 
     affiliate_url: z.string().trim().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
 
-    image_url_1: z.string().trim().min(1, "image_url_1 is required").url("image_url_1 must be a valid URL"),
+    // ✅ SIMPLE TEMPLATE SUPPORT
+    image_url: z.string().trim().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
+
+    // ✅ ADVANCED TEMPLATE SUPPORT
+    image_url_1: z.string().trim().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
     image_url_2: z.string().trim().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
     image_url_3: z.string().trim().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
     image_url_4: z.string().trim().url().optional().or(z.literal("")).transform((v) => (v ? v : null)),
@@ -159,6 +187,7 @@ const RowSchema = z
     shipping_region: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
   })
   .superRefine((r, ctx) => {
+    // ✅ require at least one URL for product page
     if (!r.source_url && !r.product_url) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -166,7 +195,18 @@ const RowSchema = z
         message: "Missing source_url (or product_url)",
       });
     }
+
+    // ✅ require at least one image url (simple or advanced)
+    const mainImage = r.image_url_1 || r.image_url;
+    if (!mainImage) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["image_url"],
+        message: "Missing image_url (or image_url_1)",
+      });
+    }
   });
+
 
 export async function POST(req: Request) {
   try {
@@ -258,7 +298,7 @@ export async function POST(req: Request) {
       }
 
       // warnings
-      const imageCount = [r.image_url_1, r.image_url_2, r.image_url_3, r.image_url_4].filter(Boolean).length;
+      const imageCount = [r.image_url, r.image_url_1, r.image_url_2, r.image_url_3, r.image_url_4].filter(Boolean).length;
       if (imageCount === 1) warnings.push({ row: i + 2, warning: "Only one image provided" });
       if (!r.stock) warnings.push({ row: i + 2, warning: "Stock not provided" });
       if (!r.tags) warnings.push({ row: i + 2, warning: "No tags provided" });
