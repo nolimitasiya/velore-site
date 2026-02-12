@@ -1,7 +1,7 @@
 // C:\Users\Asiya\projects\dalra\app\brand\(authed)\products\[id]\ProductEditClient.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import countries from "world-countries";
 
 type Status = "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "NEEDS_CHANGES" | "REJECTED";
@@ -66,10 +66,35 @@ function Chip({
   );
 }
 
+function snapshotForDirtyCheck(prod: Product) {
+  return JSON.stringify({
+    title: prod.title ?? "",
+    slug: prod.slug ?? "",
+    sourceUrl: prod.sourceUrl ?? "",
+    affiliateUrl: prod.affiliateUrl ?? "",
+    currency: prod.currency ?? "GBP",
+    price: prod.price ?? null,
+    colour: prod.colour ?? null,
+    stock: prod.stock ?? null,
+    note: prod.note ?? null,
+    productType: prod.productType ?? null,
+    worldwideShipping: !!prod.worldwideShipping,
+    shippingCountries: (prod.shippingCountries ?? []).map((x) => x.countryCode).sort(),
+    badges: Array.isArray(prod.badges) ? [...prod.badges].sort() : [],
+    images: Array.isArray(prod.images)
+      ? [...prod.images].sort((a, b) => a.sortOrder - b.sortOrder).map((x) => x.url)
+      : [],
+  });
+}
+
 export default function ProductEditClient({ id }: { id: string }) {
   const [p, setP] = useState<Product | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // ✅ “saved state” snapshot + tiny “Saved ✓” feedback
+  const savedRef = useRef<string>("");
+  const [justSaved, setJustSaved] = useState(false);
 
   const countryOptions = useMemo(() => {
     return countries
@@ -77,6 +102,16 @@ export default function ProductEditClient({ id }: { id: string }) {
       .filter((x) => x.code && x.name)
       .sort((a, b) => a.name.localeCompare(b.name));
   }, []);
+
+  const dirty = useMemo(() => {
+    if (!p) return false;
+    return snapshotForDirtyCheck(p) !== savedRef.current;
+  }, [p]);
+
+  const buyUrl = useMemo(() => {
+    if (!p) return "";
+    return (p.affiliateUrl?.trim() || p.sourceUrl?.trim() || "").trim();
+  }, [p]);
 
   async function load() {
     setError(null);
@@ -92,7 +127,7 @@ export default function ProductEditClient({ id }: { id: string }) {
     // normalize shippingCountries to codes list
     const shippingCountries = (prod.shippingCountries ?? []).map((x: any) => x.countryCode);
 
-    setP({
+    const nextP: Product = {
       id: prod.id,
       title: prod.title ?? "",
       slug: prod.slug ?? "",
@@ -110,7 +145,13 @@ export default function ProductEditClient({ id }: { id: string }) {
       badges: Array.isArray(prod.badges) ? prod.badges : [],
       images: Array.isArray(prod.images) ? prod.images : [],
       publishedAt: prod.publishedAt ?? null,
-    });
+    };
+
+    setP(nextP);
+
+    // ✅ after load, treat as “saved”
+    savedRef.current = snapshotForDirtyCheck(nextP);
+    setJustSaved(false);
   }
 
   useEffect(() => {
@@ -169,6 +210,10 @@ export default function ProductEditClient({ id }: { id: string }) {
       }
 
       await load();
+
+      // ✅ show “Saved ✓” briefly
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 1200);
     } finally {
       setSaving(false);
     }
@@ -184,17 +229,40 @@ export default function ProductEditClient({ id }: { id: string }) {
         <span className="text-xs rounded-full border px-3 py-1 bg-black/5 border-black/10">
           Status: {p.status.replace("_", " ")}
         </span>
+
         {p.publishedAt && (
           <span className="text-xs rounded-full border px-3 py-1 bg-emerald-50 text-emerald-800 border-emerald-200">
             Live
           </span>
         )}
+
+        {/* ✅ Buy button */}
+        {buyUrl && (
+          <a
+            href={buyUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="ml-auto rounded-lg border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/5"
+          >
+            Buy
+          </a>
+        )}
+
+        {/* ✅ Save button becomes grey when no changes */}
         <button
           onClick={saveDraft}
-          disabled={saving}
-          className="ml-auto rounded-lg bg-black px-4 py-2 text-white text-sm disabled:opacity-50"
+          disabled={saving || !dirty}
+          className={[
+            buyUrl ? "" : "ml-auto",
+            "rounded-lg px-4 py-2 text-sm transition",
+            saving
+              ? "bg-black text-white opacity-60"
+              : dirty
+              ? "bg-black text-white hover:opacity-90"
+              : "bg-neutral-200 text-neutral-600 cursor-not-allowed",
+          ].join(" ")}
         >
-          {saving ? "Saving..." : "Save draft"}
+          {saving ? "Saving..." : justSaved ? "Saved ✓" : dirty ? "Save draft" : "No changes"}
         </button>
       </div>
 
@@ -235,36 +303,37 @@ export default function ProductEditClient({ id }: { id: string }) {
           />
         </label>
       </div>
+
+      {/* ✅ Price + Currency */}
       <div className="grid gap-4 md:grid-cols-2">
-  <label className="space-y-1">
-    <div className="text-sm font-medium">Price</div>
-    <input
-      className="w-full rounded-lg border px-3 py-2 text-sm"
-      inputMode="decimal"
-      placeholder="e.g. 89.99"
-      value={p.price ?? ""}
-      onChange={(e) => {
-        const v = e.target.value;
-        setP({ ...p, price: v === "" ? null : v });
-      }}
-    />
-  </label>
+        <label className="space-y-1">
+          <div className="text-sm font-medium">Price</div>
+          <input
+            className="w-full rounded-lg border px-3 py-2 text-sm"
+            inputMode="decimal"
+            placeholder="e.g. 89.99"
+            value={p.price ?? ""}
+            onChange={(e) => {
+              const v = e.target.value;
+              setP({ ...p, price: v === "" ? null : v });
+            }}
+          />
+        </label>
 
-  <label className="space-y-1">
-    <div className="text-sm font-medium">Currency</div>
-    <select
-      className="w-full rounded-lg border px-3 py-2 text-sm bg-white"
-      value={p.currency ?? "GBP"}
-      onChange={(e) => setP({ ...p, currency: e.target.value })}
-    >
-      <option value="GBP">GBP</option>
-      <option value="EUR">EUR</option>
-      <option value="CHF">CHF</option>
-      <option value="USD">USD</option>
-    </select>
-  </label>
-</div>
-
+        <label className="space-y-1">
+          <div className="text-sm font-medium">Currency</div>
+          <select
+            className="w-full rounded-lg border px-3 py-2 text-sm bg-white"
+            value={p.currency ?? "GBP"}
+            onChange={(e) => setP({ ...p, currency: e.target.value })}
+          >
+            <option value="GBP">GBP</option>
+            <option value="EUR">EUR</option>
+            <option value="CHF">CHF</option>
+            <option value="USD">USD</option>
+          </select>
+        </label>
+      </div>
 
       {/* ✅ Product type (chips, single-select) */}
       <div className="rounded-2xl border p-4 space-y-3">
@@ -272,16 +341,11 @@ export default function ProductEditClient({ id }: { id: string }) {
 
         <div className="flex flex-wrap gap-2">
           {PRODUCT_TYPES.map((t) => (
-            <Chip
-              key={t}
-              active={p.productType === t}
-              onClick={() => setP({ ...p, productType: t })}
-            >
+            <Chip key={t} active={p.productType === t} onClick={() => setP({ ...p, productType: t })}>
               {t.toLowerCase()}
             </Chip>
           ))}
 
-          {/* optional clear */}
           <Chip active={p.productType === null} onClick={() => setP({ ...p, productType: null })}>
             clear
           </Chip>
