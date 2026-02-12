@@ -24,6 +24,11 @@ export default async function LiveHome() {
       title: true,
       price: true,
       currency: true,
+
+      // ✅ add these
+      affiliateUrl: true,
+      sourceUrl: true,
+
       images: {
         orderBy: { sortOrder: "asc" },
         take: 1,
@@ -33,12 +38,15 @@ export default async function LiveHome() {
   });
 
   const trendy: StorefrontProduct[] = products.map((p) => ({
-  id: p.id,
-  title: p.title,
-  imageUrl: p.images?.[0]?.url ?? null,
-  price: p.price ? p.price.toString() : null, // ✅ Decimal -> string
-  currency: p.currency, // ✅ Currency enum
-}));
+    id: p.id,
+    title: p.title,
+    imageUrl: p.images?.[0]?.url ?? null,
+    price: p.price ? p.price.toString() : null, // Decimal -> string
+    currency: p.currency, // Currency enum
+
+    // ✅ affiliate first, fallback to source
+    buyUrl: (p.affiliateUrl || p.sourceUrl || null) as string | null,
+  }));
 
   return (
     <main className="min-h-screen w-full bg-[#eee]">
