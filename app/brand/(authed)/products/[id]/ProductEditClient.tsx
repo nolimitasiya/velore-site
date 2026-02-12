@@ -157,7 +157,7 @@ export default function ProductEditClient({ id }: { id: string }) {
       };
 
       const r = await fetch(`/api/brand/products/${id}`, {
-        method: "POST",
+        method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -235,6 +235,36 @@ export default function ProductEditClient({ id }: { id: string }) {
           />
         </label>
       </div>
+      <div className="grid gap-4 md:grid-cols-2">
+  <label className="space-y-1">
+    <div className="text-sm font-medium">Price</div>
+    <input
+      className="w-full rounded-lg border px-3 py-2 text-sm"
+      inputMode="decimal"
+      placeholder="e.g. 89.99"
+      value={p.price ?? ""}
+      onChange={(e) => {
+        const v = e.target.value;
+        setP({ ...p, price: v === "" ? null : v });
+      }}
+    />
+  </label>
+
+  <label className="space-y-1">
+    <div className="text-sm font-medium">Currency</div>
+    <select
+      className="w-full rounded-lg border px-3 py-2 text-sm bg-white"
+      value={p.currency ?? "GBP"}
+      onChange={(e) => setP({ ...p, currency: e.target.value })}
+    >
+      <option value="GBP">GBP</option>
+      <option value="EUR">EUR</option>
+      <option value="CHF">CHF</option>
+      <option value="USD">USD</option>
+    </select>
+  </label>
+</div>
+
 
       {/* ✅ Product type (chips, single-select) */}
       <div className="rounded-2xl border p-4 space-y-3">
