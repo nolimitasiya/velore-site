@@ -15,7 +15,7 @@ type SocialPlatform =
   | "linkedin";
 
 const SOCIAL_OPTIONS: { label: string; value: SocialPlatform }[] = [
-  { label: "None", value: "none" },
+  { label: "Select a platform…", value: "none" },
   { label: "Instagram", value: "instagram" },
   { label: "TikTok", value: "tiktok" },
   { label: "Facebook", value: "facebook" },
@@ -24,6 +24,7 @@ const SOCIAL_OPTIONS: { label: string; value: SocialPlatform }[] = [
   { label: "X (Twitter)", value: "x" },
   { label: "LinkedIn", value: "linkedin" },
 ];
+
 
 type FormState = {
   firstName: string;
@@ -36,7 +37,7 @@ type FormState = {
   website: string;
   notes: string;
 
-  socialPlatform: SocialPlatform; // optional
+  socialPlatform: SocialPlatform; // required only if platform != none
   socialHandle: string;           // required only if platform != none
 };
 
@@ -60,19 +61,18 @@ export default function BrandApplyForm() {
 
   // All mandatory except social media
   const canSubmit = useMemo(() => {
-    const requiredOk =
-      form.firstName.trim().length > 0 &&
-      form.lastName.trim().length > 0 &&
-      form.email.trim().includes("@") &&
-      form.website.trim().length > 0 &&
-      form.notes.trim().length > 0 &&
-      form.phoneNumber.trim().length > 0;
+  return (
+    form.firstName.trim().length > 0 &&
+    form.lastName.trim().length > 0 &&
+    form.email.trim().includes("@") &&
+    form.website.trim().length > 0 &&
+    form.notes.trim().length > 0 &&
+    form.phoneNumber.trim().length > 0 &&
+    form.socialPlatform !== "none" &&
+    form.socialHandle.trim().length > 0
+  );
+}, [form]);
 
-    const socialOk =
-      form.socialPlatform === "none" || form.socialHandle.trim().length > 0;
-
-    return requiredOk && socialOk;
-  }, [form]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -222,6 +222,7 @@ export default function BrandApplyForm() {
         </label>
         <input
           id="website"
+          type="url"
           className={inputClass}
           value={form.website}
           onChange={(e) => setForm({ ...form, website: e.target.value })}
@@ -233,43 +234,44 @@ export default function BrandApplyForm() {
       {/* Social (optional dropdown + handle) */}
       <div>
         <label htmlFor="socialPlatform" className={labelClass}>
-  Social media (optional)
+  Social media *
 </label>
+
 
 
         <div className="mt-1 grid grid-cols-1 gap-3 md:grid-cols-[220px_1fr]">
           <select
-            id="socialPlatform"
-            className="rounded-xl border px-3 py-2"
-            value={form.socialPlatform}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                socialPlatform: e.target.value as SocialPlatform,
-                // clear handle if turning off
-                socialHandle:
-                  e.target.value === "none" ? "" : form.socialHandle,
-              })
-            }
-          >
-            {SOCIAL_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
+  id="socialPlatform"
+  className="rounded-xl border px-3 py-2"
+  value={form.socialPlatform}
+  required
+  onChange={(e) =>
+    setForm({
+      ...form,
+      socialPlatform: e.target.value as SocialPlatform,
+    })
+  }
+>
+  <option value="none" disabled>
+    Select a platform…
+  </option>
+  {SOCIAL_OPTIONS.filter(o => o.value !== "none").map((o) => (
+    <option key={o.value} value={o.value}>
+      {o.label}
+    </option>
+  ))}
+</select>
+
 
           <input
-            id="socialHandle"
-            className="rounded-xl border px-3 py-2"
-            value={form.socialHandle}
-            onChange={(e) =>
-              setForm({ ...form, socialHandle: e.target.value })
-            }
-            placeholder="Username or link"
-            disabled={form.socialPlatform === "none"}
-            required={form.socialPlatform !== "none"}
-          />
+  id="socialHandle"
+  className="rounded-xl border px-3 py-2"
+  value={form.socialHandle}
+  onChange={(e) => setForm({ ...form, socialHandle: e.target.value })}
+  placeholder="Username or link"
+  required
+/>
+
         </div>
       </div>
 

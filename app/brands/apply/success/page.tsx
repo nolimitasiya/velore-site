@@ -14,6 +14,7 @@ export default function Page() {
           Thank you for applying. We’ll carefully review your details and get
           back to you shortly with the next steps.
         </p>
+        
 
         {/* Back link */}
         <Link

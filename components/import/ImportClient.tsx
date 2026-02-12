@@ -59,7 +59,7 @@ export default function ImportClient({
   const common = [
     "product_slug",
     "product_name",
-    "product_url",
+    "source_url",
     "image_url_1",
     "image_url_2",
     "image_url_3",
@@ -91,7 +91,7 @@ export default function ImportClient({
             brand_name: "Veilora Club",
             product_slug: "abaya_satin_black",
             product_name: "Satin Abaya (Black)",
-            product_url: "https://brand.com/products/abaya",
+            source_url: "https://brand.com/products/abaya",
             image_url_1: "https://brand.com/img/1.jpg",
             image_url_2: "",
             image_url_3: "",
@@ -114,7 +114,7 @@ export default function ImportClient({
           {
             product_slug: "abaya_satin_black",
             product_name: "Satin Abaya (Black)",
-            product_url: "https://brand.com/products/abaya",
+            source_url: "https://brand.com/products/abaya",
             image_url_1: "https://brand.com/img/1.jpg",
             image_url_2: "",
             image_url_3: "",

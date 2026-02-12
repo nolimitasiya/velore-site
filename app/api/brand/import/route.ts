@@ -6,10 +6,15 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { requireBrandContext } from "@/lib/auth/BrandSession";
-import { Buffer as NodeBuffer } from "node:buffer";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
+// If your Product.productType is REQUIRED in Prisma, we must default it when missing.
+// Pick the least-wrong default and let them edit on the product page.
+const DEFAULT_PRODUCT_TYPE = "DRESS" as const;
+
+// Enums
 const ProductTypeEnum = z.enum(["ABAYA", "DRESS", "SKIRT", "TOP", "HIJAB"]);
 const CurrencyEnum = z.enum(["GBP", "EUR", "CHF", "USD"]);
 
@@ -28,62 +33,57 @@ const AllowedBadges = [
 
 const BadgeEnum = z.enum(AllowedBadges);
 
-// ✅ Accept XLSX template fields + CSV legacy fields
+// Reusable URL parser
+const Url = z
+  .string()
+  .trim()
+  .url()
+  .transform((v) => v.replace(/\/+$/, ""));
+
+// ✅ Accept BOTH templates:
+// - Simple: source_url + image_url
+// - Advanced: source_url + image_url_1..4 (+ optional extras)
+// Also accept legacy: product_url instead of source_url.
 const RowSchema = z.object({
-  product_slug: z.string().min(1),
-  product_name: z.string().min(1),
-  productType: ProductTypeEnum,
+  product_slug: z.string().min(1, "product_slug is required"),
+  product_name: z.string().min(1, "product_name is required"),
 
-  // Prefer source_url, allow product_url legacy
-  source_url: z
-    .string()
-    .trim()
-    .url()
-    .transform((v) => v.replace(/\/+$/, "")),
-  product_url: z
-    .string()
-    .trim()
-    .url()
-    .optional()
-    .or(z.literal(""))
-    .transform((v) => (v ? v.replace(/\/+$/, "") : null)),
+  // accept either source_url (new) or product_url (legacy)
+  source_url: Url.optional().or(z.literal("")).transform((v) => (v ? v : null)),
+  product_url: Url.optional().or(z.literal("")).transform((v) => (v ? v : null)),
 
-  affiliate_url: z
-    .string()
-    .trim()
-    .url()
-    .optional()
-    .or(z.literal(""))
-    .transform((v) => (v ? v : null)),
+  // accept either image_url (simple) or image_url_1..4 (advanced)
+  image_url: Url.optional().or(z.literal("")).transform((v) => (v ? v : null)),
+  image_url_1: Url.optional().or(z.literal("")).transform((v) => (v ? v : null)),
+  image_url_2: Url.optional().or(z.literal("")).transform((v) => (v ? v : null)),
+  image_url_3: Url.optional().or(z.literal("")).transform((v) => (v ? v : null)),
+  image_url_4: Url.optional().or(z.literal("")).transform((v) => (v ? v : null)),
 
-  image_url_1: z.string().trim().url(),
-  image_url_2: z
+  // Optional extras (advanced)
+  affiliate_url: Url.optional().or(z.literal("")).transform((v) => (v ? v : null)),
+
+  productType: z
     .string()
-    .trim()
-    .url()
     .optional()
     .or(z.literal(""))
-    .transform((v) => (v ? v : null)),
-  image_url_3: z
-    .string()
-    .trim()
-    .url()
-    .optional()
-    .or(z.literal(""))
-    .transform((v) => (v ? v : null)),
-  image_url_4: z
-    .string()
-    .trim()
-    .url()
-    .optional()
-    .or(z.literal(""))
-    .transform((v) => (v ? v : null)),
+    .transform((v) => (v ? String(v).trim().toUpperCase() : ""))
+    .transform((pt) =>
+      pt === "SKIRTS" ? "SKIRT" :
+      pt === "ABAYAS" ? "ABAYA" :
+      pt === "TOPS" ? "TOP" :
+      pt === "HIJABS" ? "HIJAB" :
+      pt
+    )
+    .refine((v) => v === "" || (ProductTypeEnum.safeParse(v).success), {
+      message: `productType must be one of ${ProductTypeEnum.options.join(", ")}`,
+    })
+    .transform((v) => (v ? (v as z.infer<typeof ProductTypeEnum>) : null)),
 
   category_slug: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
   occasion_slug: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
   material_slug: z.string().optional().or(z.literal("")).transform((v) => (v ? v : null)),
 
-  // NEW: controlled dropdown columns (optional)
+  // Prefer controlled columns; also allow legacy comma fields
   badge_1: z.string().optional().or(z.literal("")).transform((v) => (v ? v : "")),
   badge_2: z.string().optional().or(z.literal("")).transform((v) => (v ? v : "")),
   badge_3: z.string().optional().or(z.literal("")).transform((v) => (v ? v : "")),
@@ -94,7 +94,6 @@ const RowSchema = z.object({
   tag_4: z.string().optional().or(z.literal("")).transform((v) => (v ? v : "")),
   tag_5: z.string().optional().or(z.literal("")).transform((v) => (v ? v : "")),
 
-  // Legacy: comma-separated tags/badges (optional)
   tags: z.string().optional().or(z.literal("")).transform((v) => (v ? v : "")),
   badges: z.string().optional().or(z.literal("")).transform((v) => (v ? v : "")),
 
@@ -122,13 +121,13 @@ function prettyNameFromSlug(s: string) {
 }
 
 function parseCommaList(s: string) {
-  return s
+  return String(s || "")
     .split(",")
     .map((x) => x.trim())
     .filter(Boolean);
 }
 
-function normalizeUrl(v: string) {
+function normalizeUrl(v: string | null | undefined) {
   return String(v || "").trim().replace(/\/+$/, "");
 }
 
@@ -139,52 +138,41 @@ function isProbablyXlsx(file: File) {
 }
 
 async function parseXlsxToRows(file: File): Promise<Record<string, string>[]> {
-  // Safety limits (tweak as you like)
   const MAX_BYTES = 5 * 1024 * 1024; // 5MB
   const MAX_ROWS = 2000;
 
   const ab = await file.arrayBuffer();
-  if (ab.byteLength > MAX_BYTES) {
-    throw new Error("File too large. Please upload an XLSX under 5MB.");
-  }
+  if (ab.byteLength > MAX_BYTES) throw new Error("File too large. Please upload an XLSX under 5MB.");
 
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(ab);
 
-  // Prefer sheet called "Products", else first worksheet
   const ws = wb.getWorksheet("Products") ?? wb.worksheets?.[0];
   if (!ws) return [];
 
-  // Row 1: headers
   const headerRow = ws.getRow(1);
   const headers: string[] = [];
-
   headerRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-    const h = String(cell.value ?? "").trim();
-    headers[colNumber] = h; // 1-based indexing
+    headers[colNumber] = String(cell.value ?? "").trim();
   });
-
   if (!headers.some(Boolean)) return [];
 
   const rows: Record<string, string>[] = [];
 
   for (let r = 2; r <= ws.rowCount; r++) {
     if (rows.length >= MAX_ROWS) break;
-
     const row = ws.getRow(r);
     if (!row.hasValues) continue;
 
     const obj: Record<string, string> = {};
-
     for (let c = 1; c < headers.length; c++) {
       const key = headers[c];
       if (!key) continue;
 
       const cell = row.getCell(c);
-
-      let value = "";
       const v: any = cell.value;
 
+      let value = "";
       if (v == null) value = "";
       else if (typeof v === "object" && "text" in v) value = String((v as any).text ?? "");
       else if (typeof v === "object" && "result" in v) value = String((v as any).result ?? "");
@@ -193,11 +181,10 @@ async function parseXlsxToRows(file: File): Promise<Record<string, string>[]> {
       obj[key.trim()] = value.trim();
     }
 
-    // Detect your template hint row (Row 2)
+    // Skip hint row if your template has it
     const pn = String(obj["product_name"] ?? "").toLowerCase();
     const su = String(obj["source_url"] ?? "").toLowerCase();
     const pt = String(obj["productType"] ?? "").toLowerCase();
-
     const looksLikeHintRow = pn.includes("optional") || su.includes("required") || pt.includes("dropdown");
     if (looksLikeHintRow) continue;
 
@@ -213,11 +200,7 @@ async function parseCsvToRows(text: string): Promise<Record<string, string>[]> {
     skipEmptyLines: true,
     transformHeader: (h) => h.trim(),
   });
-
-  if (parsed.errors?.length) {
-    throw new Error("CSV parse error");
-  }
-
+  if (parsed.errors?.length) throw new Error("CSV parse error");
   return parsed.data ?? [];
 }
 
@@ -230,39 +213,34 @@ export async function POST(req: Request) {
     const syncMissing = formData.get("syncMissing") === "1";
 
     if (!(file instanceof File)) {
-      return NextResponse.json(
-        { ok: false, error: "No file uploaded. Use form-data key: file" },
-        { status: 400 }
-      );
+      return NextResponse.json({ ok: false, error: "No file uploaded. Use form-data key: file" }, { status: 400 });
     }
 
-    // ✅ Parse file into rows (XLSX preferred, CSV fallback)
+    // Parse into rows
     let rows: Record<string, string>[] = [];
     if (isProbablyXlsx(file)) {
       rows = await parseXlsxToRows(file);
     } else {
       const text = await file.text();
-
-      // hard block brand columns to avoid confusion
       const firstLine = text.split(/\r?\n/)[0] ?? "";
       if (/\bbrand_slug\b/i.test(firstLine) || /\bbrand_name\b/i.test(firstLine)) {
         return NextResponse.json(
-          {
-            ok: false,
-            error: "brand_slug/brand_name are not allowed in Brand imports. Use the Brand template.",
-          },
+          { ok: false, error: "brand_slug/brand_name are not allowed in Brand imports. Use the Brand template." },
           { status: 400 }
         );
       }
-
       rows = await parseCsvToRows(text);
     }
 
-    // ✅ optional syncMissing only within THIS brand
+    // Sync-missing deactivate (only within brand)
     let deactivatedCount = 0;
     if (syncMissing && rows.length) {
       const csvSourceUrls = Array.from(
-        new Set(rows.map((r) => normalizeUrl(r.source_url || r.product_url || "")).filter(Boolean))
+        new Set(
+          rows
+            .map((r) => normalizeUrl((r as any).source_url || (r as any).product_url || ""))
+            .filter(Boolean)
+        )
       );
 
       const res = await prisma.product.updateMany({
@@ -280,43 +258,62 @@ export async function POST(req: Request) {
       createdCategories: 0,
       createdOccasions: 0,
       createdMaterials: 0,
-      rowErrors: [] as Array<{ row: number; error: string }>,
       deactivatedCount,
+      rowErrors: [] as Array<{ row: number; error: string }>,
+      warnings: [] as Array<{ row: number; warning: string }>,
     };
 
     for (let i = 0; i < rows.length; i++) {
       const raw = rows[i];
 
-      // XLSX template uses source_url; if user uploaded legacy CSV, allow product_url only by copying it into source_url if missing.
-      if (!raw.source_url && raw.product_url) raw.source_url = raw.product_url;
-
       const safe = RowSchema.safeParse(raw);
       if (!safe.success) {
         results.rowErrors.push({
           row: i + 2,
-          error: safe.error.issues[0]?.message ?? safe.error.message,
+          error: safe.error.issues.map((iss) => `${iss.path.join(".")}: ${iss.message}`).join(" | "),
         });
         continue;
       }
 
       const r = safe.data;
 
+      // ✅ REQUIRED: source_url (or legacy product_url)
       const sourceUrl = normalizeUrl(r.source_url || r.product_url || "");
       if (!sourceUrl) {
         results.rowErrors.push({ row: i + 2, error: "Missing source_url (or product_url)" });
         continue;
       }
 
-      const productSlug = slugify(r.product_slug);
+      // ✅ REQUIRED: at least one image (advanced: image_url_1, simple: image_url)
+      const mainImage = r.image_url_1 || r.image_url;
+      if (!mainImage) {
+        results.rowErrors.push({ row: i + 2, error: "Missing image_url_1 (or image_url)" });
+        continue;
+      }
 
-      // Tags: prefer tag_1..tag_5, fallback to tags comma-list
+      // Build images array (advanced preferred)
+      const imageUrls = [
+        mainImage,
+        r.image_url_2,
+        r.image_url_3,
+        r.image_url_4,
+      ].filter((u): u is string => !!u);
+
+      // product slug (required)
+      const productSlug = slugify(r.product_slug);
+      if (!productSlug) {
+        results.rowErrors.push({ row: i + 2, error: "product_slug becomes empty after slugify()" });
+        continue;
+      }
+
+      // Tags: prefer tag_1..tag_5, fallback to comma list
       const tagCols = [r.tag_1, r.tag_2, r.tag_3, r.tag_4, r.tag_5].filter(Boolean);
       const tagSlugs =
         tagCols.length > 0
           ? Array.from(new Set(tagCols.map(slugify))).filter(Boolean)
           : parseCommaList(r.tags).map(slugify);
 
-      // Badges: prefer badge_1..badge_3, fallback to badges comma-list
+      // Badges: prefer badge_1..badge_3, fallback comma list
       const badgeCols = [r.badge_1, r.badge_2, r.badge_3].filter(Boolean);
       const badgeRaw = badgeCols.length > 0 ? badgeCols : parseCommaList(r.badges);
       const badges: typeof AllowedBadges[number][] = [];
@@ -335,7 +332,7 @@ export async function POST(req: Request) {
       }
       if (badgeRaw.length && badges.length === 0) continue;
 
-      // Price
+      // Price (optional)
       const price =
         r.price === null
           ? null
@@ -343,21 +340,34 @@ export async function POST(req: Request) {
               try {
                 return new Prisma.Decimal(r.price);
               } catch {
+                results.warnings.push({ row: i + 2, warning: `Invalid price "${r.price}" ignored` });
                 return null;
               }
             })();
 
-      // Stock
+      // Stock (optional)
       const stock =
         r.stock === null
           ? null
           : (() => {
               const n = Number(r.stock);
-              if (!Number.isFinite(n)) return null;
+              if (!Number.isFinite(n)) {
+                results.warnings.push({ row: i + 2, warning: `Invalid stock "${r.stock}" ignored` });
+                return null;
+              }
               return Math.max(0, Math.floor(n));
             })();
 
-      // Upsert category / occasion / material (ids for join tables)
+      // Optional: productType (default if missing AND your schema requires it)
+      const productType = r.productType ?? DEFAULT_PRODUCT_TYPE;
+      if (!r.productType) {
+        results.warnings.push({
+          row: i + 2,
+          warning: `productType missing → defaulted to ${DEFAULT_PRODUCT_TYPE} (edit on product page)`,
+        });
+      }
+
+      // Optional: category / occasion / material (upsert only if provided)
       const categoryId = r.category_slug
         ? (
             await prisma.category.upsert({
@@ -397,9 +407,8 @@ export async function POST(req: Request) {
         select: { id: true },
       });
 
-      // ✅ One transaction per row: product + joins + images
-      const product = await prisma.$transaction(async (tx) => {
-        // 1) Upsert product (NO tags / occasionId / materialId fields)
+      // One transaction per row
+      await prisma.$transaction(async (tx) => {
         const p = await tx.product.upsert({
           where: { brandId_sourceUrl: { brandId, sourceUrl } },
           update: {
@@ -408,14 +417,14 @@ export async function POST(req: Request) {
             sourceUrl,
             affiliateUrl: r.affiliate_url ?? undefined,
             price: price ?? undefined,
-            currency: r.currency as any,
+            currency: (r.currency ?? "GBP") as any,
             colour: r.colour ?? undefined,
             stock: stock ?? undefined,
-            badges: badges as any,
+            badges: badges.length ? (badges as any) : undefined,
             note: r.note ?? undefined,
             categoryId: categoryId ?? undefined,
             isActive: true,
-            productType: r.productType,
+            productType: productType as any,
           },
           create: {
             brandId,
@@ -424,19 +433,19 @@ export async function POST(req: Request) {
             sourceUrl,
             affiliateUrl: r.affiliate_url ?? undefined,
             price: price ?? undefined,
-            currency: r.currency as any,
+            currency: (r.currency ?? "GBP") as any,
             colour: r.colour ?? undefined,
             stock: stock ?? undefined,
-            badges: badges as any,
+            badges: badges.length ? (badges as any) : undefined,
             note: r.note ?? undefined,
             categoryId: categoryId ?? undefined,
             isActive: true,
-            productType: r.productType,
+            productType: productType as any,
           },
           select: { id: true },
         });
 
-        // 2) TAGS: Tag + ProductTag (replace)
+        // TAGS replace
         await tx.productTag.deleteMany({ where: { productId: p.id } });
         if (tagSlugs.length) {
           const tagRows = await Promise.all(
@@ -456,43 +465,36 @@ export async function POST(req: Request) {
           });
         }
 
-        // 3) OCCASION: ProductOccasion (replace)
+        // OCCASION replace
         await tx.productOccasion.deleteMany({ where: { productId: p.id } });
         if (occasionId) {
-          await tx.productOccasion.create({
-            data: { productId: p.id, occasionId },
-          });
+          await tx.productOccasion.create({ data: { productId: p.id, occasionId } });
         }
 
-        // 4) MATERIAL: ProductMaterial (replace)
+        // MATERIAL replace
         await tx.productMaterial.deleteMany({ where: { productId: p.id } });
         if (materialId) {
-          await tx.productMaterial.create({
-            data: { productId: p.id, materialId },
-          });
+          await tx.productMaterial.create({ data: { productId: p.id, materialId } });
         }
 
-        // 5) IMAGES: replace
-        const imageUrls = [r.image_url_1, r.image_url_2, r.image_url_3, r.image_url_4].filter(
-          (u): u is string => !!u
-        );
-
+        // IMAGES replace
         await tx.productImage.deleteMany({ where: { productId: p.id } });
         if (imageUrls.length) {
           await tx.productImage.createMany({
             data: imageUrls.map((url, idx) => ({ productId: p.id, url, sortOrder: idx })),
           });
         }
-
-        return p;
       });
 
       if (existed) results.updatedProducts += 1;
       else results.createdProducts += 1;
     }
 
-    return NextResponse.json({ ok: true, results });
+    return NextResponse.json({ ok: true, brandId, results });
   } catch (e: any) {
+    if (e?.message === "UNAUTHENTICATED") {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    }
     return NextResponse.json({ ok: false, error: e?.message ?? "Unknown error" }, { status: 500 });
   }
 }

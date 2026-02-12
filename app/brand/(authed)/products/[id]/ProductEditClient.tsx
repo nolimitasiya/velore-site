@@ -24,6 +24,7 @@ type Product = {
   images: { url: string; sortOrder: number }[];
   publishedAt: string | null;
 };
+const PRODUCT_TYPES = ["ABAYA", "DRESS", "SKIRT", "TOP", "HIJAB"] as const;
 
 const BADGES = [
   "bestseller",
@@ -206,6 +207,22 @@ export default function ProductEditClient({ id }: { id: string }) {
           />
         </label>
       </div>
+      <label className="space-y-1">
+  <div className="text-sm font-medium">Product type</div>
+  <select
+    className="w-full rounded-lg border px-3 py-2 text-sm bg-white"
+    value={p.productType ?? ""}
+    onChange={(e) => setP({ ...p, productType: e.target.value || null })}
+  >
+    <option value="">Select…</option>
+    {PRODUCT_TYPES.map((t) => (
+      <option key={t} value={t}>
+        {t}
+      </option>
+    ))}
+  </select>
+</label>
+
 
       {/* Badges chips */}
       <div className="rounded-2xl border p-4 space-y-3">

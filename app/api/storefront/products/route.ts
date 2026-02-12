@@ -7,7 +7,6 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-
   const take = Math.min(Number(searchParams.get("take") ?? 12) || 12, 48);
 
   const products = await prisma.product.findMany({
@@ -41,7 +40,10 @@ export async function GET(req: Request) {
       id: p.id,
       title: p.title,
       slug: p.slug,
-      price: p.price,
+
+      // ✅ Decimal -> string for JSON stability
+      price: p.price ? p.price.toString() : null,
+
       currency: p.currency,
       brandName: p.brand?.name ?? "",
       brandSlug: p.brand?.slug ?? "",

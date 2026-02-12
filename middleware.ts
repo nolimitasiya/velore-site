@@ -67,6 +67,7 @@ export function middleware(req: NextRequest) {
       isAdminApi ||
       isBrand ||
       isBrandApi;
+      
 
     if (!allowPublic) {
       const url = req.nextUrl.clone();
