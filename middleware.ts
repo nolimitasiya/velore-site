@@ -44,6 +44,11 @@ export function middleware(req: NextRequest) {
     const isBrand = pathname === "/brand" || pathname.startsWith("/brand/");
     const isBrandApi = pathname.startsWith("/api/brand");
 
+    const isCategories = pathname === "/categories" || pathname.startsWith("/categories/");
+    const isProductPage = pathname === "/p" || pathname.startsWith("/p/");
+    const isOut = pathname === "/out" || pathname.startsWith("/out/");
+
+
     // pages you want visible during launch
     const isBrandApplyPage =
       pathname === "/brand-apply" ||
@@ -66,7 +71,10 @@ export function middleware(req: NextRequest) {
       isAdmin ||
       isAdminApi ||
       isBrand ||
-      isBrandApi;
+      isBrandApi ||
+      isCategories ||
+      isProductPage ||
+      isOut;
       
 
     if (!allowPublic) {
