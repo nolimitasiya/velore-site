@@ -75,11 +75,12 @@ body {
 
 @layer utilities {
   .row--new > td { background: transparent; }
-
   .row--contacted > td { background: #ecfdf5; } /* emerald-50 */
   .row--invited > td { background: #eff6ff; }   /* blue-50 */
   .row--onboarded > td { background: #f5f3ff; } /* violet-50 */
-  .row--rejected > td { background: #8f1a0a; }  /* orange-50 */
+  .row--rejected > td { background: #8f1a0a; }  /* red-50 */
+  .row--contract_sent > td { background: #dcbe18; }  /* yellow-50 */
+  .row--contract_signed > td { background: #08b110; }  /* green-50 */
 }
 .font-brand {
   font-family: var(--font-abril), serif;

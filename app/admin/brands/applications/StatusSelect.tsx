@@ -144,38 +144,51 @@ export default function StatusSelect({ id, value }: { id: string; value: string 
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <span id={labelId} className="sr-only">Application stage</span>
+  <div className="flex items-center gap-2">
+    <span id={labelId} className="sr-only">Application stage</span>
 
-      {/* hidden upload inputs */}
-<label htmlFor="contractSentFile" className="sr-only">
-  Upload contract PDF (sent)
-</label>
-<input
-  id="contractSentFile"
-  ref={sentInputRef}
-  type="file"
-  accept="application/pdf"
-  className="hidden"
-  aria-label="Upload contract PDF (sent)"
-  onChange={(e) => onSentFileChosen(e.target.files?.[0] ?? null)}
-/>
+    {/* hidden upload inputs */}
+    <label htmlFor="contractSentFile" className="sr-only">
+      Upload contract PDF (sent)
+    </label>
+    <input
+      id="contractSentFile"
+      ref={sentInputRef}
+      type="file"
+      accept="application/pdf"
+      className="hidden"
+      aria-label="Upload contract PDF (sent)"
+      onChange={(e) => onSentFileChosen(e.target.files?.[0] ?? null)}
+    />
 
-<label htmlFor="contractSignedFile" className="sr-only">
-  Upload signed contract PDF
-</label>
-<input
-  id="contractSignedFile"
-  ref={signedInputRef}
-  type="file"
-  accept="application/pdf"
-  className="hidden"
-  aria-label="Upload signed contract PDF"
-  onChange={(e) => onSignedFileChosen(e.target.files?.[0] ?? null)}
-/>
+    <label htmlFor="contractSignedFile" className="sr-only">
+      Upload signed contract PDF
+    </label>
+    <input
+      id="contractSignedFile"
+      ref={signedInputRef}
+      type="file"
+      accept="application/pdf"
+      className="hidden"
+      aria-label="Upload signed contract PDF"
+      onChange={(e) => onSignedFileChosen(e.target.files?.[0] ?? null)}
+    />
 
+    <select
+      aria-labelledby={labelId}
+      className="rounded-xl border px-2 py-1 text-sm bg-white"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      disabled={loading}
+    >
+      {OPTIONS.map((s) => (
+        <option key={s} value={s}>
+          {s.toUpperCase()}
+        </option>
+      ))}
+    </select>
 
-      {loading && <span className="text-xs text-neutral-500">Saving…</span>}
-    </div>
-  );
+    {loading && <span className="text-xs text-neutral-500">Saving…</span>}
+  </div>
+);
 }

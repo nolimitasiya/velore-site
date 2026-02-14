@@ -33,6 +33,17 @@ function statusBadge(status: string) {
       label: "INVITED",
     };
 
+    if (s === "contract_sent")
+    return {
+      cls: `${base} bg-yellow-50 text-yellow-800 border-yellow-200`,
+      label: "CONTRACT SENT",
+    };
+    if (s === "contract_signed")
+    return {
+      cls: `${base} bg-green-50 text-green-800 border-green-200`,
+      label: "CONTRACT SIGNED",
+    };
+
   if (s === "contacted")
     return {
       cls: `${base} bg-amber-50 text-amber-800 border-amber-200`,
@@ -58,6 +69,8 @@ function rowHighlight(status: unknown) {
 
   if (s === "contacted") return "row--contacted";
   if (s === "invited") return "row--invited";
+  if (s === "contract_sent") return "row--contract_sent";
+  if (s === "contract_signed") return "row--contract_signed";
   if (s === "onboarded") return "row--onboarded";
   if (s === "rejected") return "row--rejected";
   return "row--new";
@@ -99,6 +112,8 @@ function normalizeStatus(input?: string): Status {
     s === "new" ||
     s === "contacted" ||
     s === "invited" ||
+    s === "contract_sent" ||
+    s === "contract_signed" ||
     s === "onboarded" ||
     s === "rejected"
   )
@@ -377,6 +392,17 @@ const toStr = sp.to ? String(sp.to) : "";
           href={`/admin/brands/applications${qs({ status: "invited" })}`}
           active={status === "invited"}
         />
+        <FilterButton
+          label={`contract sent (${c("contract_sent")})`}
+          href={`/admin/brands/applications${qs({ status: "contract_sent" })}`}
+          active={status === "contract_sent"}
+        />
+         <FilterButton
+          label={`contract signed (${c("contract_signed")})`}
+          href={`/admin/brands/applications${qs({ status: "contract_signed" })}`}
+          active={status === "contract_signed"}
+        />
+
         <FilterButton
           label={`Onboarded (${c("onboarded")})`}
           href={`/admin/brands/applications${qs({ status: "onboarded" })}`}
