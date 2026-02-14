@@ -9,6 +9,8 @@ type Status =
   | "new"
   | "contacted"
   | "invited"
+  | "contract_sent"
+  | "contract_signed"
   | "onboarded"
   | "rejected";
 

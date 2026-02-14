@@ -220,6 +220,11 @@ model BrandApplication {
   lastName    String
   phone       String?
   socialMedia String?
+  contractSentAt   DateTime?
+  contractSignedAt DateTime?
+  contractSentPath   String?
+  contractSignedPath String?
+
 
   @@index([status, createdAt])
   @@index([email])
@@ -257,6 +262,8 @@ enum BrandApplicationStatus {
   new
   contacted
   invited
+  contract_sent
+  contract_signed
   onboarded
   rejected
 }
