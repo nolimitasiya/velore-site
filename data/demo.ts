@@ -14,6 +14,7 @@ export type DemoProduct = {
 export type DemoBrandTile = {
   id: string;
   name: string;
+  slug: string;
   imageUrl: string;
 };
 
@@ -132,31 +133,37 @@ export const demo = {
     {
       id: "b1",
       name: "ByHasanat",
+      slug: "ByHasanat",
       imageUrl: "/home/brand-byhassanat.jpg",
     },
     {
       id: "b2",
       name: "Batul The Collection",
+      slug: "batul-collection",
       imageUrl: "/home/brand-batul1.jpg",
     },
     {
       id: "b3",
       name: "Summer Evening",
+      slug: "Summer-Evening",
       imageUrl: "/home/brand-summerevening.jpg",
     },
     {
       id: "b4",
       name: "Mayza",
+      slug: "Mayza",
       imageUrl: "/home/brand-mayza.jpg",
     },
     {
       id: "b5",
       name: "Q A A F",
+      slug: "qaaf",
       imageUrl: "/home/brand-qaaf.jpg",
     },
     {
       id: "b6",
       name: "Hassani",
+      slug: "hassani",
       imageUrl: "/home/brand-hassani.jpg",
     },
   ] as DemoBrandTile[],

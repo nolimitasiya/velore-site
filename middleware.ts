@@ -97,16 +97,32 @@ export function middleware(req: NextRequest) {
 
   // ✅ routes that must be accessible without auth
   const allowUnauthed =
-    pathname === "/admin/login" ||
-    pathname === "/api/admin/auth/login" ||
-    pathname === "/api/admin/auth/logout" ||
-    pathname === "/brand/login" ||
-    pathname === "/api/brand/auth/login" ||
-    pathname === "/api/brand/auth/logout" ||
-    pathname === "/brand/onboarding" ||
-    pathname === "/api/brand/onboarding" ||
-    pathname === "/api/brand-apply" ||
-    pathname.startsWith("/api/brand-apply/");
+  // admin auth pages + APIs
+  pathname === "/admin/login" ||
+  pathname === "/admin/forgot" ||
+  pathname === "/admin/reset" ||
+  pathname === "/api/admin/auth/login" ||
+  pathname === "/api/admin/auth/logout" ||
+  pathname === "/api/admin/auth/forgot" ||
+  pathname === "/api/admin/auth/reset" ||
+
+  // brand auth pages + APIs
+  pathname === "/brand/login" ||
+  pathname === "/brand/forgot" ||
+  pathname === "/brand/reset" ||
+  pathname === "/api/brand/auth/login" ||
+  pathname === "/api/brand/auth/logout" ||
+  pathname === "/api/brand/auth/forgot" ||
+  pathname === "/api/brand/auth/reset" ||
+
+  // onboarding + apply
+  pathname === "/brand/onboarding" ||
+  pathname === "/api/brand/onboarding" ||
+  pathname === "/api/brand-apply" ||
+  pathname.startsWith("/api/brand-apply/");
+
+
+
 
   // Admin protection
   if ((isAdminPage || isAdminApi) && !allowUnauthed) {

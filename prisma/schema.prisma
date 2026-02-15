@@ -80,15 +80,41 @@ model Brand {
   defaultCommissionRate Decimal? @db.Decimal(5, 4) // e.g. 0.08
   aovEstimate           Decimal? @db.Decimal(12, 2) // e.g. 65.00
 
+  baseCity String?
   baseCountryCode    String?             @db.Char(2) // e.g. "GB", "FR", "AE"
   // optional, if you want to avoid mapping in code:
   baseRegion         Region? // enum: EUROPE, AFRICA, etc.
   adminNotifications AdminNotification[]
+ // ---------------------------
+  // Contract acceptance (digital)
+  // ---------------------------
+  contractVersion     String?
+  contractAcceptedAt  DateTime?
+  contractAcceptedIp  String?
 
+  // ---------------------------
+  // Stripe billing
+  // ---------------------------
+  accountStatus              BrandAccountStatus @default(PENDING)
+  stripeCustomerId           String? @unique
+  stripeSubscriptionId       String? @unique
+  stripeSubscriptionStatus   String?
+  currentPeriodEnd           DateTime?
+  lastInvoiceId              String?
+  lastInvoiceStatus          String?
+  pastDueSince               DateTime? // used for your 5/14/30 logic
+
+  // ---------------------------
+  // Feature bookings + style feed
+  // ---------------------------
+  featureBookings FeatureBooking[]
+  styleFeedPosts  StyleFeedPost[]
   // ✅ ADD THESE (opposite relations)
   affiliateClicks   AffiliateClick[]
   affiliateEarnings AffiliateEarning[]
   payouts           BrandPayout[]
+  billingEmail String?
+
 }
 
 model Category {
@@ -126,19 +152,21 @@ model Product {
   isActive        Boolean          @default(true)
   badges          Badge[]          @default([])
   categoryId      String?          @db.Uuid
-  colour          String?
   note            String?
   price           Decimal?         @db.Decimal(10, 2)
   stock           Int?
   publishedAt     DateTime?
   affiliateUrl    String?
   productType     ProductType?
+  productColours     ProductColour[]
   brand           Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
   category        Category?        @relation(fields: [categoryId], references: [id])
   images          ProductImage[]
   affiliateClicks AffiliateClick[]
   status          ProductStatus    @default(DRAFT)
   lastApprovedAt  DateTime?
+  productSizes       ProductSize[]
+
 
   worldwideShipping Boolean                  @default(false)
   shippingCountries ProductShippingCountry[]
@@ -220,12 +248,15 @@ model BrandApplication {
   lastName    String
   phone       String?
   socialMedia String?
+  countryCode String? @db.Char(2) // ISO-2 like "GB"
+  city        String?
   contractSentAt   DateTime?
   contractSignedAt DateTime?
   contractSentPath   String?
   contractSignedPath String?
+  
 
-
+  @@index([countryCode])
   @@index([status, createdAt])
   @@index([email])
 }
@@ -362,6 +393,45 @@ model Tag {
 
   products ProductTag[]
 }
+model Colour {
+  id   String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name String
+  slug String @unique
+
+  productColours ProductColour[]
+}
+
+model ProductColour {
+  productId String @db.Uuid
+  colourId  String @db.Uuid
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  colour  Colour  @relation(fields: [colourId], references: [id], onDelete: Cascade)
+
+  @@id([productId, colourId])
+  @@index([colourId])
+  @@index([productId])
+}
+
+model ProductSize {
+  productId String @db.Uuid
+  sizeId    String @db.Uuid
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size    Size    @relation(fields: [sizeId], references: [id], onDelete: Cascade)
+
+  @@id([productId, sizeId])
+  @@index([sizeId])
+  @@index([productId])
+}
+
+model Size {
+  id   String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name String
+  slug String @unique
+
+  productSizes ProductSize[]
+}
 
 model ProductTag {
   productId String @db.Uuid
@@ -462,3 +532,108 @@ enum Region {
   OCEANIA
   MIDDLE_EAST
 }
+
+enum BrandAccountStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  TERMINATED
+}
+
+enum FeatureType {
+  TREND_SPOTLIGHT
+  STYLE_FEED
+}
+
+enum FeatureBookingStatus {
+  RESERVED
+  PAID
+  CANCELLED
+}
+
+model FeatureSlot {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type       FeatureType
+  startDate  DateTime
+  endDate    DateTime
+  capacity   Int      @default(1)
+  bookedCount Int     @default(0)
+
+  bookings   FeatureBooking[]
+
+  @@unique([type, startDate])
+  @@index([type, startDate])
+}
+
+model FeatureBooking {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brandId   String   @db.Uuid
+  slotId    String   @db.Uuid
+  type      FeatureType
+  status    FeatureBookingStatus @default(RESERVED)
+
+  stripeCheckoutSessionId String? @unique
+  stripePaymentIntentId   String? @unique
+
+  amountCents Int?
+  currency    Currency @default(GBP)
+  payload     Json?
+
+  brand Brand      @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  slot  FeatureSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([brandId, slotId])
+  @@index([status, createdAt])
+}
+
+model StyleFeedPost {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brandId   String?  @db.Uuid
+
+  igMediaId String?  @unique
+  imageUrl  String
+  caption   String?
+  permalink String?
+  postedAt  DateTime?
+
+  isPinned  Boolean  @default(false)
+  isActive  Boolean  @default(true)
+
+  brand     Brand?   @relation(fields: [brandId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, postedAt])
+}
+enum PasswordResetUserType {
+  ADMIN
+  BRAND
+}
+
+model PasswordResetToken {
+  id        String @id @default(cuid())
+  userType  PasswordResetUserType
+  email     String
+  tokenHash String @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userType, email])
+  @@index([expiresAt])
+}
+model RateLimit {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  count     Int      @default(0)
+  resetAt   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([resetAt])
+}
+

@@ -38,7 +38,6 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
         affiliateUrl: true,
         currency: true,
         price: true,
-        colour: true,
         stock: true,
         note: true,
         productType: true,
@@ -55,6 +54,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
         productTags : { select: { tag: { select: { id: true, slug: true, name: true } } } },
         productMaterials: { select: { material: { select: { id: true, slug: true, name: true } } } },
         productOccasions: { select: { occasion: { select: { id: true, slug: true, name: true } } } },
+        productColours: { select: { colour: { select: { id: true, slug: true, name: true } } } },
+        productSizes: { select: { size: { select: { id: true, slug: true, name: true } } } },
         category: { select: { id: true, slug: true, name: true } },
       },
     });
@@ -93,12 +94,12 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     const currency = toStr(body.currency);
     const price = body.price === undefined || body.price === null || body.price === ""? undefined // ✅ ignore, do not touch DB
     : new Prisma.Decimal(String(body.price));
-    const colour = toStr(body.colour);
     const stock = toInt(body.stock);
     const note = toStr(body.note);
     const productType = body.productType === undefined ? undefined : body.productType;
-
-
+    const materialIds = Array.isArray(body.materialIds) ? body.materialIds : undefined;
+    const colourIds = Array.isArray(body.colourIds) ? body.colourIds : undefined;
+    const sizeIds = Array.isArray(body.sizeIds) ? body.sizeIds : undefined;
 
     const badges = Array.isArray(body.badges) ? body.badges : undefined; // Badge[]
     const tags = Array.isArray(body.tags) ? body.tags : undefined; // string[] (legacy)
@@ -120,7 +121,6 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
           ...(affiliateUrl !== null ? { affiliateUrl } : {}),
           ...(currency !== null ? { currency: currency as any } : {}),
           ...(price !== undefined ? { price } : {}),
-          ...(colour !== null ? { colour } : {}),
           ...(stock !== null || body.stock === "" ? { stock } : {}),
           ...(note !== null || body.note === "" ? { note } : {}),
           ...(productType !== undefined ? { productType } : {}),
@@ -160,6 +160,36 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
           });
         }
       }
+            // materials
+      if (materialIds) {
+        await tx.productMaterial.deleteMany({ where: { productId: id } });
+        if (materialIds.length) {
+          await tx.productMaterial.createMany({
+            data: materialIds.map((mid: string) => ({ productId: id, materialId: mid })),
+          });
+        }
+      }
+
+      // colours
+      if (colourIds) {
+        await tx.productColour.deleteMany({ where: { productId: id } });
+        if (colourIds.length) {
+          await tx.productColour.createMany({
+            data: colourIds.map((cid: string) => ({ productId: id, colourId: cid })),
+          });
+        }
+      }
+
+      // sizes
+      if (sizeIds) {
+        await tx.productSize.deleteMany({ where: { productId: id } });
+        if (sizeIds.length) {
+          await tx.productSize.createMany({
+            data: sizeIds.map((sid: string) => ({ productId: id, sizeId: sid })),
+          });
+        }
+      }
+
 
       return p;
     });

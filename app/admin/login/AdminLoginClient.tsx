@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 export default function AdminLoginClient() {
@@ -11,7 +10,6 @@ export default function AdminLoginClient() {
   const [busy, setBusy] = useState(false);
 
   const sp = useSearchParams();
-  const router = useRouter();
   const next = sp.get("next") || "/admin/import";
 
   async function onLogin(e: React.FormEvent) {
@@ -23,7 +21,7 @@ export default function AdminLoginClient() {
       const r = await fetch("/api/admin/auth/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        credentials: "include", // ✅
+        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
 
@@ -70,11 +68,21 @@ export default function AdminLoginClient() {
         />
 
         <button
+          type="submit"
           disabled={busy || !email || !password}
           className="w-full rounded-lg bg-black text-white py-2 disabled:opacity-50"
         >
           {busy ? "Signing in..." : "Sign in"}
         </button>
+
+        <div className="text-sm text-center">
+          <a
+            href="/admin/forgot"
+            className="underline text-black/80 hover:text-black"
+          >
+            Forgot password?
+          </a>
+        </div>
 
         {err && <div className="text-sm text-red-600">{err}</div>}
       </form>

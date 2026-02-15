@@ -1,3 +1,4 @@
+// C:\Users\Asiya\projects\dalra\app\api\brand-apply\route.ts
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
@@ -8,6 +9,10 @@ const schema = z.object({
   firstName: z.string().min(1).max(80),
   lastName: z.string().min(1).max(80),
   email: z.string().email().max(200),
+
+  // ✅ required for long-term data quality
+  countryCode: z.string().length(2),
+  city: z.string().min(1).max(120),
 
   phone: z.string().max(60).optional().or(z.literal("")),
   website: z.string().max(300).optional().or(z.literal("")),
@@ -20,11 +25,19 @@ export async function POST(req: Request) {
     const body = await req.json();
     const data = schema.parse(body);
 
+    const countryCode = String(data.countryCode || "").trim().toUpperCase();
+    const city = String(data.city || "").trim();
+
     const created = await prisma.brandApplication.create({
       data: {
         firstName: data.firstName.trim(),
         lastName: data.lastName.trim(),
         email: data.email.trim().toLowerCase(),
+
+        // ✅ new fields (make sure Prisma model has them)
+        countryCode,
+        city,
+
         phone: data.phone?.trim() || null,
         website: data.website?.trim() || null,
         socialMedia: data.socialMedia?.trim() || null,
@@ -32,9 +45,7 @@ export async function POST(req: Request) {
       },
     });
 
-    // Email you (optional but recommended)
-        const resendKey = process.env.RESEND_API_KEY;
-        const { subject, html } = brandApplicationReceivedEmail({ firstName: created.firstName });
+    const resendKey = process.env.RESEND_API_KEY;
     const to = process.env.BRAND_APPLY_NOTIFY_TO; // your inbox
     const from = process.env.BRAND_APPLY_FROM || "onboarding@veiloraclub.com";
     const replyTo = process.env.BRAND_APPLY_REPLY_TO || "info@veiloraclub.com";
@@ -54,6 +65,7 @@ export async function POST(req: Request) {
               <h2 style="margin:0 0 12px">New Brand Apply</h2>
               <p><strong>Name:</strong> ${escapeHtml(created.firstName)} ${escapeHtml(created.lastName)}</p>
               <p><strong>Email:</strong> ${escapeHtml(created.email)}</p>
+              <p><strong>Location:</strong> ${escapeHtml(created.city ?? "-")}, ${escapeHtml(created.countryCode ?? "-")}</p>
               <p><strong>Phone:</strong> ${escapeHtml(created.phone ?? "-")}</p>
               <p><strong>Company website:</strong> ${escapeHtml(created.website ?? "-")}</p>
               <p><strong>Social media:</strong> ${escapeHtml(created.socialMedia ?? "-")}</p>
@@ -68,15 +80,15 @@ export async function POST(req: Request) {
       }
 
       // 2) Auto-reply to applicant (always)
+      const { subject, html } = brandApplicationReceivedEmail({ firstName: created.firstName });
       await resend.emails.send({
-  from: `Veilora Club <${from.includes("<") ? from : from}>`,
-  to: created.email,
-  replyTo,
-  subject,
-  html,
-});
+        from: `Veilora Club <${from.includes("<") ? from : from}>`,
+        to: created.email,
+        replyTo,
+        subject,
+        html,
+      });
     }
-
 
     return NextResponse.json({ ok: true, id: created.id });
   } catch (e: any) {

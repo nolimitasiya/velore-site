@@ -1,8 +1,9 @@
-
-
+// C:\Users\Asiya\projects\dalra\app\admin\brand-invites\BrandInvitesClient.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import countries from "world-countries";
+import citiesByCountry from "@/lib/cities-by-country.json";
 
 type InviteRow = {
   id: string;
@@ -17,6 +18,22 @@ type InviteRow = {
   };
 };
 
+function slugify(s: string) {
+  return s
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, "and")
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+}
+
+function toStr(v: any) {
+  const s = String(v ?? "").trim();
+  return s.length ? s : "";
+}
+
 export default function AdminBrandInvitesPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +44,11 @@ export default function AdminBrandInvitesPage() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"owner" | "editor" | "viewer">("owner");
 
+  // ✅ location
+  const [countryCode, setCountryCode] = useState("GB");
+  const [cityChoice, setCityChoice] = useState("Other");
+  const [cityOther, setCityOther] = useState("");
+
   // results
   const [onboardingUrl, setOnboardingUrl] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
@@ -35,12 +57,34 @@ export default function AdminBrandInvitesPage() {
 
   const ADMIN_TOKEN = process.env.NEXT_PUBLIC_ADMIN_IMPORT_TOKEN ?? "";
 
-  function slugify(s: string) {
-    return s
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)+/g, "");
+  const countryOptions = useMemo(() => {
+    return countries
+      .map((c) => ({ code: c.cca2, name: c.name.common }))
+      .filter((x) => x.code && x.name)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, []);
+
+  const cityDropdownOptions = useMemo(() => {
+    const cc = String(countryCode || "").toUpperCase();
+    const list = (citiesByCountry as any)?.[cc] as string[] | undefined;
+    const safe = Array.isArray(list) && list.length ? list : ["Other"];
+    return safe.includes("Other") ? safe : [...safe, "Other"];
+  }, [countryCode]);
+
+  const resolvedCity = useMemo(() => {
+    if (cityChoice === "Other") return toStr(cityOther);
+    return toStr(cityChoice);
+  }, [cityChoice, cityOther]);
+
+  function onChangeCountry(next: string) {
+    const cc = String(next || "").toUpperCase();
+    const list = (citiesByCountry as any)?.[cc] as string[] | undefined;
+    const opts = Array.isArray(list) && list.length ? list : ["Other"];
+    const first = opts[0] ?? "Other";
+
+    setCountryCode(cc);
+    setCityChoice(first);
+    setCityOther("");
   }
 
   async function loadInvites() {
@@ -67,18 +111,25 @@ export default function AdminBrandInvitesPage() {
     setOnboardingUrl(null);
     setExpiresAt(null);
 
+    const payload = {
+      companyName: toStr(companyName),
+      // ✅ slug optional — server can auto-generate if blank
+      companySlug: toStr(companySlug),
+      email: toStr(email).toLowerCase(),
+      role,
+
+      // ✅ location sent to server
+      countryCode: String(countryCode || "").toUpperCase(),
+      city: resolvedCity || null,
+    };
+
     const r = await fetch("/api/admin/brand-invites/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
         "x-admin-token": ADMIN_TOKEN,
       },
-      body: JSON.stringify({
-        companyName,
-        companySlug: companySlug || slugify(companyName),
-        email,
-        role,
-      }),
+      body: JSON.stringify(payload),
     });
 
     const j = await r.json().catch(() => ({}));
@@ -124,9 +175,7 @@ export default function AdminBrandInvitesPage() {
     setOnboardingUrl(null);
     setExpiresAt(null);
 
-    // Note: resend endpoint wants brandId, but list endpoint currently returns brand slug+name only.
-    // Easiest fix: change list endpoint to also include brandId.
-    // For now, we’ll call create again (same effect).
+    // Resend by generating a fresh invite (same effect)
     const r = await fetch("/api/admin/brand-invites/create", {
       method: "POST",
       headers: {
@@ -136,9 +185,12 @@ export default function AdminBrandInvitesPage() {
       body: JSON.stringify({
         companyName: row.brand.name,
         companySlug: row.brand.slug,
-
         email: row.email,
         role,
+
+        // keep currently selected location (or you can ignore)
+        countryCode: String(countryCode || "").toUpperCase(),
+        city: resolvedCity || null,
       }),
     });
 
@@ -159,11 +211,16 @@ export default function AdminBrandInvitesPage() {
     await navigator.clipboard.writeText(text);
   }
 
+  const slugPreview = useMemo(() => {
+    if (toStr(companySlug)) return toStr(companySlug);
+    if (!toStr(companyName)) return "";
+    return slugify(companyName);
+  }, [companyName, companySlug]);
+
   return (
     <main className="max-w-5xl mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold"> Brand Invites</h1>
-
+        <h1 className="text-2xl font-semibold">Brand Invites</h1>
       </div>
 
       <div className="rounded-2xl border p-4 space-y-3">
@@ -174,20 +231,67 @@ export default function AdminBrandInvitesPage() {
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
           />
-          <input
-            className="rounded-lg border p-2 text-sm"
-            placeholder="Company slug (optional, e.g. batul-london)"
-            value={companySlug}
-            onChange={(e) => setCompanySlug(e.target.value)}
-          />
+
+          <div className="space-y-1">
+            <input
+              className="rounded-lg border p-2 text-sm w-full"
+              placeholder="Company slug (optional, e.g. batul-london)"
+              value={companySlug}
+              onChange={(e) => setCompanySlug(e.target.value)}
+            />
+            <div className="text-xs text-black/60">
+              Slug preview: <span className="font-medium">{slugPreview || "—"}</span>
+            </div>
+          </div>
+
           <input
             className="rounded-lg border p-2 text-sm sm:col-span-2"
             placeholder="Invite email (brand owner)"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
+
+          {/* ✅ Country */}
           <select
-            className="rounded-lg border p-2 text-sm"
+            className="rounded-lg border p-2 text-sm bg-white"
+            value={countryCode}
+            onChange={(e) => onChangeCountry(e.target.value)}
+            aria-label="Country"
+          >
+            {countryOptions.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.name} ({c.code})
+              </option>
+            ))}
+          </select>
+
+          {/* ✅ City */}
+          <div className="space-y-2">
+            <select
+              className="rounded-lg border p-2 text-sm bg-white w-full"
+              value={cityChoice}
+              onChange={(e) => setCityChoice(e.target.value)}
+              aria-label="City"
+            >
+              {cityDropdownOptions.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+
+            {cityChoice === "Other" && (
+              <input
+                className="rounded-lg border p-2 text-sm w-full"
+                placeholder="Type city"
+                value={cityOther}
+                onChange={(e) => setCityOther(e.target.value)}
+              />
+            )}
+          </div>
+
+          <select
+            className="rounded-lg border p-2 text-sm bg-white"
             value={role}
             onChange={(e) => setRole(e.target.value as any)}
             aria-label="Role"
@@ -199,7 +303,7 @@ export default function AdminBrandInvitesPage() {
 
           <button
             className="rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-50"
-            disabled={busy || !companyName || !email}
+            disabled={busy || !toStr(companyName) || !toStr(email) || !toStr(resolvedCity)}
             onClick={createInvite}
           >
             {busy ? "Generating..." : "Generate invite link"}
@@ -218,10 +322,7 @@ export default function AdminBrandInvitesPage() {
               </div>
             )}
             <div className="flex gap-2">
-              <button
-                className="rounded-lg border px-3 py-1 text-xs"
-                onClick={() => copy(onboardingUrl)}
-              >
+              <button className="rounded-lg border px-3 py-1 text-xs" onClick={() => copy(onboardingUrl)}>
                 Copy link
               </button>
             </div>
@@ -246,11 +347,7 @@ export default function AdminBrandInvitesPage() {
             <tbody>
               {invites.map((row) => {
                 const expired = new Date(row.expiresAt).getTime() < Date.now();
-                const status = row.usedAt
-                  ? "Used/Revoked"
-                  : expired
-                  ? "Expired"
-                  : "Active";
+                const status = row.usedAt ? "Used/Revoked" : expired ? "Expired" : "Active";
 
                 return (
                   <tr key={row.id} className="border-t">
@@ -260,9 +357,7 @@ export default function AdminBrandInvitesPage() {
                     </td>
                     <td className="py-2 pr-4">{row.email}</td>
                     <td className="py-2 pr-4">{status}</td>
-                    <td className="py-2 pr-4">
-                      {new Date(row.expiresAt).toLocaleString()}
-                    </td>
+                    <td className="py-2 pr-4">{new Date(row.expiresAt).toLocaleString()}</td>
                     <td className="py-2 pr-4">
                       <div className="flex flex-wrap gap-2">
                         <button

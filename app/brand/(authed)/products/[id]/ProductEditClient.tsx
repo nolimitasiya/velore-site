@@ -6,6 +6,8 @@ import countries from "world-countries";
 
 type Status = "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "NEEDS_CHANGES" | "REJECTED";
 
+type TaxItem = { id: string; name: string; slug: string };
+
 type Product = {
   id: string;
   title: string;
@@ -14,7 +16,6 @@ type Product = {
   affiliateUrl: string | null;
   currency: string;
   price: string | null;
-  colour: string | null;
   stock: number | null;
   note: string | null;
   productType: string | null;
@@ -24,6 +25,11 @@ type Product = {
   badges: string[];
   images: { url: string; sortOrder: number }[];
   publishedAt: string | null;
+
+  // relations coming from GET
+  productMaterials?: { material: TaxItem }[];
+  productColours?: { colour: TaxItem }[];
+  productSizes?: { size: TaxItem }[];
 };
 
 const PRODUCT_TYPES = ["ABAYA", "DRESS", "SKIRT", "TOP", "HIJAB"] as const;
@@ -56,9 +62,7 @@ function Chip({
       onClick={onClick}
       className={[
         "rounded-full border px-3 py-1 text-xs transition",
-        active
-          ? "bg-black text-white border-black"
-          : "bg-white text-black border-black/10 hover:bg-black/5",
+        active ? "bg-black text-white border-black" : "bg-white text-black border-black/10 hover:bg-black/5",
       ].join(" ")}
     >
       {children}
@@ -66,7 +70,16 @@ function Chip({
   );
 }
 
-function snapshotForDirtyCheck(prod: Product) {
+function uniqStr(xs: string[]) {
+  return Array.from(new Set(xs.filter(Boolean)));
+}
+
+function snapshotForDirtyCheck(
+  prod: Product,
+  selectedMaterialIds: string[],
+  selectedColourIds: string[],
+  selectedSizeIds: string[]
+) {
   return JSON.stringify({
     title: prod.title ?? "",
     slug: prod.slug ?? "",
@@ -74,23 +87,40 @@ function snapshotForDirtyCheck(prod: Product) {
     affiliateUrl: prod.affiliateUrl ?? "",
     currency: prod.currency ?? "GBP",
     price: prod.price ?? null,
-    colour: prod.colour ?? null,
     stock: prod.stock ?? null,
     note: prod.note ?? null,
     productType: prod.productType ?? null,
     worldwideShipping: !!prod.worldwideShipping,
     shippingCountries: (prod.shippingCountries ?? []).map((x) => x.countryCode).sort(),
     badges: Array.isArray(prod.badges) ? [...prod.badges].sort() : [],
-    images: Array.isArray(prod.images)
-      ? [...prod.images].sort((a, b) => a.sortOrder - b.sortOrder).map((x) => x.url)
-      : [],
+    images: Array.isArray(prod.images) ? [...prod.images].sort((a, b) => a.sortOrder - b.sortOrder).map((x) => x.url) : [],
+    materialIds: [...selectedMaterialIds].sort(),
+    colourIds: [...selectedColourIds].sort(),
+    sizeIds: [...selectedSizeIds].sort(),
   });
+}
+
+async function fetchTaxonomy(path: string): Promise<TaxItem[]> {
+  const r = await fetch(path, { cache: "no-store" });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.ok) throw new Error(j?.error ?? `Failed (${r.status})`);
+  return Array.isArray(j.items) ? j.items : [];
 }
 
 export default function ProductEditClient({ id }: { id: string }) {
   const [p, setP] = useState<Product | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // taxonomy options
+  const [materials, setMaterials] = useState<TaxItem[]>([]);
+  const [colours, setColours] = useState<TaxItem[]>([]);
+  const [sizes, setSizes] = useState<TaxItem[]>([]);
+
+  // selected ids
+  const [selectedMaterialIds, setSelectedMaterialIds] = useState<string[]>([]);
+  const [selectedColourIds, setSelectedColourIds] = useState<string[]>([]);
+  const [selectedSizeIds, setSelectedSizeIds] = useState<string[]>([]);
 
   // ✅ “saved state” snapshot + tiny “Saved ✓” feedback
   const savedRef = useRef<string>("");
@@ -105,16 +135,25 @@ export default function ProductEditClient({ id }: { id: string }) {
 
   const dirty = useMemo(() => {
     if (!p) return false;
-    return snapshotForDirtyCheck(p) !== savedRef.current;
-  }, [p]);
+    return (
+      snapshotForDirtyCheck(p, selectedMaterialIds, selectedColourIds, selectedSizeIds) !== savedRef.current
+    );
+  }, [p, selectedMaterialIds, selectedColourIds, selectedSizeIds]);
 
   const buyUrl = useMemo(() => {
     if (!p) return "";
     return (p.affiliateUrl?.trim() || p.sourceUrl?.trim() || "").trim();
   }, [p]);
 
-  async function load() {
+  function toggleSelected(setter: (v: string[]) => void, current: string[], id: string) {
+    const has = current.includes(id);
+    setter(has ? current.filter((x) => x !== id) : [...current, id]);
+  }
+
+  async function loadAll() {
     setError(null);
+
+    // 1) load product
     const r = await fetch(`/api/brand/products/${id}`, { cache: "no-store" });
     const j = await r.json().catch(() => ({}));
     if (!r.ok || !j.ok) {
@@ -124,7 +163,6 @@ export default function ProductEditClient({ id }: { id: string }) {
 
     const prod = j.product as any;
 
-    // normalize shippingCountries to codes list
     const shippingCountries = (prod.shippingCountries ?? []).map((x: any) => x.countryCode);
 
     const nextP: Product = {
@@ -135,7 +173,6 @@ export default function ProductEditClient({ id }: { id: string }) {
       affiliateUrl: prod.affiliateUrl ?? null,
       currency: prod.currency ?? "GBP",
       price: prod.price ?? null,
-      colour: prod.colour ?? null,
       stock: prod.stock ?? null,
       note: prod.note ?? null,
       productType: prod.productType ?? null,
@@ -145,17 +182,44 @@ export default function ProductEditClient({ id }: { id: string }) {
       badges: Array.isArray(prod.badges) ? prod.badges : [],
       images: Array.isArray(prod.images) ? prod.images : [],
       publishedAt: prod.publishedAt ?? null,
+      productMaterials: Array.isArray(prod.productMaterials) ? prod.productMaterials : [],
+      productColours: Array.isArray(prod.productColours) ? prod.productColours : [],
+      productSizes: Array.isArray(prod.productSizes) ? prod.productSizes : [],
     };
 
     setP(nextP);
 
+    // hydrate selected ids from relations
+    const matIds = uniqStr((nextP.productMaterials ?? []).map((x) => x.material?.id).filter(Boolean));
+    const colIds = uniqStr((nextP.productColours ?? []).map((x) => x.colour?.id).filter(Boolean));
+    const sizIds = uniqStr((nextP.productSizes ?? []).map((x) => x.size?.id).filter(Boolean));
+
+    setSelectedMaterialIds(matIds);
+    setSelectedColourIds(colIds);
+    setSelectedSizeIds(sizIds);
+
+    // 2) load taxonomy options (in parallel)
+    try {
+      const [m, c, s] = await Promise.all([
+        fetchTaxonomy("/api/brand/taxonomy/materials"),
+        fetchTaxonomy("/api/brand/taxonomy/colours"),
+        fetchTaxonomy("/api/brand/taxonomy/sizes"),
+      ]);
+      setMaterials(m);
+      setColours(c);
+      setSizes(s);
+    } catch (e: any) {
+      // Don't block editing if taxonomy list fails, but show an error
+      setError((prev) => prev ?? e?.message ?? "Failed to load taxonomy");
+    }
+
     // ✅ after load, treat as “saved”
-    savedRef.current = snapshotForDirtyCheck(nextP);
+    savedRef.current = snapshotForDirtyCheck(nextP, matIds, colIds, sizIds);
     setJustSaved(false);
   }
 
   useEffect(() => {
-    load();
+    loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -187,7 +251,6 @@ export default function ProductEditClient({ id }: { id: string }) {
         affiliateUrl: p.affiliateUrl,
         currency: p.currency,
         price: p.price,
-        colour: p.colour,
         stock: p.stock,
         note: p.note,
         productType: p.productType,
@@ -195,6 +258,11 @@ export default function ProductEditClient({ id }: { id: string }) {
         worldwideShipping: p.worldwideShipping,
         shippingCountries: p.shippingCountries.map((x) => x.countryCode),
         images: p.images.map((x) => x.url),
+
+        // ✅ new multi-select relations
+        materialIds: selectedMaterialIds,
+        colourIds: selectedColourIds,
+        sizeIds: selectedSizeIds,
       };
 
       const r = await fetch(`/api/brand/products/${id}`, {
@@ -209,9 +277,8 @@ export default function ProductEditClient({ id }: { id: string }) {
         return;
       }
 
-      await load();
+      await loadAll();
 
-      // ✅ show “Saved ✓” briefly
       setJustSaved(true);
       setTimeout(() => setJustSaved(false), 1200);
     } finally {
@@ -236,7 +303,6 @@ export default function ProductEditClient({ id }: { id: string }) {
           </span>
         )}
 
-        {/* ✅ Buy button */}
         {buyUrl && (
           <a
             href={buyUrl}
@@ -248,7 +314,6 @@ export default function ProductEditClient({ id }: { id: string }) {
           </a>
         )}
 
-        {/* ✅ Save button becomes grey when no changes */}
         <button
           onClick={saveDraft}
           disabled={saving || !dirty}
@@ -356,6 +421,87 @@ export default function ProductEditClient({ id }: { id: string }) {
         </div>
       </div>
 
+      {/* ✅ Materials (multi-select chips) */}
+      <div className="rounded-2xl border p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="font-medium">Materials</div>
+          <button
+            type="button"
+            className="text-xs text-black/60 hover:text-black"
+            onClick={() => setSelectedMaterialIds([])}
+          >
+            clear
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {materials.map((m) => (
+            <Chip
+              key={m.id}
+              active={selectedMaterialIds.includes(m.id)}
+              onClick={() => toggleSelected(setSelectedMaterialIds, selectedMaterialIds, m.id)}
+            >
+              {m.name}
+            </Chip>
+          ))}
+          {!materials.length && <div className="text-xs text-black/50">No materials yet (seed them first).</div>}
+        </div>
+      </div>
+
+      {/* ✅ Colours (multi-select chips) */}
+      <div className="rounded-2xl border p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="font-medium">Colours</div>
+          <button
+            type="button"
+            className="text-xs text-black/60 hover:text-black"
+            onClick={() => setSelectedColourIds([])}
+          >
+            clear
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {colours.map((c) => (
+            <Chip
+              key={c.id}
+              active={selectedColourIds.includes(c.id)}
+              onClick={() => toggleSelected(setSelectedColourIds, selectedColourIds, c.id)}
+            >
+              {c.name}
+            </Chip>
+          ))}
+          {!colours.length && <div className="text-xs text-black/50">No colours yet (seed them first).</div>}
+        </div>
+      </div>
+
+      {/* ✅ Sizes (multi-select chips) */}
+      <div className="rounded-2xl border p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="font-medium">Sizes</div>
+          <button
+            type="button"
+            className="text-xs text-black/60 hover:text-black"
+            onClick={() => setSelectedSizeIds([])}
+          >
+            clear
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {sizes.map((s) => (
+            <Chip
+              key={s.id}
+              active={selectedSizeIds.includes(s.id)}
+              onClick={() => toggleSelected(setSelectedSizeIds, selectedSizeIds, s.id)}
+            >
+              {s.name}
+            </Chip>
+          ))}
+          {!sizes.length && <div className="text-xs text-black/50">No sizes yet (seed them first).</div>}
+        </div>
+      </div>
+
       {/* Badges chips */}
       <div className="rounded-2xl border p-4 space-y-3">
         <div className="font-medium">Badges</div>
@@ -418,3 +564,4 @@ export default function ProductEditClient({ id }: { id: string }) {
     </div>
   );
 }
+1

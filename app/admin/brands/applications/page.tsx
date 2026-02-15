@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import StatusSelect from "./StatusSelect";
+import OnboardButton from "./OnboardButton";
 
 export const dynamic = "force-dynamic";
 
@@ -442,6 +443,8 @@ const toStr = sp.to ? String(sp.to) : "";
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Created</th>
               <th className="px-4 py-3">Stage</th>
+              <th className="px-4 py-3">Onboard</th>
+
 
             </tr>
           </thead>
@@ -523,7 +526,13 @@ const toStr = sp.to ? String(sp.to) : "";
 
                   <td className="px-4 py-3">{fmt(a.createdAt)}</td>
                   <td className="px-4 py-3"> <StatusSelect id={String(a.id)} value={String(a.status)} /> </td>
-
+                  <td className="px-4 py-3">
+  {String(a.status).toLowerCase() === "contract_signed" ? (
+    <OnboardButton applicationId={String(a.id)} />
+  ) : (
+    <span className="text-xs text-neutral-400">—</span>
+  )}
+</td>
 
                 </tr>
               );

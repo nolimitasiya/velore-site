@@ -7,7 +7,8 @@ async function getJSON(path: string) {
 
 export default async function RevenuePage() {
   // relative fetch works in Next server components
-  const summary = await getJSON(`${process.env.NEXT_PUBLIC_SITE_URL}/api/admin/revenue/summary`);
+const summary = await getJSON(`/api/admin/revenue/summary`);
+const regions = await getJSON(`/api/admin/revenue/regions`);
 
   return (
     <div className="p-6 space-y-6">

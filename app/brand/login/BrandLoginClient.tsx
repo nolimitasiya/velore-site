@@ -4,7 +4,6 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function BrandLoginClient() {
-"use client";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -62,11 +61,22 @@ export default function BrandLoginClient() {
         />
 
         <button
+          type="submit"
           disabled={busy || !email || !password}
           className="w-full rounded-lg bg-black text-white py-2 disabled:opacity-50"
         >
           {busy ? "Signing in..." : "Sign in"}
         </button>
+
+        <div className="text-sm text-center">
+          <a
+            href="/admin/forgot"
+            className="underline text-black/80 hover:text-black"
+          >
+            Forgot password?
+          </a>
+        </div>
+
 
         {err && <div className="text-sm text-red-600">{err}</div>}
       </form>
