@@ -1,6 +1,6 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import AffiliateControls from "./AffiliateControls";
-
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -11,15 +11,21 @@ type BrandRow = {
   slug: string;
   createdAt: string;
   accountStatus: string;
-
   affiliateStatus: "PENDING" | "ACTIVE" | "PAUSED";
   affiliateProvider: string | null;
   affiliateBaseUrl: string | null;
 };
 
+async function getBaseUrlFromHeaders() {
+  const h = await headers(); // ✅ await fixes your error
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  if (!host) throw new Error("Missing host header");
+  return `${proto}://${host}`;
+}
 
 async function getBrands(): Promise<BrandRow[]> {
-  const base = process.env.NEXT_PUBLIC_BASE_URL || "";
+  const base = await getBaseUrlFromHeaders(); // ✅ await
   const res = await fetch(`${base}/api/admin/brands`, { cache: "no-store" });
   const json = await res.json().catch(() => ({}));
   return json?.brands ?? [];

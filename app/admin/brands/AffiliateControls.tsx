@@ -9,11 +9,11 @@ type Props = {
   initialBaseUrl: string | null;
 };
 
-const STATUS_OPTIONS: Array<Props["initialStatus"] extends null ? never : "PENDING" | "ACTIVE" | "PAUSED"> = [
-  "PENDING",
-  "ACTIVE",
-  "PAUSED",
-];
+const STATUS_OPTIONS = ["PENDING", "ACTIVE", "PAUSED"] as const;
+type Status = (typeof STATUS_OPTIONS)[number];
+
+const PROVIDER_OPTIONS = ["SHOPIFY_COLLABS", "OTHER"] as const;
+type Provider = (typeof PROVIDER_OPTIONS)[number];
 
 export default function AffiliateControls({
   brandId,
@@ -21,8 +21,12 @@ export default function AffiliateControls({
   initialProvider,
   initialBaseUrl,
 }: Props) {
-  const [status, setStatus] = useState<"PENDING" | "ACTIVE" | "PAUSED">((initialStatus ?? "PENDING") as any);
-  const [provider, setProvider] = useState(initialProvider ?? "SHOPIFY_COLLABS");
+  const [status, setStatus] = useState<Status>(
+    (initialStatus ?? "PENDING") as Status
+  );
+  const [provider, setProvider] = useState<Provider>(
+    (initialProvider ?? "SHOPIFY_COLLABS") as Provider
+  );
   const [baseUrl, setBaseUrl] = useState(initialBaseUrl ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
@@ -58,13 +62,27 @@ export default function AffiliateControls({
       <select
         className="rounded-lg border border-black/10 bg-white px-2 py-1 text-xs"
         value={status}
-        onChange={(e) => setStatus(e.target.value as any)}
+        onChange={(e) => setStatus(e.target.value as Status)}
         disabled={saving}
         aria-label="Affiliate status"
       >
         {STATUS_OPTIONS.map((s) => (
           <option key={s} value={s}>
             {s}
+          </option>
+        ))}
+      </select>
+
+      <select
+        className="rounded-lg border border-black/10 bg-white px-2 py-1 text-xs"
+        value={provider}
+        onChange={(e) => setProvider(e.target.value as Provider)}
+        disabled={saving}
+        aria-label="Affiliate provider"
+      >
+        {PROVIDER_OPTIONS.map((p) => (
+          <option key={p} value={p}>
+            {p}
           </option>
         ))}
       </select>

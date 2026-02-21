@@ -43,6 +43,7 @@ export function AdminHeader() {
         <NavLink href="/admin/revenue" label="Revenue" />
         <NavLink href="/admin/products" label="Products" />
         <NavLink href="/admin/import" label="Import" />
+        <NavLink href="/admin/brands" label="Brands" />
         <NavLink href="/admin/brand-invites" label="Brand Invites" />
         <NavLink href="/admin/brands/applications" label="Applications" />
         <NavLink href="/admin/newsletter" label="Newsletter" />
