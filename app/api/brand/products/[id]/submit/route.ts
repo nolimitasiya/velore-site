@@ -44,9 +44,9 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     // ✅ Quality gate (ready-for-review validations)
     const problems: string[] = [];
 
-    if (!product.affiliateUrl) problems.push("Add an affiliate link (Buy Now link).");
     if (!product.productType) problems.push("Select a product type (e.g., ABAYA, DRESS…).");
-    if (!product.sourceUrl) problems.push("Add the source URL (product page).");
+    if (!product.sourceUrl?.trim()) problems.push("Add a product link (Buy Now link).");
+
 
     // I recommend requiring price before review:
    if (product.price == null) problems.push("Set a price.");

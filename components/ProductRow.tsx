@@ -1,93 +1,98 @@
+// C:\Users\Asiya\projects\dalra\components\ProductRow.tsx
 import Image from "next/image";
-import type { Currency } from "@prisma/client";
+import MoneyLabel from "@/components/MoneyLabel";
 
 export type StorefrontProduct = {
   id: string;
   title: string;
+  brandName?: string | null;
   imageUrl: string | null;
-  price: string | null;     // keep string in UI layer
-  currency: Currency;       // use Prisma enum directly
-  buyUrl: string | null;    // ✅ NEW (affiliateUrl preferred, else sourceUrl)
+  price: string | null;
+  currency: string;
+  buyUrl: string | null;
 };
-
-function formatPrice(price: string | null, currency: Currency) {
-  if (!price) return "—";
-
-  return new Intl.NumberFormat("en-GB", {
-    style: "currency",
-    currency,
-  }).format(Number(price));
-}
 
 export function ProductRow({ products }: { products: StorefrontProduct[] }) {
   return (
-    <section className="bg-[#eee]">
-      <div className="mx-auto w-full max-w-[1800px] px-8 pb-12">
-        <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
-          {products.map((p) => {
-            const href = p.buyUrl?.trim() || null;
+    <div className="mx-auto w-full max-w-[1800px] px-8">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {products.map((p) => {
+          const href = p.buyUrl?.trim() || null;
 
-            return (
-              <div key={p.id} className="space-y-2">
-                <div className="relative aspect-[3/4] overflow-hidden bg-black/5">
-                  {p.imageUrl ? (
-                    href ? (
-                      <a href={href} target="_blank" rel="noreferrer">
-                        <Image
-                          src={p.imageUrl}
-                          alt={p.title}
-                          fill
-                          className="object-cover transition-transform duration-300 hover:scale-105"
-                        />
-                      </a>
-                    ) : (
+          return (
+            <div
+              key={p.id}
+              className="rounded-3xl border border-black/10 bg-white overflow-hidden"
+            >
+              <div className="relative aspect-[3/4] bg-black/5">
+                {p.imageUrl ? (
+                  href ? (
+                    <a href={href} target="_blank" rel="noreferrer">
                       <Image
                         src={p.imageUrl}
                         alt={p.title}
                         fill
                         className="object-cover transition-transform duration-300 hover:scale-105"
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                       />
-                    )
+                    </a>
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-xs text-black/40">
-                      No image
-                    </div>
-                  )}
-                </div>
+                    <Image
+                      src={p.imageUrl}
+                      alt={p.title}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    />
+                  )
+                ) : (
+                  <div className="absolute inset-0 grid place-items-center text-xs text-black/40">
+                    No image
+                  </div>
+                )}
+              </div>
 
+              <div className="p-4">
                 {href ? (
                   <a
                     href={href}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs text-black/80 line-clamp-2 hover:underline"
+                    className="text-sm font-medium line-clamp-2 hover:underline"
                   >
                     {p.title}
                   </a>
                 ) : (
-                  <div className="text-xs text-black/80 line-clamp-2">{p.title}</div>
+                  <div className="text-sm font-medium line-clamp-2">
+                    {p.title}
+                  </div>
                 )}
 
-                <div className="text-xs font-medium text-black">
-                  {formatPrice(p.price, p.currency)}
+                {p.brandName && (
+                  <div className="mt-1 text-[11px] uppercase tracking-wide text-black/60">
+                    {p.brandName}
+                  </div>
+                )}
+
+                <div className="mt-2 text-sm text-black/70">
+                  <MoneyLabel amount={p.price} currency={p.currency} />
                 </div>
 
-                {/* ✅ BUY BUTTON */}
                 {href && (
                   <a
                     href={href}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center justify-center rounded-lg bg-black px-3 py-2 text-xs text-white hover:opacity-90"
+                    className="mt-3 inline-flex items-center rounded-full bg-black px-4 py-2 text-xs font-medium text-white hover:opacity-90"
                   >
-                    Shop 
+                    Shop
                   </a>
                 )}
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
       </div>
-    </section>
+    </div>
   );
 }

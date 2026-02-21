@@ -182,11 +182,12 @@ export default function ProductsClient() {
                   {busyId === p.id ? "Submitting..." : "Submit for review"}
                 </button>
 
-                {p.affiliateUrl && (
+                {/* {p.affiliateUrl && (
                   <a className="text-xs underline text-black/70" href={p.affiliateUrl} target="_blank" rel="noreferrer">
                     View link
                   </a>
-                )}
+                )}*/}
+
               </div>
             </div>
           </div>

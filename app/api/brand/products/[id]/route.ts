@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { requireBrandContext } from "@/lib/auth/BrandSession";
 import { ProductStatus } from "@prisma/client";
 import { Prisma } from "@prisma/client";
+import { isAllowedBrandCurrency } from "@/lib/currency/codes";
+
 
 
 export const runtime = "nodejs";
@@ -90,8 +92,10 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     const title = toStr(body.title);
     const slug = toStr(body.slug);
     const sourceUrl = toStr(body.sourceUrl);
-    const affiliateUrl = toStr(body.affiliateUrl);
-    const currency = toStr(body.currency);
+// Currency (only update if client sent it)
+    const currency = body.currency === undefined
+    ? undefined
+    : String(body.currency || "").trim().toUpperCase();
     const price = body.price === undefined || body.price === null || body.price === ""? undefined // ✅ ignore, do not touch DB
     : new Prisma.Decimal(String(body.price));
     const stock = toInt(body.stock);
@@ -111,6 +115,16 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     // ✅ Rule: if product was APPROVED and brand edits → becomes DRAFT again
     const shouldDemote = existing.status === ProductStatus.APPROVED;
 
+    if (currency !== undefined) {
+  if (!currency || !isAllowedBrandCurrency(currency)) {
+    return NextResponse.json(
+      { ok: false, error: "Invalid currency" },
+      { status: 400 }
+    );
+  }
+}
+
+
     const updated = await prisma.$transaction(async (tx) => {
       const p = await tx.product.update({
         where: { id },
@@ -118,8 +132,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
           ...(title !== null ? { title } : {}),
           ...(slug !== null ? { slug } : {}),
           ...(sourceUrl !== null ? { sourceUrl } : {}),
-          ...(affiliateUrl !== null ? { affiliateUrl } : {}),
-          ...(currency !== null ? { currency: currency as any } : {}),
+          ...(currency !== undefined ? { currency } : {}),
           ...(price !== undefined ? { price } : {}),
           ...(stock !== null || body.stock === "" ? { stock } : {}),
           ...(note !== null || body.note === "" ? { note } : {}),
@@ -189,8 +202,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
           });
         }
       }
-
-
+      
       return p;
     });
 

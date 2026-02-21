@@ -1,180 +1,267 @@
 // C:\Users\Asiya\projects\dalra\app\categories\clothing\page.tsx
-import { prisma } from "@/lib/prisma";
-import Link from "next/link";
-import { cookies } from "next/headers";
-import { getEcbRates, convert, safeCurrency } from "@/lib/currency/rates";
-import { formatMoney } from "@/lib/formatMoney";
-import { ProductType } from "@prisma/client";
-
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
-// URL values (lowercase)
-const TYPES = ["abaya", "dress", "skirt", "top", "hijab"] as const;
-type UrlType = (typeof TYPES)[number];
-const ALLOWED_TYPES = new Set<UrlType>(TYPES);
+import SiteShell from "@/components/SiteShell";
+import ContinentFilters from "@/components/ContinentFilters";
+import { ProductGrid, type GridProduct } from "@/components/ProductGrid";
+import { prisma } from "@/lib/prisma";
+import { Badge, ProductType } from "@prisma/client";
 
-// Map URL -> Prisma enum
-const TYPE_TO_ENUM: Record<UrlType, ProductType> = {
-  abaya: ProductType.ABAYA,
-  dress: ProductType.DRESS,
-  skirt: ProductType.SKIRT,
-  top: ProductType.TOP,
-  hijab: ProductType.HIJAB,
-};
 
-function toStr(v: unknown) {
-  return Array.isArray(v) ? String(v[0] ?? "") : String(v ?? "");
+type Opt = { value: string; label: string };
+
+function qp(v: string | string[] | undefined): string {
+  if (Array.isArray(v)) return v[0] ?? "";
+  return typeof v === "string" ? v : "";
 }
+
+/**
+ * IMPORTANT:
+ * Number("") === 0, so empty must become null.
+ */
+function toNum(v: unknown): number | null {
+  if (v == null) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+function isProductType(v: string): v is ProductType {
+  return (Object.values(ProductType) as string[]).includes(v);
+}
+
+const CLOTHING_CATEGORY_SLUGS = [
+  // your seed slugs (excluding "clothing" umbrella)
+  "abaya",
+  "modest_dresses",
+  "coats",
+  "jackets",
+  "knitwear",
+  "tops",
+  "skirts",
+  "trousers",
+  "co_ords",
+  "activewear",
+  "swimwear_modest",
+  "hijabs",
+  "accessories",
+  "shoes",
+];
 
 export default async function ClothingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string | string[] }> | { type?: string | string[] };
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const sp = await Promise.resolve(searchParams);
+  const sp = (await searchParams) ?? {};
 
-  const rawType = toStr(sp?.type);
-  const type = decodeURIComponent(rawType).trim().toLowerCase();
-  const selectedType: UrlType | "" = ALLOWED_TYPES.has(type as UrlType) ? (type as UrlType) : "";
+  // ---- read filters from URL (same keys as continent)
+  const brandSlug = qp(sp.brand);
+  const country = qp(sp.country).toUpperCase();
+
+  const typeRaw = qp(sp.type).toUpperCase();
+  const type: ProductType | "" =
+    typeRaw && isProductType(typeRaw) ? (typeRaw as ProductType) : "";
+
+  const color = qp(sp.color).toLowerCase();
+  const material = qp(sp.material).toLowerCase(); // slug
+
+  // ✅ badge toggles from URL
+  const saleOn = qp(sp.sale) === "1" || qp(sp.sale).toLowerCase() === "true";
+  const nextDayOn =
+    qp(sp.next_day) === "1" || qp(sp.next_day).toLowerCase() === "true";
+
+  const min = toNum(qp(sp.min));
+  const max = toNum(qp(sp.max));
+  const sort = qp(sp.sort) || "new";
+
+  const orderBy =
+    sort === "price_asc"
+      ? [{ price: "asc" as const }, { publishedAt: "desc" as const }]
+      : sort === "price_desc"
+      ? [{ price: "desc" as const }, { publishedAt: "desc" as const }]
+      : [{ publishedAt: "desc" as const }];
+
+
 
   /* ===========================
-     🌍 Currency (SHOPPER SIDE)
+     🧠 Clothing scope (umbrella)
      =========================== */
-  const jar = await cookies();
-  const chosenCurrency =
-    safeCurrency(jar.get("vc_currency")?.value || jar.get("dalra_currency")?.value || "") ?? "GBP";
+  const clothingCats = await prisma.category.findMany({
+    where: { slug: { in: CLOTHING_CATEGORY_SLUGS } },
+    select: { id: true },
+  });
+  const clothingCatIds = clothingCats.map((c) => c.id);
 
-  const rates = await getEcbRates();
+  /* ===========================
+     🔽 Filter options (from DB)
+     =========================== */
+  const brandsRaw = await prisma.brand.findMany({
+    where: {
+      products: {
+        some: {
+          status: "APPROVED",
+          isActive: true,
+          publishedAt: { not: null },
+          OR: [
+  ...(clothingCatIds.length ? [{ categoryId: { in: clothingCatIds } }] : []),
+  { categoryId: null, productType: { not: null } }, // ✅ tight fallback
+],
+
+
+        },
+      },
+    },
+    orderBy: { name: "asc" },
+    select: { slug: true, name: true, baseCountryCode: true },
+    take: 1000,
+  });
+
+  const brandOptions: Opt[] = brandsRaw.map((b) => ({ value: b.slug, label: b.name }));
+
+  const countryOptions: Opt[] = Array.from(
+    new Set(brandsRaw.map((b) => b.baseCountryCode).filter(Boolean))
+  )
+    .sort()
+    .map((cc) => ({ value: String(cc), label: String(cc) }));
+
+  const typeOptions: Opt[] = Object.values(ProductType).map((t) => ({
+    value: t,
+    label: t.replaceAll("_", " "),
+  }));
+
+  const coloursRaw = await prisma.colour.findMany({
+    orderBy: { name: "asc" },
+    select: { slug: true, name: true },
+    take: 300,
+  });
+  const colorOptions: Opt[] = coloursRaw.map((c) => ({ value: c.slug, label: c.name }));
+
+  const materialsRaw = await prisma.material.findMany({
+    orderBy: { name: "asc" },
+    select: { slug: true, name: true },
+    take: 500,
+  });
+  const materialOptions: Opt[] = materialsRaw.map((m) => ({ value: m.slug, label: m.name }));
 
   /* ===========================
      📦 Fetch products
      =========================== */
-  const clothing = await prisma.category.findUnique({
-    where: { slug: "clothing" },
-    select: { id: true },
-  });
+  const where: any = {
+    status: "APPROVED",
+    isActive: true,
+    publishedAt: { not: null },
 
-  const enumType = selectedType ? TYPE_TO_ENUM[selectedType] : undefined;
+    // Clothing umbrella: include subcategories OR (fallback) products with productType set
+    OR: [
+  ...(clothingCatIds.length ? [{ categoryId: { in: clothingCatIds } }] : []),
+  { categoryId: null, productType: { not: null } }, // ✅ tight fallback
+],
+
+
+
+    ...(brandSlug || country
+      ? {
+          brand: {
+            is: {
+              ...(brandSlug ? { slug: brandSlug } : {}),
+              ...(country ? { baseCountryCode: country } : {}),
+            },
+          },
+        }
+      : {}),
+
+    ...(type ? { productType: type } : {}),
+
+    ...(min != null || max != null
+      ? {
+          price: {
+            ...(min != null ? { gte: min } : {}),
+            ...(max != null ? { lte: max } : {}),
+          },
+        }
+      : {}),
+
+    ...(color
+      ? {
+          productColours: {
+            some: { colour: { slug: color } },
+          },
+        }
+      : {}),
+
+    ...(material
+      ? {
+          productMaterials: {
+            some: { material: { slug: material } },
+          },
+        }
+      : {}),
+
+    ...(saleOn ? { badges: { has: Badge.sale } } : {}),
+    ...(nextDayOn ? { badges: { has: Badge.next_day } } : {}),
+  };
 
   const products = await prisma.product.findMany({
-    where: {
-      categoryId: clothing?.id,
-      isActive: true,
-      publishedAt: { not: null },
-      ...(enumType ? { productType: enumType } : {}),
-    },
-    orderBy: { updatedAt: "desc" },
+    where,
+    orderBy,
     take: 120,
     select: {
-      id: true,
-      title: true,
-      slug: true,
-      price: true,
-      currency: true,
-      brand: { select: { name: true, slug: true } },
-      images: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true } },
-      // keep if you need
-      affiliateUrl: true,
-    },
+  id: true,
+  title: true,
+  price: true,
+  currency: true,
+  badges: true,
+  brand: { select: { name: true } }, // ✅ ADD THIS
+  images: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true } },
+},
   });
 
-  /* ===========================
-     💱 Convert prices for display
-     =========================== */
-  const mapped = products.map((p) => {
-    const baseAmount = p.price ? Number(p.price) : null;
+  const mapped: GridProduct[] = products.map((p) => ({
+  id: p.id,
+  title: p.title,
+  brandName: p.brand?.name ?? null,
+  imageUrl: p.images?.[0]?.url ?? null,
+  price: p.price ? p.price.toString() : null,
+  currency: String(p.currency),
+  buyUrl: `/out/${p.id}`,
+  badges: (p.badges ?? []) as any,
+}));
 
-    const converted =
-      baseAmount != null ? convert(baseAmount, p.currency, chosenCurrency, rates) : null;
-
-    const displayAmount = converted ?? baseAmount;
-
-    return {
-      ...p,
-      imageUrl: p.images?.[0]?.url ?? null,
-      displayPriceLabel: displayAmount != null ? formatMoney(displayAmount, chosenCurrency) : null,
-    };
-  });
 
   return (
-    <div className="mx-auto max-w-6xl p-6">
-      <h1 className="text-center text-2xl font-semibold">Clothing</h1>
+    <SiteShell>
+      <main className="min-h-screen w-full bg-white">
+        <div className="mx-auto w-full max-w-[1800px] px-8 py-10 space-y-8">
+          <header className="text-center">
+            <h1 className="font-display text-4xl md:text-5xl tracking-[0.12em]">
+              Clothing
+            </h1>
+            <p className="mt-3 text-sm text-black/60">
+              Curated modest clothing across brands.
+            </p>
+          </header>
 
-      {/* Filter chips */}
-      <div className="mt-6 flex justify-center">
-        <div className="inline-flex flex-wrap justify-center gap-2 text-sm">
-          <Link
-            href="/categories/clothing"
-            className={[
-              "rounded-full border px-3 py-1 transition-colors",
-              selectedType === "" ? "bg-black text-white border-black" : "hover:bg-black/5",
-            ].join(" ")}
-          >
-            All
-          </Link>
+          <ContinentFilters
+            brands={brandOptions}
+            countries={countryOptions}
+            types={typeOptions}
+            colors={colorOptions}
+            materials={materialOptions}
+          />
 
-          {TYPES.map((t) => {
-            const active = selectedType === t;
-            return (
-              <Link
-                key={t}
-                href={`/categories/clothing?type=${t}`}
-                className={[
-                  "rounded-full border px-3 py-1 capitalize transition-colors",
-                  active ? "bg-black text-white border-black" : "hover:bg-black/5",
-                ].join(" ")}
-              >
-                {t}
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Product grid */}
-      <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {mapped.map((p) => (
-          <div key={p.id} className="rounded-2xl border border-black/10 bg-white">
-            <Link href={`/p/${p.slug}`} className="block">
-              <div className="aspect-[3/4] w-full overflow-hidden rounded-t-2xl bg-black/5">
-                {p.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={p.imageUrl}
-                    alt={p.title}
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-xs text-black/40">
-                    No image
-                  </div>
-                )}
-              </div>
-
-              <div className="p-4">
-                <div className="text-sm font-medium">{p.title}</div>
-                <div className="mt-1 text-xs text-black/60 uppercase tracking-wide">
-                  {p.brand?.name ?? ""}
-                </div>
-
-                {p.displayPriceLabel && <div className="mt-2 text-sm">{p.displayPriceLabel}</div>}
-              </div>
-            </Link>
-
-            <div className="px-4 pb-4">
-              <Link
-                href={`/out/${p.id}`}
-                className="inline-flex w-full items-center justify-center rounded-md bg-black px-4 py-2 text-sm text-white"
-              >
-                Buy Now
-              </Link>
+          {mapped.length === 0 ? (
+            <div className="rounded-2xl border border-black/10 bg-white p-10 text-center text-black/60">
+              No items match your filters.
             </div>
-          </div>
-        ))}
-      </div>
-    </div>
+          ) : (
+            <ProductGrid products={mapped} />
+          )}
+        </div>
+      </main>
+    </SiteShell>
   );
 }

@@ -3,6 +3,8 @@
 
 import { useEffect, useMemo, useState, useRef } from "react";
 import countries from "world-countries";
+import { BRAND_CURRENCY_OPTIONS } from "@/lib/currency/codes";
+
 
 type Status = "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "NEEDS_CHANGES" | "REJECTED";
 
@@ -248,7 +250,6 @@ export default function ProductEditClient({ id }: { id: string }) {
         title: p.title,
         slug: p.slug,
         sourceUrl: p.sourceUrl,
-        affiliateUrl: p.affiliateUrl,
         currency: p.currency,
         price: p.price,
         stock: p.stock,
@@ -359,14 +360,14 @@ export default function ProductEditClient({ id }: { id: string }) {
           />
         </label>
 
-        <label className="space-y-1 md:col-span-2">
+       {/* <label className="space-y-1 md:col-span-2">
           <div className="text-sm font-medium">Affiliate URL (Buy Now)</div>
           <input
             className="w-full rounded-lg border px-3 py-2 text-sm"
             value={p.affiliateUrl ?? ""}
             onChange={(e) => setP({ ...p, affiliateUrl: e.target.value || null })}
           />
-        </label>
+        </label> */}
       </div>
 
       {/* ✅ Price + Currency */}
@@ -388,15 +389,18 @@ export default function ProductEditClient({ id }: { id: string }) {
         <label className="space-y-1">
           <div className="text-sm font-medium">Currency</div>
           <select
-            className="w-full rounded-lg border px-3 py-2 text-sm bg-white"
-            value={p.currency ?? "GBP"}
-            onChange={(e) => setP({ ...p, currency: e.target.value })}
-          >
-            <option value="GBP">GBP</option>
-            <option value="EUR">EUR</option>
-            <option value="CHF">CHF</option>
-            <option value="USD">USD</option>
-          </select>
+  className="w-full rounded-lg border px-3 py-2 text-sm"
+  value={(p.currency || "GBP").toUpperCase()}
+  onChange={(e) => setP({ ...p, currency: e.target.value.toUpperCase() })}
+>
+  {BRAND_CURRENCY_OPTIONS.map((c) => (
+    <option key={c.code} value={c.code}>
+      {c.label}
+    </option>
+  ))}
+</select>
+
+
         </label>
       </div>
 

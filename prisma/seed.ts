@@ -73,6 +73,7 @@ async function main() {
   // 2) Core taxonomy (existing)
   // ---------------------------
   await upsertBySlug("category", [
+    "clothing", 
     "abaya",
     "modest_dresses",
     "coats",

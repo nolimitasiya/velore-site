@@ -9,17 +9,16 @@ export async function GET() {
   await requireAdminSession();
 
   const brands = await prisma.brand.findMany({
-    orderBy: { createdAt: "desc" },
+    orderBy: { createdAt: "desc" }, // ✅ HERE
     select: {
       id: true,
       name: true,
       slug: true,
       createdAt: true,
       accountStatus: true,
-      stripeCustomerId: true,
-      stripeSubscriptionStatus: true,
-      currentPeriodEnd: true,
-      pastDueSince: true,
+      affiliateStatus: true,
+      affiliateProvider: true,
+      affiliateBaseUrl: true,
     },
   });
 

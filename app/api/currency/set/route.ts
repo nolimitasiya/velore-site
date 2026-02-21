@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
-import { Currency } from "@prisma/client";
+import { isAllowedBrandCurrency } from "@/lib/currency/codes";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
-  const code = String(body.currency || "").toUpperCase();
 
-  const ok = (Object.values(Currency) as string[]).includes(code);
-  if (!ok) {
+  const code = String(body.currency || "")
+    .trim()
+    .toUpperCase();
+
+  if (!isAllowedBrandCurrency(code)) {
     return NextResponse.json(
       { ok: false, error: "Invalid currency" },
       { status: 400 }
@@ -18,16 +20,20 @@ export async function POST(req: Request) {
 
   const res = NextResponse.json({ ok: true });
 
-  // ✅ shopper currency (used by categories / product pages)
   res.cookies.set("vc_currency", code, {
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
+    httpOnly: false,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
   });
 
-  // ✅ legacy / internal (used by LocationSwitcher)
   res.cookies.set("dalra_currency", code, {
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
+    httpOnly: false,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
   });
 
   return res;

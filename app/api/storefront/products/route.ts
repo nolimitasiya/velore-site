@@ -26,20 +26,22 @@ export async function GET(req: Request) {
 
   const products = await prisma.product.findMany({
     where: {
-      status: "APPROVED",
-      isActive: true,
-      publishedAt: { not: null },
+  status: "APPROVED",
+  isActive: true,
+  publishedAt: { not: null },
 
-      // ✅ filter by brand region/country
-      ...(region || country
-        ? {
-            brand: {
-              ...(region ? { baseRegion: region } : {}),
-              ...(country ? { baseCountryCode: country } : {}),
-            },
-          }
-        : {}),
-    },
+  brand: {
+    affiliateStatus: "ACTIVE",
+    ...(region ? { baseRegion: region } : {}),
+    ...(country ? { baseCountryCode: country } : {}),
+  },
+
+  OR: [
+    { affiliateUrl: { not: null } },
+    { brand: { affiliateBaseUrl: { not: null } } },
+  ],
+},
+
     orderBy: { publishedAt: "desc" },
     take,
     select: {
@@ -53,12 +55,15 @@ export async function GET(req: Request) {
       brand: {
         select: {
           name: true,
-          slug: true,
-          baseRegion: true,
-          baseCountryCode: true,
-          baseCity: true,
-        },
-      },
+    slug: true,
+    baseRegion: true,
+    baseCountryCode: true,
+    baseCity: true,
+    affiliateStatus: true,
+    affiliateBaseUrl: true,
+  },
+},
+
       images: {
         orderBy: { sortOrder: "asc" },
         take: 1,
@@ -82,8 +87,7 @@ export async function GET(req: Request) {
       brandRegion: p.brand?.baseRegion ?? null,
       brandCountryCode: p.brand?.baseCountryCode ?? null,
       brandCity: p.brand?.baseCity ?? null,
-
-      affiliateUrl: p.affiliateUrl,
+      affiliateUrl: p.affiliateUrl ?? p.brand?.affiliateBaseUrl ?? null,
       sourceUrl: p.sourceUrl,
       imageUrl: p.images?.[0]?.url ?? null,
     })),

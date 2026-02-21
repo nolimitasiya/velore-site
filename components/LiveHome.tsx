@@ -12,9 +12,13 @@ import { demo } from "@/data/demo";
 import type { Region } from "@prisma/client";
 
 type LiveHomeProps = {
-  region?: string;  // e.g. "EUROPE"
-  country?: string; // e.g. "GB"
+  region?: string;
+  country?: string;
 };
+
+/* ---------------------------------- */
+/* Helpers */
+/* ---------------------------------- */
 
 function toStorefrontProducts(
   products: Array<{
@@ -22,20 +26,21 @@ function toStorefrontProducts(
     title: string;
     price: any | null;
     currency: any;
-    affiliateUrl: string | null;
-    sourceUrl: string | null;
     images: { url: string }[];
+    brand: { name: string } | null;
   }>
 ): StorefrontProduct[] {
   return products.map((p) => ({
     id: p.id,
     title: p.title,
+    brandName: p.brand?.name ?? null,
     imageUrl: p.images?.[0]?.url ?? null,
     price: p.price ? p.price.toString() : null,
     currency: p.currency,
-    buyUrl: (p.affiliateUrl || p.sourceUrl || null) as string | null,
+    buyUrl: `/out/${p.id}`, // ✅ always tracked
   }));
 }
+
 
 function normalizeRegion(input?: string): Region | null {
   const r = String(input ?? "").trim().toUpperCase();
@@ -56,69 +61,50 @@ function normalizeCountry(input?: string): string | null {
   return c.length === 2 ? c : null;
 }
 
-async function fetchProductsByRegion(region: Region, take = 12) {
-  const products = await prisma.product.findMany({
-    where: {
-      status: "APPROVED",
-      isActive: true,
-      publishedAt: { not: null },
-      brand: { baseRegion: region },
-    },
-    orderBy: { publishedAt: "desc" },
-    take,
-    select: {
-      id: true,
-      title: true,
-      price: true,
-      currency: true,
-      affiliateUrl: true,
-      sourceUrl: true,
-      images: {
-        orderBy: { sortOrder: "asc" },
-        take: 1,
-        select: { url: true },
-      },
-    },
-  });
-
-  return toStorefrontProducts(products as any);
-}
-
-const REGION_SECTIONS: Array<{ region: Region; title: string }> = [
-  { region: "AFRICA", title: "AFRICA EDIT" },
-  { region: "ASIA", title: "ASIA EDIT" },
-  { region: "SOUTH_AMERICA", title: "SOUTH AMERICA EDIT" },
-  { region: "EUROPE", title: "EUROPE EDIT" },
-  { region: "NORTH_AMERICA", title: "NORTH AMERICA EDIT" },
-  { region: "OCEANIA", title: "OCEANIA EDIT" },
-  { region: "MIDDLE_EAST", title: "MIDDLE EAST EDIT" },
-];
+/* ---------------------------------- */
+/* Component */
+/* ---------------------------------- */
 
 export default async function LiveHome({ region, country }: LiveHomeProps) {
   const selectedRegion = normalizeRegion(region);
   const selectedCountry = normalizeCountry(country);
 
-  // ---------------------------
-  // SHOP TRENDY (optionally filtered)
-  // ---------------------------
+  /* --------------------------- */
+  /* SHOP TRENDY */
+  /* --------------------------- */
+
   const trendyRaw = await prisma.product.findMany({
     where: {
-      status: "APPROVED",
-      isActive: true,
-      publishedAt: { not: null },
-      ...(selectedRegion ? { brand: { baseRegion: selectedRegion } } : {}),
-      ...(selectedCountry ? { brand: { baseCountryCode: selectedCountry } } : {}),
-    },
+  status: "APPROVED",
+  isActive: true,
+  publishedAt: { not: null },
+
+  brand: {
+    affiliateStatus: "ACTIVE",
+    ...(selectedRegion ? { baseRegion: selectedRegion } : {}),
+    ...(selectedCountry ? { baseCountryCode: selectedCountry } : {}),
+  },
+
+  OR: [
+    { affiliateUrl: { not: null } },
+    { brand: { affiliateBaseUrl: { not: null } } },
+  ],
+},
+
+
+
     orderBy: { publishedAt: "desc" },
     take: 12,
     select: {
-      id: true,
-      title: true,
-      price: true,
-      currency: true,
-      affiliateUrl: true,
-      sourceUrl: true,
-      images: {
+  id: true,
+  title: true,
+  price: true,
+  currency: true,
+  affiliateUrl: true,
+  sourceUrl: true,
+  brand: { select: { name: true, affiliateBaseUrl: true } },
+  images: { 
+
         orderBy: { sortOrder: "asc" },
         take: 1,
         select: { url: true },
@@ -126,29 +112,21 @@ export default async function LiveHome({ region, country }: LiveHomeProps) {
     },
   });
 
-  const trendy: StorefrontProduct[] = toStorefrontProducts(trendyRaw as any);
-
-  // ---------------------------
-  // Region edits (ALL 7)
-  // If a region is selected in querystring, only show that region section.
-  // ---------------------------
-  const sectionsToShow = selectedRegion
-    ? REGION_SECTIONS.filter((s) => s.region === selectedRegion)
-    : REGION_SECTIONS;
-
-  const regionResults = await Promise.all(
-    sectionsToShow.map(async (s) => ({
-      ...s,
-      products: await fetchProductsByRegion(s.region, 12),
-    }))
+  const trendy: StorefrontProduct[] = toStorefrontProducts(
+    trendyRaw as any
   );
 
-  // ---------------------------
-  // Live Style Feed
-  // ---------------------------
+  /* --------------------------- */
+  /* STYLE FEED */
+  /* --------------------------- */
+
   const stylePostsDb = await prisma.styleFeedPost.findMany({
     where: { isActive: true },
-    orderBy: [{ isPinned: "desc" }, { postedAt: "desc" }, { createdAt: "desc" }],
+    orderBy: [
+      { isPinned: "desc" },
+      { postedAt: "desc" },
+      { createdAt: "desc" },
+    ],
     take: 12,
     select: {
       id: true,
@@ -156,25 +134,31 @@ export default async function LiveHome({ region, country }: LiveHomeProps) {
       caption: true,
       permalink: true,
       postedAt: true,
+      brand: { select: { name: true } }, // ✅ correct
     },
   });
 
   const liveStyleFeed: StyleFeedPost[] = stylePostsDb.map((p) => ({
     id: p.id,
     imageUrl: p.imageUrl,
+    brandName: p.brand?.name ?? null,
     caption: p.caption,
     permalink: p.permalink,
     postedAt: p.postedAt ? p.postedAt.toISOString() : null,
   }));
 
   const styleFeedToShow =
-    liveStyleFeed.length > 0 ? liveStyleFeed : (demo.styleFeed as any);
+    liveStyleFeed.length > 0
+      ? liveStyleFeed
+      : (demo.styleFeed as any);
 
-  // ---------------------------
-  // Brand mosaic tiles
-  // demo tiles may not match StorefrontBrandTile, so map safely
-  // ---------------------------
-  const mosaicTiles: StorefrontBrandTile[] = (demo.brandTiles as any[]).map((t) => ({
+  /* --------------------------- */
+  /* Brand Mosaic */
+  /* --------------------------- */
+
+  const mosaicTiles: StorefrontBrandTile[] = (
+    demo.brandTiles as any[]
+  ).map((t) => ({
     id: String(t.id),
     name: String(t.name),
     slug: String(t.slug ?? "")
@@ -185,6 +169,10 @@ export default async function LiveHome({ region, country }: LiveHomeProps) {
     imageUrl: String(t.imageUrl),
   }));
 
+  /* --------------------------- */
+  /* Render */
+  /* --------------------------- */
+
   return (
     <main className="min-h-screen w-full bg-[#eee]">
       <Hero imageUrl={demo.heroImage} />
@@ -192,15 +180,6 @@ export default async function LiveHome({ region, country }: LiveHomeProps) {
 
       <SectionTitle>SHOP TRENDY</SectionTitle>
       <ProductRow products={trendy} />
-
-      {regionResults.map((s) =>
-        s.products.length > 0 ? (
-          <div key={s.region}>
-            <SectionTitle>{s.title}</SectionTitle>
-            <ProductRow products={s.products} />
-          </div>
-        ) : null
-      )}
 
       <SloganAndContinents
         slogan="Where global brands and international style meet"

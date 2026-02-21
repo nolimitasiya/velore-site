@@ -103,28 +103,44 @@ export default function LocationSwitcher() {
   }, [query]);
 
   // ✅ THIS is where it goes (client-side)
-  async function choose(loc: Location) {
-    setCurrent(loc);
-    setOpen(false);
-    setQuery("");
+ async function choose(loc: Location) {
+  setCurrent(loc);
+  setOpen(false);
+  setQuery("");
 
-    try {
-      localStorage.setItem(LS_KEY, JSON.stringify(loc));
-    } catch {}
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(loc));
+  } catch {}
 
-    // ✅ Set cookies for country
-    setCookie("dalra_country", loc.code);
+  setCookie("dalra_country", loc.code);
 
-    // ✅ Set currency via API (sets vc_currency + dalra_currency on the server response)
-    await fetch("/api/currency/set", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ currency: loc.currency }),
-    });
+  // ✅ Normalize currency to match Prisma enum
+  const code = String(loc.currency || "").trim().toUpperCase();
 
-    // ✅ Force server components (categories pages) to re-read cookies
-    router.refresh();
+  // ✅ (optional) hard guard: fallback if not supported
+  const safeCode = code;
+
+
+  const r = await fetch("/api/currency/set", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ currency: safeCode }),
+    credentials: "include",
+  });
+
+  // 🔥 Debug: see why it's 400
+  if (!r.ok) {
+    console.log("currency/set failed", r.status, await r.text(), { sent: safeCode, raw: loc.currency });
+    return;
   }
+
+  setCookie("vc_currency", safeCode);
+  setCookie("dalra_currency", safeCode);
+
+  window.dispatchEvent(new CustomEvent("vc_currency_changed"));
+  router.refresh();
+}
+
 
   return (
     <>

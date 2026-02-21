@@ -1,4 +1,6 @@
 import Link from "next/link";
+import AffiliateControls from "./AffiliateControls";
+
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -9,11 +11,12 @@ type BrandRow = {
   slug: string;
   createdAt: string;
   accountStatus: string;
-  stripeCustomerId: string | null;
-  stripeSubscriptionStatus: string | null;
-  currentPeriodEnd: string | null;
-  pastDueSince: string | null;
+
+  affiliateStatus: "PENDING" | "ACTIVE" | "PAUSED";
+  affiliateProvider: string | null;
+  affiliateBaseUrl: string | null;
 };
+
 
 async function getBrands(): Promise<BrandRow[]> {
   const base = process.env.NEXT_PUBLIC_BASE_URL || "";
@@ -49,9 +52,7 @@ export default async function AdminBrandsPage() {
             <tr>
               <th className="px-4 py-3">Brand</th>
               <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Stripe</th>
-              <th className="px-4 py-3">Period End</th>
-              <th className="px-4 py-3">Past Due Since</th>
+              <th className="px-4 py-3 text-right">Affiliate</th>
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
@@ -63,15 +64,16 @@ export default async function AdminBrandsPage() {
                   <div className="text-xs text-black/50">{b.slug}</div>
                 </td>
                 <td className="px-4 py-3">{b.accountStatus}</td>
-                <td className="px-4 py-3">
-                  {b.stripeSubscriptionStatus ?? "—"}
-                </td>
-                <td className="px-4 py-3">
-                  {b.currentPeriodEnd ? new Date(b.currentPeriodEnd).toLocaleDateString() : "—"}
-                </td>
-                <td className="px-4 py-3">
-                  {b.pastDueSince ? new Date(b.pastDueSince).toLocaleDateString() : "—"}
-                </td>
+                <td className="px-4 py-3 text-right">
+  <AffiliateControls
+    brandId={b.id}
+    initialStatus={b.affiliateStatus}
+    initialProvider={b.affiliateProvider}
+    initialBaseUrl={b.affiliateBaseUrl}
+  />
+</td>
+
+                
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-2">
                     <ForceResetButton brandId={b.id} />
@@ -82,7 +84,7 @@ export default async function AdminBrandsPage() {
 
             {brands.length === 0 && (
               <tr>
-                <td className="px-4 py-10 text-center text-black/60" colSpan={6}>
+                <td className="px-4 py-10 text-center text-black/60" colSpan={4}>
                   No brands yet.
                 </td>
               </tr>

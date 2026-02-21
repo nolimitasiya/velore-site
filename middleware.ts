@@ -47,6 +47,13 @@ export function middleware(req: NextRequest) {
     const isCategories = pathname === "/categories" || pathname.startsWith("/categories/");
     const isProductPage = pathname === "/p" || pathname.startsWith("/p/");
     const isOut = pathname === "/out" || pathname.startsWith("/out/");
+    const isContinent = pathname === "/continent" || pathname.startsWith("/continent/");
+    const isBrands = pathname === "/brands" || pathname.startsWith("/brands/");
+    const isNextDay = pathname === "/next-day-delivery" || pathname.startsWith("/next-day-delivery/");
+    const isCurrencyApi = pathname.startsWith("/api/currency/");
+
+    
+
 
 
     // pages you want visible during launch
@@ -68,20 +75,24 @@ export function middleware(req: NextRequest) {
       isThanks ||
       isBrandApplyPage ||
       isPublicApi ||
+      isCurrencyApi || 
       isAdmin ||
       isAdminApi ||
       isBrand ||
       isBrandApi ||
       isCategories ||
       isProductPage ||
-      isOut;
+      isOut ||
+      isContinent ||
+      isBrands ||
+      isNextDay;
       
 
     if (!allowPublic) {
       const url = req.nextUrl.clone();
       url.pathname = "/";
       url.searchParams.set("locked", "1");
-      url.searchParams.set("next", pathname);
+      url.searchParams.set("next", req.nextUrl.pathname + req.nextUrl.search);
       return NextResponse.redirect(url);
     }
   }
@@ -94,6 +105,7 @@ export function middleware(req: NextRequest) {
 
   const isBrandPage = pathname === "/brand" || pathname.startsWith("/brand/");
   const isBrandApi = pathname.startsWith("/api/brand");
+
 
   // ✅ routes that must be accessible without auth
   const allowUnauthed =
@@ -119,7 +131,10 @@ export function middleware(req: NextRequest) {
   pathname === "/brand/onboarding" ||
   pathname === "/api/brand/onboarding" ||
   pathname === "/api/brand-apply" ||
-  pathname.startsWith("/api/brand-apply/");
+  pathname.startsWith("/api/brand-apply/")||
+  
+  pathname.startsWith("/api/currency/");
+
 
 
 
