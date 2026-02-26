@@ -24,8 +24,8 @@ const navItemWrapper = "flex items-center h-[48px] pb-3";
 
 const navLink = (active: boolean) =>
   [
-    "relative py-2 text-base md:text-[17px] tracking-[0.04em] transition-colors duration-200 leading-none",
-    active ? "text-white" : "text-white/70 hover:text-white",
+    "relative py-2 text-base md:text-[17px] tracking-[0.02em] transition-colors duration-200 leading-none",
+    active ? "text-white" : "text-white/85 hover:text-white",
     "after:absolute after:left-0 after:right-0 after:-bottom-0.5 after:h-px",
     "after:bg-[var(--accent)] after:origin-center after:transition-transform after:duration-200",
     active ? "after:scale-x-100" : "after:scale-x-0 hover:after:scale-x-100",

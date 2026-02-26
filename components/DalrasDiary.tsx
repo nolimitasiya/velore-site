@@ -1,16 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
+import { SectionTitle } from "./SectionTitle";
 import type { DemoDiaryPost } from "../data/demo";
 
 export function DalrasDiary({ posts = [] }: { posts?: DemoDiaryPost[] }) {
   return (
     <section className="bg-[#eee]">
-      <div className="mx-auto w-full max-w-[1800px] px-8 py-16">
+      <div className="mx-auto w-full max-w-[1800px] px-8 py-10">
         <div className="text-center mb-10">
-          <h2 className="font-display text-2xl sm:text-3xl text-black">
-            The Veilora Club Diary
-          </h2>
-          <p className="mt-2 text-sm text-black/60">
+          <SectionTitle>The Veilora Club Diary</SectionTitle>
+          <p className="mt-0.5 font-display text-[28px] tracking-[0.02em] text-black/70">
             Editorial notes on modest style, global brands, and timeless silhouettes.
           </p>
         </div>
@@ -47,3 +46,6 @@ export function DalrasDiary({ posts = [] }: { posts?: DemoDiaryPost[] }) {
     </section>
   );
 }
+
+
+     

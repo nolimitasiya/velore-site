@@ -1,38 +1,27 @@
 import Link from "next/link";
-import { headers } from "next/headers";
-import AffiliateControls from "./AffiliateControls";
+import { requireAdminSession } from "@/lib/auth/AdminSession";
+import { prisma } from "@/lib/prisma";
+import BrandRowClient from "./BrandRowClient";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type BrandRow = {
-  id: string;
-  name: string;
-  slug: string;
-  createdAt: string;
-  accountStatus: string;
-  affiliateStatus: "PENDING" | "ACTIVE" | "PAUSED";
-  affiliateProvider: string | null;
-  affiliateBaseUrl: string | null;
-};
-
-async function getBaseUrlFromHeaders() {
-  const h = await headers(); // ✅ await fixes your error
-  const host = h.get("x-forwarded-host") ?? h.get("host");
-  const proto = h.get("x-forwarded-proto") ?? "https";
-  if (!host) throw new Error("Missing host header");
-  return `${proto}://${host}`;
-}
-
-async function getBrands(): Promise<BrandRow[]> {
-  const base = await getBaseUrlFromHeaders(); // ✅ await
-  const res = await fetch(`${base}/api/admin/brands`, { cache: "no-store" });
-  const json = await res.json().catch(() => ({}));
-  return json?.brands ?? [];
-}
-
 export default async function AdminBrandsPage() {
-  const brands = await getBrands();
+  await requireAdminSession();
+
+  const brands = await prisma.brand.findMany({
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      createdAt: true,
+      accountStatus: true,
+      affiliateStatus: true,
+      affiliateProvider: true,
+      affiliateBaseUrl: true,
+    },
+  });
 
   return (
     <main className="mx-auto w-full max-w-6xl px-6 py-10">
@@ -62,30 +51,10 @@ export default async function AdminBrandsPage() {
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
+
           <tbody>
             {brands.map((b) => (
-              <tr key={b.id} className="border-t border-black/10">
-                <td className="px-4 py-3">
-                  <div className="font-medium">{b.name}</div>
-                  <div className="text-xs text-black/50">{b.slug}</div>
-                </td>
-                <td className="px-4 py-3">{b.accountStatus}</td>
-                <td className="px-4 py-3 text-right">
-  <AffiliateControls
-    brandId={b.id}
-    initialStatus={b.affiliateStatus}
-    initialProvider={b.affiliateProvider}
-    initialBaseUrl={b.affiliateBaseUrl}
-  />
-</td>
-
-                
-                <td className="px-4 py-3">
-                  <div className="flex justify-end gap-2">
-                    <ForceResetButton brandId={b.id} />
-                  </div>
-                </td>
-              </tr>
+              <BrandRowClient key={b.id} b={b} />
             ))}
 
             {brands.length === 0 && (
@@ -99,43 +68,5 @@ export default async function AdminBrandsPage() {
         </table>
       </div>
     </main>
-  );
-}
-
-/** client button component inside server page */
-function ForceResetButton({ brandId }: { brandId: string }) {
-  "use client";
-  const [busy, setBusy] = (require("react") as typeof import("react")).useState(false);
-  const [done, setDone] = (require("react") as typeof import("react")).useState<string | null>(null);
-
-  async function onClick() {
-    if (!confirm("Send a password reset link to the brand owner/admin email?")) return;
-
-    setBusy(true);
-    setDone(null);
-    try {
-      const res = await fetch(`/api/admin/brands/${brandId}/force-reset`, {
-        method: "POST",
-      });
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(j?.error || "Failed");
-      setDone("Sent");
-      setTimeout(() => setDone(null), 2000);
-    } catch (e: any) {
-      alert(e?.message || "Failed");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <button
-      onClick={onClick}
-      disabled={busy}
-      className="rounded-lg border border-black/10 px-3 py-2 text-xs hover:bg-black/5 disabled:opacity-50"
-      type="button"
-    >
-      {busy ? "Sending..." : done ? "Sent ✓" : "Force reset"}
-    </button>
   );
 }

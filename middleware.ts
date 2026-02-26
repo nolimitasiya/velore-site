@@ -23,11 +23,14 @@ function isPublicPath(pathname: string) {
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const launchMode = process.env.LAUNCH_MODE === "true"; // true = locked / gate
-
+if (pathname.startsWith("/api/cron/")) {
+    return NextResponse.next();
+  }
   // ✅ Always allow static/public assets (prevents favicon/icon being blocked)
   if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
+  
 
   // ---------------------------
   // PUBLIC LOCKDOWN (only when launchMode = true)
@@ -176,6 +179,6 @@ export function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|icon.png|robots.txt|sitemap.xml).*)",
+    "/((?!_next/static|_next/image|favicon.ico|icon.png|robots.txt|sitemap.xml|api/cron).*)",
   ],
 };

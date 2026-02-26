@@ -5,7 +5,6 @@ import { Resend } from "resend";
 
 import { brandInvitedZoomEmail } from "@/lib/resend/templates/brand/invitedZoom";
 import { brandRejectedEmail } from "@/lib/resend/templates/brand/rejected";
-import { sendBrandInviteEmail } from "@/lib/resend/templates/onboarding/brandInvite";
 
 import { brandContractSentEmail } from "@/lib/resend/templates/brand/contractSent";
 import { brandContractSignedEmail } from "@/lib/resend/templates/brand/contractSigned";
@@ -46,7 +45,6 @@ async function sendStatusEmail(args: {
   applicantEmail: string;
   firstName?: string | null;
   schedulerUrl?: string;
-  inviteLink?: string;
   contractDownloadUrl?: string;
 }) {
   if (args.status === "new" || args.status === "contacted") return;
@@ -110,18 +108,9 @@ async function sendStatusEmail(args: {
     return;
   }
 
-  if (args.status === "onboarded") {
-    const link = safe(args.inviteLink);
-    if (!link) throw new Error("Missing inviteLink for onboarded email");
+  // ✅ Onboarding emails are handled by /invite (token generation + email).
+if (args.status === "onboarded") return;
 
-    await sendBrandInviteEmail({
-      to: args.applicantEmail,
-      brandName: "your brand",
-      inviteLink: link,
-      senderName: "Asiya",
-    });
-    return;
-  }
 
   if (args.status === "rejected") {
     const resend = new Resend(resendKey);
@@ -225,7 +214,6 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       applicantEmail: current.email,
       firstName: current.firstName,
       schedulerUrl: safe(body.schedulerUrl) || undefined,
-      inviteLink: safe(body.inviteLink) || undefined,
       contractDownloadUrl,
     });
   } catch (e) {

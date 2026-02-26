@@ -1,7 +1,10 @@
 import "./globals.css";
-import { Playfair_Display, Inter } from "next/font/google";
+import { Abril_Fatface, Inter } from "next/font/google";
+import { Great_Vibes } from "next/font/google";
+import { Cormorant_Garamond } from "next/font/google";
 
-const heading = Playfair_Display({
+const heading = Abril_Fatface({
+  weight: "400",
   subsets: ["latin"],
   variable: "--font-heading",
   display: "swap",
@@ -12,6 +15,19 @@ const body = Inter({
   variable: "--font-body",
   display: "swap",
 });
+const script = Great_Vibes({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-script",
+  display: "swap",
+});
+const display = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-display",
+  display: "swap",
+});
+
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.startsWith("http")
@@ -32,7 +48,10 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${heading.variable} ${body.variable}`}>
+    <html
+  lang="en"
+  className={`${heading.variable} ${body.variable} ${display.variable} ${script.variable}`}
+>
       <body className="min-h-screen w-full bg-white font-body text-black">
         {children}
       </body>

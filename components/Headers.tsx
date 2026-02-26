@@ -5,14 +5,14 @@ export function Header() {
     <header className="w-full border-b border-black/20 bg-[#eee]">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <div className="w-[120px]" />
+
         <Link
           href="/"
-          className="text-3xl tracking-[0.35em] font-light text-black"
+          className="font-heading text-4xl tracking-[0.02em] text-black"
           aria-label="Veilora Club home"
         >
           Veilora Club
         </Link>
-        
 
         <div className="w-[120px] flex justify-end">
           <button
@@ -22,9 +22,7 @@ export function Header() {
           >
             Search
           </button>
-        
-</div>
-
+        </div>
       </div>
     </header>
   );

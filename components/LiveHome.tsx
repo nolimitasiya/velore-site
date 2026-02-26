@@ -173,22 +173,22 @@ export default async function LiveHome({ region, country }: LiveHomeProps) {
   /* Render */
   /* --------------------------- */
 
-  return (
-    <main className="min-h-screen w-full bg-[#eee]">
-      <Hero imageUrl={demo.heroImage} />
-      <SaleTicker />
+return (
+  <main className="min-h-screen w-full bg-background text-foreground">
+    <Hero imageUrl={demo.heroImage} />
+    <SaleTicker />
 
-      <SectionTitle>SHOP TRENDY</SectionTitle>
-      <ProductRow products={trendy} />
+    <SectionTitle>Shop Trendy</SectionTitle>
+    <ProductRow products={trendy} />
 
-      <SloganAndContinents
-        slogan="Where global brands and international style meet"
-        continents={demo.continents}
-      />
+    <SloganAndContinents
+      slogan="Where global brands and international style meet"
+      continents={demo.continents}
+    />
 
-      <StyleFeed posts={styleFeedToShow} />
-      <DalrasDiary posts={demo.diary} />
-      <BrandMosaic tiles={mosaicTiles} />
-    </main>
-  );
+    <StyleFeed posts={styleFeedToShow} />
+    <DalrasDiary posts={demo.diary} />
+    <BrandMosaic tiles={mosaicTiles} />
+  </main>
+);
 }

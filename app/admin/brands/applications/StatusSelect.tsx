@@ -71,13 +71,31 @@ export default function StatusSelect({ id, value }: { id: string; value: string 
       }
 
       // Onboarded => require invite link
-      if (next === "onboarded") {
-        inviteLink =
-          window
-            .prompt("Paste the brand invite/onboarding link to include in the email (required):")
-            ?.trim() || "";
-        if (!inviteLink) return;
-      }
+      // Onboarded => auto-generate invite + email it
+if (next === "onboarded") {
+  const ok = window.confirm(
+    "This will create/update the Brand, generate an onboarding invite, email it to the applicant, and mark the application as ONBOARDED.\n\nContinue?"
+  );
+  if (!ok) return;
+
+  const res = await fetch(`/api/admin/brand-applications/${id}/invite`, {
+    method: "POST",
+  });
+
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok || !j.ok) {
+    throw new Error(j?.error || `Failed (${res.status})`);
+  }
+
+  // Optional: show link so you can copy it
+  if (j.onboardingUrl) {
+    window.prompt("Onboarding link (copy):", j.onboardingUrl);
+  }
+
+  router.refresh();
+  return; // IMPORTANT: don't fall through to patchStatus
+}
+
 
       // contract_sent => MUST upload PDF first
       if (next === "contract_sent") {

@@ -71,14 +71,14 @@ useEffect(() => {
           mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2",
         ].join(" ")}
       >
-        <h1 className="font-serif text-4xl sm:text-5xl tracking-tight">
+        <h1 className="font-heading text-4xl md:text-5xl leading-none tracking-[0.05em] text-black">
           Veilora Club
         </h1>
 {mode === null && (
   <div className="mt-10 flex flex-col sm:flex-row items-stretch justify-center gap-3">
     <button
       onClick={() => setMode("shopper")}
-      className="rounded-2xl border px-6 py-4 text-base font-medium hover:bg-neutral-50 transition"
+      className="rounded-2xl border px-6 py-4 text-base font-serif text-2xl sm:text-1xl tracking-tight transition"
     >
       I’m a shopper
     </button>
@@ -87,7 +87,7 @@ useEffect(() => {
       onClick={() => {
             console.log("Brand button clicked - going to /brand-apply");
             router.push("/brands/apply");}}
-      className="rounded-2xl border px-6 py-4 text-base font-medium hover:bg-neutral-50 transition"
+      className="rounded-2xl border px-6 py-4 text-base font-serif text-2xl sm:text-1xl tracking-tight transition"
     >
       I’m a brand
     </button>
@@ -95,11 +95,14 @@ useEffect(() => {
 )}
 
 
-        <p className="mt-6 text-sm text-neutral-900">
-          We’re launching soon{launchDate ? ` — ${launchDate}` : "."}
+        <p className="font-serif text-1xl sm:text-1xl tracking-tight">
+          We’re launching soon{launchDate ? ` — ${launchDate}` : " :)"}
         </p>
 
        <div
+
+
+
   className={[
     "overflow-hidden transition-all duration-500 ease-out",
     mode === "shopper"

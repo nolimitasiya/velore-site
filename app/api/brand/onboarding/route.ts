@@ -74,9 +74,11 @@ export async function POST(req: Request) {
   });
 
   // log them in
+    // log them in (BRAND SESSION cookies)
   const res = NextResponse.json({ ok: true });
 
-  res.cookies.set("user_authed", user.id, {
+  // ✅ this is what middleware + requireBrandContext expects
+  res.cookies.set("brand_authed", user.id, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -84,13 +86,19 @@ export async function POST(req: Request) {
     maxAge: 60 * 60 * 12,
   });
 
-  res.cookies.set("company_id", invite.brandId, {
+  // ✅ brand id cookie (name MUST match what BrandSession.ts reads)
+  res.cookies.set("brand_id", invite.brandId, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 12,
   });
+
+  // (optional) clear old cookies so they don't confuse anything
+  res.cookies.set("user_authed", "", { path: "/", maxAge: 0 });
+  res.cookies.set("company_id", "", { path: "/", maxAge: 0 });
 
   return res;
 }
+

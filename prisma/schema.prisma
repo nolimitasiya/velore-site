@@ -70,6 +70,8 @@ model Brand {
   websiteUrl String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  adminNotes String?
+  notes BrandNote[]
 
   products         Product[]
   memberships      BrandMembership[]
@@ -112,7 +114,12 @@ model Brand {
   affiliateStatus   AffiliateStatus     @default(PENDING)
   affiliateBaseUrl  String?
 
+// ---------------------------
+//  Instagram API
+// ---------------------------
 
+instagramUserId   String?  // the IG user id (business/creator)
+instagramToken    String?  // long-lived token (store carefully)
 
   
   // ---------------------------
@@ -256,6 +263,10 @@ model BrandApplication {
   website            String?
   email              String
   notes              String?
+  companyName     String?
+  platformHosted  PlatformHosted? // new enum
+  platformHostedOther String?
+
   status             BrandApplicationStatus @default(new)
   createdAt          DateTime               @default(now())
   updatedAt          DateTime               @updatedAt
@@ -273,6 +284,13 @@ model BrandApplication {
   @@index([countryCode])
   @@index([status, createdAt])
   @@index([email])
+  @@index([platformHosted])
+}
+enum PlatformHosted {
+  SHOPIFY
+  GODADDY
+  WIX
+  OTHER
 }
 
 enum Role {
@@ -661,3 +679,17 @@ enum AffiliateStatus {
   ACTIVE
   PAUSED
 }
+
+model BrandNote {
+  id        String   @id @default(uuid()) @db.Uuid
+  brandId   String   @db.Uuid
+  content   String
+  createdAt DateTime @default(now())
+
+  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@index([brandId])
+}                    
+
+
+

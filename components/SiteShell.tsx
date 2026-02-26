@@ -30,8 +30,8 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
             <div className="pb-3 text-center">
               <Link
                 href="/"
-                className="font-display text-4xl md:text-5xl leading-none tracking-[0.06em] text-white"
-              >
+                className="font-heading text-4xl md:text-5xl leading-none tracking-[0.05em] text-white"
+>
                 Veilora Club
               </Link>
             </div>
@@ -48,10 +48,10 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
       <footer className="border-t border-white/10 bg-black text-white">
         <div className="mx-auto w-full max-w-[1800px] px-8 py-14 text-sm">
           <div className="mb-10 text-center">
-            <div className="font-heading text-2xl md:text-3xl tracking-[0.3em] text-white">
+            <div className="font-heading text-2xl md:text-3xl tracking-[0.08em] text-white">
               Veilora Club
             </div>
-            <div className="mt-3 text-sm md:text-base tracking-wide text-white/80">
+            <div className="mt-3 font-display text-[18px] md:text-[22px] tracking-[0.02em] text-white/80">
               Where global brands and international style meet
             </div>
           </div>

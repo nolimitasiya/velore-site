@@ -14,7 +14,7 @@ export function StyleFeed({ posts }: { posts: StyleFeedPost[] }) {
     <section className="bg-[#eee]">
       <div className="mx-auto w-full max-w-[1800px] px-8 pb-16">
         <div className="py-8 text-center">
-          <h2 className="text-2xl font-semibold text-black">
+          <h2 className="text-4xl font-semibold text-black">
             The Style Feed
           </h2>
         </div>

@@ -5,43 +5,90 @@ import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
 import { brandApplicationReceivedEmail } from "@/lib/resend/templates/brand/applicationReceived";
 
-const schema = z.object({
-  firstName: z.string().min(1).max(80),
-  lastName: z.string().min(1).max(80),
-  email: z.string().email().max(200),
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-  // ✅ required for long-term data quality
-  countryCode: z.string().length(2),
-  city: z.string().min(1).max(120),
+const PLATFORM = ["SHOPIFY", "GODADDY", "WIX", "OTHER"] as const;
 
-  phone: z.string().max(60).optional().or(z.literal("")),
-  website: z.string().max(300).optional().or(z.literal("")),
-  socialMedia: z.string().max(300).optional().or(z.literal("")),
-  notes: z.string().max(2000).optional().or(z.literal("")),
-});
+// helpers
+const trimToNull = (v: unknown) => {
+  const s = String(v ?? "").trim();
+  return s.length ? s : null;
+};
+
+const upper = (v: unknown) => String(v ?? "").trim().toUpperCase();
+
+const schema = z
+  .object({
+    firstName: z.string().min(1).max(80).transform((s) => s.trim()),
+    lastName: z.string().min(1).max(80).transform((s) => s.trim()),
+    email: z.string().email().max(200).transform((s) => s.trim().toLowerCase()),
+
+    // ✅ NEW
+    companyName: z.string().min(1).max(160).transform((s) => s.trim()),
+    platformHosted: z.enum(PLATFORM),
+    platformHostedOther: z
+      .string()
+      .max(120)
+      .optional()
+      .nullable()
+      .transform((s) => (s == null ? null : s.trim())),
+
+    // ✅ required for long-term data quality
+    countryCode: z
+      .string()
+      .length(2)
+      .transform((s) => s.trim().toUpperCase()),
+    city: z.string().min(1).max(120).transform((s) => s.trim()),
+
+    // optional text fields (allow "" but store null)
+    phone: z.string().max(60).optional().or(z.literal("")).transform(trimToNull),
+    website: z.string().max(300).optional().or(z.literal("")).transform(trimToNull),
+    socialMedia: z.string().max(300).optional().or(z.literal("")).transform(trimToNull),
+    notes: z.string().max(2000).optional().or(z.literal("")).transform(trimToNull),
+  })
+  .superRefine((val, ctx) => {
+    // If OTHER -> require platformHostedOther
+    if (val.platformHosted === "OTHER") {
+      const other = String(val.platformHostedOther ?? "").trim();
+      if (!other) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["platformHostedOther"],
+          message: "Please specify which platform you are hosted on.",
+        });
+      }
+    }
+  });
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     const data = schema.parse(body);
 
-    const countryCode = String(data.countryCode || "").trim().toUpperCase();
-    const city = String(data.city || "").trim();
+    // Normalised values already, but keep these explicit:
+    const countryCode = data.countryCode; // already upper + trimmed
+    const city = data.city;
 
     const created = await prisma.brandApplication.create({
       data: {
-        firstName: data.firstName.trim(),
-        lastName: data.lastName.trim(),
-        email: data.email.trim().toLowerCase(),
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
 
-        // ✅ new fields (make sure Prisma model has them)
+        // ✅ NEW
+        companyName: data.companyName,
+        platformHosted: data.platformHosted,
+        platformHostedOther:
+          data.platformHosted === "OTHER" ? (data.platformHostedOther?.trim() || null) : null,
+
         countryCode,
         city,
 
-        phone: data.phone?.trim() || null,
-        website: data.website?.trim() || null,
-        socialMedia: data.socialMedia?.trim() || null,
-        notes: data.notes?.trim() || null,
+        phone: data.phone,
+        website: data.website,
+        socialMedia: data.socialMedia,
+        notes: data.notes,
       },
     });
 
@@ -55,21 +102,33 @@ export async function POST(req: Request) {
 
       // 1) Notify you (only if BRAND_APPLY_NOTIFY_TO is set)
       if (to) {
+        const hostedDisplay =
+          created.platformHosted === "OTHER"
+            ? `OTHER — ${created.platformHostedOther ?? ""}`.trim()
+            : String(created.platformHosted ?? "-");
+
         await resend.emails.send({
           from,
           to,
           replyTo,
-          subject: `New Brand Apply – ${created.firstName} ${created.lastName}`,
+          subject: `New Brand Apply – ${created.companyName || `${created.firstName} ${created.lastName}`}`,
           html: `
             <div style="font-family:ui-sans-serif,system-ui; line-height:1.5">
-              <h2 style="margin:0 0 12px">New Brand Apply</h2>
-              <p><strong>Name:</strong> ${escapeHtml(created.firstName)} ${escapeHtml(created.lastName)}</p>
+              <h2 style="margin:0 0 12px">New Brand Application</h2>
+
+              <p><strong>Company:</strong> ${escapeHtml(created.companyName ?? "-")}</p>
+              <p><strong>Hosted on:</strong> ${escapeHtml(hostedDisplay || "-")}</p>
+
+              <p><strong>Contact:</strong> ${escapeHtml(created.firstName)} ${escapeHtml(created.lastName)}</p>
               <p><strong>Email:</strong> ${escapeHtml(created.email)}</p>
+
               <p><strong>Location:</strong> ${escapeHtml(created.city ?? "-")}, ${escapeHtml(created.countryCode ?? "-")}</p>
               <p><strong>Phone:</strong> ${escapeHtml(created.phone ?? "-")}</p>
-              <p><strong>Company website:</strong> ${escapeHtml(created.website ?? "-")}</p>
+              <p><strong>Website:</strong> ${escapeHtml(created.website ?? "-")}</p>
               <p><strong>Social media:</strong> ${escapeHtml(created.socialMedia ?? "-")}</p>
+
               <p><strong>Notes:</strong><br/>${escapeHtml(created.notes ?? "-").replace(/\\n/g, "<br/>")}</p>
+
               <hr style="margin:16px 0"/>
               <p style="color:#666; font-size:12px">
                 Status: ${escapeHtml(String(created.status))} • Created: ${created.createdAt.toISOString()} • ID: ${created.id}
@@ -92,16 +151,23 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, id: created.id });
   } catch (e: any) {
-    const msg =
-      e?.name === "ZodError"
-        ? "Please check the form fields and try again."
-        : e?.message ?? "Unexpected error";
-    return NextResponse.json({ error: msg }, { status: 400 });
+    // In prod, keep message generic. In dev, expose Zod issues for faster debugging.
+    const isZod = e?.name === "ZodError";
+    const dev = process.env.NODE_ENV !== "production";
+
+    return NextResponse.json(
+      {
+        ok: false,
+        error: isZod ? "Please check the form fields and try again." : e?.message ?? "Unexpected error",
+        ...(dev && isZod ? { issues: e.issues } : {}),
+      },
+      { status: 400 }
+    );
   }
 }
 
 function escapeHtml(s: string) {
-  return s
+  return String(s ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")

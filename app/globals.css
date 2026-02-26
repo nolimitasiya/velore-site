@@ -56,22 +56,18 @@ body {
     font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji",
       "Twemoji Mozilla", sans-serif;
   }
+
+  .font-heading { font-family: var(--font-heading); }
+  .font-body { font-family: var(--font-body); }
+  .font-display {font-family: var(--font-display); }/* alias */
+  .font-script {
+  font-family: var(--font-script);
+}
 }
 
-@layer base {
-  body {
-    text-rendering: geometricPrecision;
-  }
 
-  h1, h2, h3, h4 {
-    font-family: var(--font-heading);
-    letter-spacing: 0.03em;
-  }
-}
-:root {
-  /* ...your existing vars... */
-  --font-display: var(--font-heading);
-}
+
+
 
 @layer utilities {
   .row--new > td { background: transparent; }
@@ -82,10 +78,15 @@ body {
   .row--contract_sent > td { background: #dcbe18; }  /* yellow-50 */
   .row--contract_signed > td { background: #08b110; }  /* green-50 */
 }
-.font-brand {
-  font-family: var(--font-abril), serif;
+@layer base {
+  body {
+    text-rendering: geometricPrecision;
+    font-family: var(--font-body);
+  }
+
+  h1, h2, h3, h4 {
+  font-family: var(--font-heading);
+  letter-spacing: 0.01em;
 }
-h1, h2, h3 {
-  font-family: var(--font-abril), serif;
 }
 

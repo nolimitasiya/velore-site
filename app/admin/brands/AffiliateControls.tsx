@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Props = {
   brandId: string;
@@ -21,9 +22,9 @@ export default function AffiliateControls({
   initialProvider,
   initialBaseUrl,
 }: Props) {
-  const [status, setStatus] = useState<Status>(
-    (initialStatus ?? "PENDING") as Status
-  );
+  const router = useRouter();
+
+  const [status, setStatus] = useState<Status>((initialStatus ?? "PENDING") as Status);
   const [provider, setProvider] = useState<Provider>(
     (initialProvider ?? "SHOPIFY_COLLABS") as Provider
   );
@@ -49,6 +50,10 @@ export default function AffiliateControls({
       if (!res.ok || !j.ok) throw new Error(j?.error || `Failed (${res.status})`);
 
       setSaved("Saved ✓");
+
+      // ✅ refresh server components so Status badge updates immediately
+      router.refresh();
+
       setTimeout(() => setSaved(null), 1500);
     } catch (e: any) {
       alert(e?.message || "Failed to save affiliate settings");

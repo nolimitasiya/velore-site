@@ -38,9 +38,9 @@ export function SloganAndContinents({
 
       {/* Slogan */}
 <div className="text-center mb-10">
-  <div className="font-semibold text-2xl sm:text-3xl text-black tracking-wide">
-    {slogan}
-  </div>
+  <div className="mt-2 font-display text-[28px] md:text-[26px] tracking-[0.02em] text-black/80 text-center">
+  {slogan}
+</div>
 </div>
 
 
