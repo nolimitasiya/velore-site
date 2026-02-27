@@ -6,6 +6,19 @@ import { buildTrackedProductUrl } from "@/lib/affiliate/url";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function pickHeader(req: NextRequest, keys: string[]) {
+  for (const k of keys) {
+    const v = req.headers.get(k);
+    if (v && v.trim()) return v.trim();
+  }
+  return null;
+}
+
+function normalizeCountryCode(v: string | null) {
+  const s = (v ?? "").trim().toUpperCase();
+  return s.length === 2 ? s : null;
+}
+
 export async function GET(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> }
@@ -17,8 +30,8 @@ export async function GET(
     select: {
       id: true,
       brandId: true,
-      sourceUrl: true, // ✅ needed
-      affiliateUrl: true, // optional (per-product override if you ever use it)
+      sourceUrl: true,
+      affiliateUrl: true,
       brand: {
         select: {
           affiliateStatus: true,
@@ -28,25 +41,14 @@ export async function GET(
     },
   });
 
-  // Not found → home
-  if (!product) {
-    return NextResponse.redirect(new URL("/", req.url));
-  }
-
-  // If brand is not ACTIVE, you can either block or still allow plain sourceUrl.
-  // Your current logic blocks, so we keep it consistent:
+  if (!product) return NextResponse.redirect(new URL("/", req.url));
   if (product.brand?.affiliateStatus !== "ACTIVE") {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
   const sourceUrl = String(product.sourceUrl || "").trim();
-  if (!sourceUrl) {
-    return NextResponse.redirect(new URL("/", req.url));
-  }
+  if (!sourceUrl) return NextResponse.redirect(new URL("/", req.url));
 
-  // ✅ Destination logic:
-  // - If product.affiliateUrl exists, it is already a fully tracked URL → use it as-is
-  // - Otherwise build tracked URL from sourceUrl + brand affiliateBaseUrl params
   const destinationUrl =
     (product.affiliateUrl?.trim() || "") ||
     buildTrackedProductUrl({
@@ -54,16 +56,36 @@ export async function GET(
       affiliateBaseUrl: product.brand?.affiliateBaseUrl ?? null,
     });
 
-  if (!destinationUrl) {
-    return NextResponse.redirect(new URL("/", req.url));
-  }
+  if (!destinationUrl) return NextResponse.redirect(new URL("/", req.url));
 
-  // Track click
+  // ✅ GEO from Vercel/infra headers (Node runtime)
+  const countryRaw = pickHeader(req, [
+    "x-vercel-ip-country",
+    "x-country",
+    "cf-ipcountry", // cloudflare fallback if ever used
+  ]);
+
+  const region = pickHeader(req, [
+    "x-vercel-ip-country-region",
+    "x-region",
+  ]);
+
+  const city = pickHeader(req, [
+    "x-vercel-ip-city",
+    "x-city",
+  ]);
+
+  const countryCode = normalizeCountryCode(countryRaw);
+
   await prisma.affiliateClick.create({
     data: {
       brandId: product.brandId,
       productId: product.id,
       destinationUrl,
+
+      countryCode,
+      region: region ?? null,
+      city: city ?? null,
     },
   });
 

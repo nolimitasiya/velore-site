@@ -14,10 +14,12 @@ export async function POST(req: Request) {
   const newPassword = String(body.password || "");
 
   const v = validatePassword(newPassword);
-if (!v.ok) {
-  return NextResponse.json({ ok: false, error: "WEAK_PASSWORD", details: v.errors }, { status: 400 });
-}
-
+  if (!v.ok) {
+    return NextResponse.json(
+      { ok: false, error: "WEAK_PASSWORD", details: v.errors },
+      { status: 400 }
+    );
+  }
 
   const tokenHash = hashToken(token);
 
@@ -36,11 +38,21 @@ if (!v.ok) {
     return NextResponse.json({ ok: false, error: "INVALID_OR_EXPIRED" }, { status: 400 });
   }
 
+  // ✅ Find user case-insensitively, then update by id
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+    select: { id: true },
+  });
+
+  if (!user) {
+    return NextResponse.json({ ok: false, error: "INVALID_OR_EXPIRED" }, { status: 400 });
+  }
+
   const hash = await bcrypt.hash(newPassword, 12);
 
   await prisma.$transaction([
     prisma.user.update({
-      where: { email },
+      where: { id: user.id },
       data: { password: hash },
     }),
     prisma.passwordResetToken.update({

@@ -28,12 +28,11 @@ export async function POST(req: Request) {
 
   if (!email) return NextResponse.json({ ok: true });
 
-  const user = await prisma.user.findUnique({
-    where: { email },
-    select: { email: true },
-  });
-
-  if (!user) return NextResponse.json({ ok: true });
+  const user = await prisma.user.findFirst({
+  where: { email: { equals: email, mode: "insensitive" } },
+  select: { email: true },
+});
+if (!user) return NextResponse.json({ ok: true });
 
   const token = makeResetToken();
   const tokenHash = hashToken(token);
@@ -47,8 +46,11 @@ export async function POST(req: Request) {
     },
   });
 
-  const origin = req.headers.get("origin") || "http://localhost:3000";
-  const resetUrl = `${origin}/brand/reset?token=${token}&email=${encodeURIComponent(email)}`;
+  const appUrl =
+  process.env.NEXT_PUBLIC_APP_URL ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+
+const resetUrl = `${appUrl}/brand/reset?token=${token}&email=${encodeURIComponent(email)}`;
 
   await sendResetEmail({ to: email, resetUrl, userType: "BRAND" });
 

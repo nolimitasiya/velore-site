@@ -2,6 +2,8 @@
 
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
+import AuthShell from "@/components/AuthShell";
+
 
 export default function AdminLoginClient() {
   const [email, setEmail] = useState("");
@@ -45,8 +47,8 @@ export default function AdminLoginClient() {
   }
 
   return (
-    <div className="max-w-md mx-auto p-6">
-      <h1 className="text-2xl font-semibold">Admin Login</h1>
+    <AuthShell title="Admin Login" variant="admin">
+
 
       <form onSubmit={onLogin} className="mt-4 space-y-3">
         <input
@@ -86,6 +88,7 @@ export default function AdminLoginClient() {
 
         {err && <div className="text-sm text-red-600">{err}</div>}
       </form>
-    </div>
+    </AuthShell>
+
   );
 }

@@ -2,6 +2,7 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { useState } from "react";
+import AuthShell from "@/components/AuthShell";
 
 export default function BrandLoginClient() {
 
@@ -40,46 +41,46 @@ export default function BrandLoginClient() {
   }
 
   return (
-    <div className="max-w-md mx-auto p-6">
-      <h1 className="text-2xl font-semibold">Brand Login</h1>
-
-      <form onSubmit={onLogin} className="mt-4 space-y-3">
+  <AuthShell title="Sign in" variant="brand">
+    <form onSubmit={onLogin} className="space-y-5">
+      <div className="space-y-2">
+        <label className="text-sm text-black/70">Email</label>
         <input
           type="email"
-          className="w-full rounded-lg border p-2"
+          className="w-full rounded-md border border-black/20 px-3 py-2 text-sm focus:outline-none focus:border-black"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
+      </div>
 
+      <div className="space-y-2">
+        <label className="text-sm text-black/70">Password</label>
         <input
           type="password"
-          className="w-full rounded-lg border p-2"
+          className="w-full rounded-md border border-black/20 px-3 py-2 text-sm focus:outline-none focus:border-black"
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
+      </div>
 
-        <button
-          type="submit"
-          disabled={busy || !email || !password}
-          className="w-full rounded-lg bg-black text-white py-2 disabled:opacity-50"
-        >
-          {busy ? "Signing in..." : "Sign in"}
-        </button>
+      <button
+        type="submit"
+        disabled={busy || !email || !password}
+        className="w-full rounded-md bg-black text-white py-3 text-sm disabled:opacity-50"
+      >
+        {busy ? "Signing in..." : "Sign in"}
+      </button>
 
-        <div className="text-sm text-center">
-          <a
-            href="/admin/forgot"
-            className="underline text-black/80 hover:text-black"
-          >
-            Forgot password?
-          </a>
-        </div>
+      <div className="text-sm">
+        <a href="/brand/forgot" className="underline text-black/70 hover:text-black">
+          Forgot your password?
+        </a>
+      </div>
 
-
-        {err && <div className="text-sm text-red-600">{err}</div>}
-      </form>
-    </div>
-  );
+      {err && <div className="text-sm text-red-600">{err}</div>}
+    </form>
+  </AuthShell>
+);
 }

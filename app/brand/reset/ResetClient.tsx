@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import AuthShell from "@/components/AuthShell";
 
 export default function ResetClient() {
   const params = useSearchParams();
@@ -39,7 +40,7 @@ export default function ResetClient() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#eee]">
+    <AuthShell title="Set new password" variant="brand">
       <form
         onSubmit={handleSubmit}
         className="bg-white p-8 w-full max-w-md space-y-6 border border-black/10"
@@ -53,8 +54,8 @@ export default function ResetClient() {
             <input
               type="password"
               required
-              minLength={8}
-              placeholder="New password (min 8 characters)"
+              minLength={10}
+              placeholder="New password (min 10 characters)"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full border border-black/20 px-3 py-2 text-sm focus:outline-none"
@@ -73,6 +74,6 @@ export default function ResetClient() {
           </>
         )}
       </form>
-    </div>
+    </AuthShell>
   );
 }

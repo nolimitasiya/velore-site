@@ -4,11 +4,13 @@ import { requireAdminSession } from "@/lib/auth/AdminSession";
 import { adminError } from "@/lib/auth/http";
 import { parseRange, rangeWindow } from "@/lib/revenue/ranges";
 
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type OutRow = {
-  brandId: string;
+  productId: string;
+  product: { id: string; title: string; slug: string } | null;
   brand: { id: string; name: string; slug: string } | null;
   clicks: number;
 };
@@ -23,11 +25,14 @@ export async function GET(req: Request) {
 
     const { gte, lt } = rangeWindow(range);
 
+    // product-level clicks only
     const grouped = await prisma.affiliateClick.groupBy({
-      by: ["brandId"],
-      where: { clickedAt: { gte, lt } },
+      by: ["productId", "brandId"],
+      where: {
+        clickedAt: { gte, lt },
+        productId: { not: null },
+      },
       _count: { _all: true },
-      // Prisma groupBy ordering support can be finicky; keep your proven pattern:
       orderBy: { brandId: "asc" },
       take: 500,
     });
@@ -37,18 +42,33 @@ export async function GET(req: Request) {
     );
 
     const top = sorted.slice(0, take);
+
+    const productIds = top.map((r) => r.productId!).filter(Boolean);
     const brandIds = top.map((r) => r.brandId);
 
-    const brands = await prisma.brand.findMany({
-      where: { id: { in: brandIds } },
-      select: { id: true, name: true, slug: true },
-    });
+    const [products, brands] = await Promise.all([
+      prisma.product.findMany({
+        where: { id: { in: productIds } },
+        select: { id: true, title: true, slug: true, brandId: true },
+      }),
+      prisma.brand.findMany({
+        where: { id: { in: brandIds } },
+        select: { id: true, name: true, slug: true },
+      }),
+    ]);
 
-    const map = new Map(brands.map((b) => [b.id, b]));
+    const productMap = new Map(products.map((p) => [p.id, p]));
+    const brandMap = new Map(brands.map((b) => [b.id, b]));
 
     const out: OutRow[] = top.map((r) => ({
-      brandId: r.brandId,
-      brand: map.get(r.brandId) ?? null,
+      productId: r.productId!,
+      product: (() => {
+        const p = productMap.get(r.productId!);
+        return p ? { id: p.id, title: p.title, slug: p.slug } : null;
+      })(),
+      brand: brandMap.get(r.brandId)
+        ? { id: r.brandId, name: brandMap.get(r.brandId)!.name, slug: brandMap.get(r.brandId)!.slug }
+        : null,
       clicks: Number(r._count?._all ?? 0),
     }));
 

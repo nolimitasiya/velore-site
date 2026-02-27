@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import StatusSelect from "./StatusSelect";
 import OnboardButton from "./OnboardButton";
+import { requireAdminSession } from "@/lib/auth/AdminSession";
 
 export const dynamic = "force-dynamic";
 
@@ -123,6 +124,7 @@ function normalizeStatus(input?: string): Status {
 }
 
 export default async function Page({
+  
   searchParams,
 }: {
   searchParams: Promise<{
@@ -133,6 +135,12 @@ export default async function Page({
   }>;
 }) {
   const sp = await searchParams;
+  const { admin } = await requireAdminSession();
+  const now = new Date();
+  await prisma.adminUser.update({
+  where: { id: admin.id },
+  data: { lastSeenApplicationsAt: now },
+});
 
   const status = normalizeStatus(sp.status);
 
@@ -154,7 +162,6 @@ const toStr = sp.to ? String(sp.to) : "";
   // --------
   // Date range computation
   // --------
-  const now = new Date();
 
   function startOfDay(d: Date) {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -298,6 +305,8 @@ const toStr = sp.to ? String(sp.to) : "";
 
     const s = params.toString();
     return s ? `?${s}` : "";
+
+  
 
   };
 

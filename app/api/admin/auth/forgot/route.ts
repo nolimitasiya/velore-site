@@ -29,12 +29,11 @@ export async function POST(req: Request) {
 
   if (!email) return NextResponse.json({ ok: true });
 
-  const admin = await prisma.adminUser.findUnique({
-    where: { email },
-    select: { email: true },
-  });
-
-  if (!admin) return NextResponse.json({ ok: true });
+  const admin = await prisma.adminUser.findFirst({
+  where: { email: { equals: email, mode: "insensitive" } },
+  select: { email: true },
+});
+if (!admin) return NextResponse.json({ ok: true });
 
   const token = makeResetToken();
   const tokenHash = hashToken(token);
@@ -48,9 +47,11 @@ export async function POST(req: Request) {
     },
   });
 
-  const origin = req.headers.get("origin") || "http://localhost:3000";
-  const resetUrl = `${origin}/admin/reset?token=${token}&email=${encodeURIComponent(email)}`;
+ const appUrl =
+  process.env.NEXT_PUBLIC_APP_URL ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
+const resetUrl = `${appUrl}/admin/reset?token=${token}&email=${encodeURIComponent(email)}`;
   await sendResetEmail({ to: email, resetUrl, userType: "ADMIN" });
 
   return NextResponse.json({ ok: true });

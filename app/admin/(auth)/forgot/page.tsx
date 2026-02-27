@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import AuthShell from "@/components/AuthShell";
 
 export default function AdminForgotPage() {
   const [email, setEmail] = useState("");
@@ -24,12 +25,12 @@ export default function AdminForgotPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#eee]">
+    <AuthShell title="Admin Password Reset" variant="admin">
+
       <form
         onSubmit={handleSubmit}
         className="bg-white p-8 w-full max-w-md space-y-6 border border-black/10"
       >
-        <h1 className="text-xl font-semibold text-center">Admin Password Reset</h1>
 
         {!sent ? (
           <>
@@ -62,6 +63,6 @@ export default function AdminForgotPage() {
           </div>
         )}
       </form>
-    </div>
+</AuthShell>
   );
 }

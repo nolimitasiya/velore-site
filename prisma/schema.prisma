@@ -15,6 +15,8 @@ model AdminUser {
   name                     String?
   createdAt                DateTime          @default(now())
   reviewedTaxonomyRequests TaxonomyRequest[] @relation("TaxonomyReviewedBy")
+  lastSeenWaitlistAt DateTime?
+  lastSeenApplicationsAt DateTime?
 }
 
 model User {
@@ -23,6 +25,7 @@ model User {
   password  String
   name      String?
   createdAt DateTime @default(now())
+  lastSeenWaitlistAt   DateTime?
 
   brandMemberships BrandMembership[]
   importJobs       ImportJob[]
@@ -256,6 +259,7 @@ model NewsletterSubscriber {
   confirmedAt      DateTime?
   unsubscribeToken String?   @unique
   unsubscribedAt   DateTime?
+  countryCode String? @db.Char(2)
 }
 
 model BrandApplication {
@@ -329,6 +333,9 @@ model AffiliateClick {
   productId String?  @db.Uuid
   brandId   String   @db.Uuid
   clickedAt DateTime @default(now())
+  countryCode String? @db.Char(2)  // ISO-2 e.g. "GB"
+  region      String?              // e.g. "ENG" or "California" depending on provider
+  city        String?
 
   destinationUrl String? // ✅ ADD THIS
 
@@ -338,6 +345,7 @@ model AffiliateClick {
 
   @@index([brandId, clickedAt])
   @@index([productId, clickedAt])
+  @@index([countryCode, clickedAt])
 }
 
 model AffiliateEarning {
@@ -390,6 +398,7 @@ model WaitlistSubscriber {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name      String
   email     String   @unique
+  countryCode String? @db.Char(2)
   createdAt DateTime @default(now())
 }
 

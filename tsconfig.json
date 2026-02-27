@@ -30,7 +30,7 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-, "app/admin/brand-invites"  ],
+, "app/admin/(app)/brand-invites"  ],
   "exclude": ["node_modules","scripts"]
   
 }

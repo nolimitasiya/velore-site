@@ -568,4 +568,3 @@ export default function ProductEditClient({ id }: { id: string }) {
     </div>
   );
 }
-1
