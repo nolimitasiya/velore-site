@@ -230,11 +230,17 @@ export default function BrandApplyForm() {
     }
   }
 
-  const inputClass = "mt-1 w-full rounded-xl border px-3 py-2";
-  const selectClass = "mt-1 w-full rounded-xl border px-3 py-2 bg-white";
-  const labelClass = "text-sm font-medium";
-  const sectionTitle = "text-2xl md:text-3xl font-semibold";
-  const sectionWrap = "rounded-2xl border border-black/10 bg-white p-5 md:p-7";
+  const inputClass =
+  "mt-1 w-full rounded-xl border border-black/15 bg-white px-3 py-2 text-black placeholder:text-black/40";
+
+const selectClass =
+  "mt-1 w-full rounded-xl border border-black/15 bg-white px-3 py-2 text-black";
+
+const labelClass = "text-sm font-medium text-black";
+
+const sectionTitle = "text-2xl md:text-3xl font-semibold text-black";
+
+const sectionWrap = "rounded-2xl border border-black/10 bg-white p-5 md:p-7 text-black";
 
   // IDs for accessibility linking
   const phoneLegendId = "phoneLegend";
