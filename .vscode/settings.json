@@ -1,0 +1,7 @@
+{
+  "files.associations": {
+    "*.tsx": "typescriptreact"
+  },
+  "html.validate.scripts": false,
+  "html.validate.styles": false
+}

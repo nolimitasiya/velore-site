@@ -27,14 +27,14 @@ function BadgePill({ children }: { children: React.ReactNode }) {
 
 export function ProductGrid({ products }: { products: GridProduct[] }) {
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid gap-5 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4">
       {products.map((p) => {
         const href = p.buyUrl?.trim() || null;
 
         return (
           <div
             key={p.id}
-            className="rounded-3xl border border-black/10 bg-white overflow-hidden"
+            className="overflow-hidden rounded-3xl border border-black/5 bg-white transition hover:shadow-sm"
           >
             <div className="relative aspect-[3/4] bg-black/5">
               {p.imageUrl ? (
@@ -77,12 +77,12 @@ export function ProductGrid({ products }: { products: GridProduct[] }) {
                   href={href}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-sm font-medium line-clamp-2 hover:underline"
+                  className="line-clamp-2 text-sm font-medium leading-5 hover:underline"
                 >
                   {p.title}
                 </a>
               ) : (
-                <div className="text-sm font-medium line-clamp-2">{p.title}</div>
+                <div className="line-clamp-2 text-sm font-medium leading-5">{p.title}</div>
               )}
 
               {p.brandName ? (
@@ -90,6 +90,7 @@ export function ProductGrid({ products }: { products: GridProduct[] }) {
                   {p.brandName}
                 </div>
               ) : null}
+              
 
               <div className="mt-2 text-sm text-black/70">
                 <MoneyLabel amount={p.price} currency={p.currency} />

@@ -9,18 +9,20 @@ export const revalidate = 0;
 
 export default async function AdminAppLayout({
   children,
+  modal,
 }: {
   children: ReactNode;
+  modal?: ReactNode;
 }) {
   const { admin } = await requireAdminSession();
-  const lastSeen = admin.lastSeenWaitlistAt ?? new Date(0);
-  const unseenWaitlistCount = await prisma.waitlistSubscriber.count({
-  where: { createdAt: { gt: admin.lastSeenWaitlistAt ?? new Date(0) } },
-});
 
-const unseenApplicationsCount = await prisma.brandApplication.count({
-  where: { createdAt: { gt: admin.lastSeenApplicationsAt ?? new Date(0) } },
-});
+  const unseenWaitlistCount = await prisma.waitlistSubscriber.count({
+    where: { createdAt: { gt: admin.lastSeenWaitlistAt ?? new Date(0) } },
+  });
+
+  const unseenApplicationsCount = await prisma.brandApplication.count({
+    where: { createdAt: { gt: admin.lastSeenApplicationsAt ?? new Date(0) } },
+  });
 
   return (
     <SiteShell>
@@ -28,13 +30,15 @@ const unseenApplicationsCount = await prisma.brandApplication.count({
         <header className="border-b">
           <div className="mx-auto w-full max-w-6xl px-4 py-6">
             <AdminTopBar
-  unseenWaitlistCount={unseenWaitlistCount}
-  unseenApplicationsCount={unseenApplicationsCount}
-/>
+              unseenWaitlistCount={unseenWaitlistCount}
+              unseenApplicationsCount={unseenApplicationsCount}
+            />
           </div>
         </header>
 
         <main className="mx-auto w-full max-w-6xl px-4 py-8">{children}</main>
+
+        {modal}
       </div>
     </SiteShell>
   );

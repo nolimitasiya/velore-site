@@ -58,6 +58,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
         productOccasions: { select: { occasion: { select: { id: true, slug: true, name: true } } } },
         productColours: { select: { colour: { select: { id: true, slug: true, name: true } } } },
         productSizes: { select: { size: { select: { id: true, slug: true, name: true } } } },
+        productStyles: { select: { style: { select: { id: true, slug: true, name: true } } } },
         category: { select: { id: true, slug: true, name: true } },
       },
     });
@@ -102,8 +103,10 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     const note = toStr(body.note);
     const productType = body.productType === undefined ? undefined : body.productType;
     const materialIds = Array.isArray(body.materialIds) ? body.materialIds : undefined;
+    const occasionIds = Array.isArray(body.occasionIds) ? body.occasionIds : undefined;
     const colourIds = Array.isArray(body.colourIds) ? body.colourIds : undefined;
     const sizeIds = Array.isArray(body.sizeIds) ? body.sizeIds : undefined;
+    const styleIds = Array.isArray(body.styleIds) ? body.styleIds : undefined;
 
     const badges = Array.isArray(body.badges) ? body.badges : undefined; // Badge[]
     const tags = Array.isArray(body.tags) ? body.tags : undefined; // string[] (legacy)
@@ -183,6 +186,16 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
         }
       }
 
+            // occasions
+      if (occasionIds) {
+        await tx.productOccasion.deleteMany({ where: { productId: id } });
+        if (occasionIds.length) {
+          await tx.productOccasion.createMany({
+            data: occasionIds.map((oid: string) => ({ productId: id, occasionId: oid })),
+          });
+        }
+      }
+
       // colours
       if (colourIds) {
         await tx.productColour.deleteMany({ where: { productId: id } });
@@ -194,6 +207,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       }
 
       // sizes
+            // sizes
       if (sizeIds) {
         await tx.productSize.deleteMany({ where: { productId: id } });
         if (sizeIds.length) {
@@ -202,6 +216,17 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
           });
         }
       }
+
+      // styles
+      if (styleIds) {
+        await tx.productStyle.deleteMany({ where: { productId: id } });
+        if (styleIds.length) {
+          await tx.productStyle.createMany({
+            data: styleIds.map((sid: string) => ({ productId: id, styleId: sid })),
+          });
+        }
+      }
+
       
       return p;
     });

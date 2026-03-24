@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
 import { prisma } from "@/lib/prisma";
 import BrandRowClient from "./BrandRowClient";
+import HomepageOrderControls from "./HomepageOrderControls";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -9,8 +10,12 @@ export const revalidate = 0;
 export default async function AdminBrandsPage() {
   await requireAdminSession();
 
-  const brands = await prisma.brand.findMany({
-    orderBy: { createdAt: "desc" },
+   const brands = await prisma.brand.findMany({
+    orderBy: [
+      { showOnHomepage: "desc" },
+      { homepageOrder: "asc" },
+      { createdAt: "desc" },
+    ],
     select: {
       id: true,
       name: true,
@@ -20,6 +25,8 @@ export default async function AdminBrandsPage() {
       affiliateStatus: true,
       affiliateProvider: true,
       affiliateBaseUrl: true,
+      showOnHomepage: true,
+      homepageOrder: true,
     },
   });
 

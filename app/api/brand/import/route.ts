@@ -137,6 +137,14 @@ function isProbablyXlsx(file: File) {
   return name.endsWith(".xlsx") || type.includes("spreadsheet") || type.includes("excel");
 }
 
+function normalizeMaybeUrl(v: any) {
+  return normalizeUrl(String(v ?? ""));
+}
+
+function getRowSourceUrl(raw: Record<string, any>) {
+  return normalizeUrl(raw?.source_url || raw?.product_url || "");
+}
+
 async function parseXlsxToRows(file: File): Promise<Record<string, string>[]> {
   const MAX_BYTES = 5 * 1024 * 1024; // 5MB
   const MAX_ROWS = 2000;
@@ -220,6 +228,7 @@ export async function POST(req: Request) {
     let rows: Record<string, string>[] = [];
     if (isProbablyXlsx(file)) {
       rows = await parseXlsxToRows(file);
+      
     } else {
       const text = await file.text();
       const firstLine = text.split(/\r?\n/)[0] ?? "";
@@ -231,6 +240,36 @@ export async function POST(req: Request) {
       }
       rows = await parseCsvToRows(text);
     }
+
+    // ✅ File-level safety: detect duplicates within this upload (same source_url)
+// We'll still process, but we'll warn AND only import the last occurrence per sourceUrl.
+const seen = new Map<string, number[]>(); // sourceUrl -> rowIndexes (0-based)
+for (let i = 0; i < rows.length; i++) {
+  const u = getRowSourceUrl(rows[i]);
+  if (!u) continue;
+  const arr = seen.get(u) ?? [];
+  arr.push(i);
+  seen.set(u, arr);
+}
+
+const duplicateSourceUrls = Array.from(seen.entries())
+  .filter(([, idxs]) => idxs.length > 1)
+  .map(([url, idxs]) => ({ url, rows: idxs.map((x) => x + 2) })); // +2 = header + 1-based
+
+// Optional: dedupe rows so a duplicate URL doesn't cause "create then update" in same upload.
+// We keep the LAST occurrence as the winner.
+if (duplicateSourceUrls.length) {
+  const lastIndexForUrl = new Map<string, number>();
+  for (const [url, idxs] of seen.entries()) {
+    lastIndexForUrl.set(url, idxs[idxs.length - 1]);
+  }
+
+  rows = rows.filter((r, idx) => {
+    const u = getRowSourceUrl(r);
+    if (!u) return true;
+    return lastIndexForUrl.get(u) === idx;
+  });
+}
 
     // Sync-missing deactivate (only within brand)
     let deactivatedCount = 0;
@@ -262,6 +301,35 @@ export async function POST(req: Request) {
       rowErrors: [] as Array<{ row: number; error: string }>,
       warnings: [] as Array<{ row: number; warning: string }>,
     };
+    // ✅ Preflight: figure out what will be created vs updated (after file dedupe)
+const uniqueUrls = Array.from(new Set(rows.map((r) => getRowSourceUrl(r)).filter(Boolean)));
+
+const existing = await prisma.product.findMany({
+  where: { brandId, sourceUrl: { in: uniqueUrls } },
+  select: { sourceUrl: true },
+});
+
+const existingSet = new Set(existing.map((x) => x.sourceUrl));
+
+(results as any).summary = {
+  willCreate: uniqueUrls.filter((u) => !existingSet.has(u)).length,
+  willUpdate: uniqueUrls.filter((u) => existingSet.has(u)).length,
+  duplicateSourceUrlsInFile: duplicateSourceUrls.length,
+  duplicateExamples: duplicateSourceUrls.slice(0, 5),
+  effectiveRowsAfterDeduping: rows.length,
+};
+
+// ✅ Convert file-duplicate info into visible warnings in the UI
+if (duplicateSourceUrls.length) {
+  for (const d of duplicateSourceUrls.slice(0, 20)) {
+    results.warnings.push({
+      row: d.rows[0],
+      warning: `Duplicate source_url in file: ${d.url} appears on rows ${d.rows.join(
+        ", "
+      )}. Using the LAST occurrence.`,
+    });
+  }
+}
 
     for (let i = 0; i < rows.length; i++) {
       const raw = rows[i];

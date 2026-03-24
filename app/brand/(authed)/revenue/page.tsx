@@ -1,10 +1,20 @@
 import { prisma } from "@/lib/prisma";
 import { requireBrandContext } from "@/lib/auth/BrandSession";
+import CountryHeatmapGrid from "@/components/analytics/CountryHeatmapGrid";
+import { iso2ToIsoNumeric } from "@/lib/geo/iso";
+import WorldChoropleth from "@/components/analytics/WorldChoropleth";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
+
+function countryLabel(code: string) {
+  return regionNames.of(String(code ?? "").toUpperCase()) ?? code;
+}
+
 type RangeKey = "today" | "7d" | "30d";
+
 
 function parseRange(input?: string): RangeKey {
   const r = String(input ?? "").toLowerCase();
@@ -145,6 +155,61 @@ export default async function BrandRevenuePage({
     };
   });
 
+  // --------
+  // Clicks by country (range-aware)
+  // --------
+  const groupedCountries = await prisma.affiliateClick.groupBy({
+    by: ["countryCode"],
+    where: {
+      brandId,
+      clickedAt: { gte, lt },
+      countryCode: { not: null },
+    },
+    _count: { _all: true },
+    orderBy: { countryCode: "asc" },
+    take: 5000,
+  });
+
+  
+
+  const byCountry = groupedCountries
+    .map((g) => ({
+      countryCode: g.countryCode!,
+      clicks: Number(g._count._all ?? 0),
+    }))
+    .sort((a, b) => b.clicks - a.clicks)
+    .slice(0, 20);
+
+const groupedShopperCountries = await prisma.affiliateClick.groupBy({
+  by: ["shopperCountryCode"],
+  where: {
+    brandId,
+    clickedAt: { gte, lt },
+    shopperCountryCode: { not: null },
+  },
+  _count: { _all: true },
+  orderBy: { shopperCountryCode: "asc" },
+  take: 5000,
+});
+
+
+    const byShopperCountry = groupedShopperCountries
+  .map((g) => ({
+    countryCode: g.shopperCountryCode!,
+    clicks: Number(g._count._all ?? 0),
+  }))
+  .sort((a, b) => b.clicks - a.clicks)
+  .slice(0, 20);
+  const maxClicks = Math.max(1, ...byShopperCountry.map((r) => r.clicks));
+
+  // ✅ ISO2 → ISO3 for choropleth input
+ const numericData: Record<string, number> = {};
+for (const r of byShopperCountry) {
+  const id = iso2ToIsoNumeric(r.countryCode);
+  if (!id) continue;
+  numericData[id] = (numericData[id] ?? 0) + r.clicks;
+}
+
   const qs = (r: RangeKey) => (r === "30d" ? "" : `?range=${r}`);
 
   return (
@@ -179,18 +244,25 @@ export default async function BrandRevenuePage({
         </div>
       </div>
 
-      {/* Range toggle for Top Products */}
+      {/* Range toggle */}
       <div className="flex flex-wrap gap-2">
         <RangeLink href={`/brand/revenue${qs("today")}`} label="Today" active={range === "today"} />
         <RangeLink href={`/brand/revenue${qs("7d")}`} label="Last 7 days" active={range === "7d"} />
         <RangeLink href={`/brand/revenue${qs("30d")}`} label="Last 30 days" active={range === "30d"} />
       </div>
 
-      {/* Top products (with images) */}
+      {/* Top products */}
       <div className="rounded-2xl border bg-white overflow-hidden">
-        <div className="px-4 py-3 border-b">
-          <div className="font-semibold">Top products</div>
-          <div className="text-xs text-neutral-500">Range: {range}</div>
+        <div className="px-4 py-3 border-b flex items-center justify-between">
+          <div>
+            <a
+              href={`/brand/revenue/products${qs(range)}`}
+              className="font-semibold underline underline-offset-4"
+            >
+              Top products
+            </a>
+            <div className="text-xs text-neutral-500">Range: {range}</div>
+          </div>
         </div>
 
         <table className="w-full text-sm">
@@ -208,12 +280,7 @@ export default async function BrandRevenuePage({
                   <div className="flex items-center gap-3">
                     <div className="h-12 w-12 overflow-hidden rounded-lg border bg-neutral-50 flex items-center justify-center">
                       {r.imageUrl ? (
-                        // using <img> keeps this simple (no next/image domain config needed)
-                        <img
-                          src={r.imageUrl}
-                          alt={r.title}
-                          className="h-full w-full object-cover"
-                        />
+                        <img src={r.imageUrl} alt={r.title} className="h-full w-full object-cover" />
                       ) : (
                         <span className="text-xs text-neutral-400">No image</span>
                       )}
@@ -255,6 +322,66 @@ export default async function BrandRevenuePage({
           </tbody>
         </table>
       </div>
+
+      {/* Clicks by country table */}
+      <div className="rounded-2xl border bg-white overflow-hidden">
+        <div className="px-4 py-3 border-b">
+          <div className="font-semibold">Shopper preference country</div>
+          <div className="text-xs text-neutral-500">Range: {range}</div>
+          
+        </div>
+
+        <table className="w-full text-sm">
+          <thead className="bg-neutral-50 text-left text-neutral-600">
+            <tr>
+              <th className="px-4 py-3">Country</th>
+              <th className="px-4 py-3 text-right">Clicks</th>
+              <th className="px-4 py-3">Intensity</th>
+            </tr>
+          </thead>
+          <tbody>
+            {byShopperCountry.map((r) => (
+              <tr key={countryLabel(r.countryCode)} className="border-t">
+                <td className="px-4 py-3 font-medium">{countryLabel(r.countryCode)}</td>
+                <td className="px-4 py-3 text-right">{r.clicks}</td>
+                <td className="px-4 py-3">
+                  <div className="h-2 w-full rounded-full bg-black/10 overflow-hidden">
+                    <div
+                      className="h-2 bg-black/70"
+                      style={{
+                        width: `${Math.max(5, Math.round((r.clicks / maxClicks) * 100))}%`,
+                      }}
+                    />
+                  </div>
+                </td>
+              </tr>
+            ))}
+
+            {byShopperCountry.length === 0 && (
+              <tr>
+                <td className="px-4 py-6 text-neutral-500" colSpan={3}>
+                  No geo clicks yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <CountryHeatmapGrid
+  rows={byShopperCountry}
+  title="Shopper preference heatmap (top countries)"
+/>
+
+<div className="text-xs text-neutral-500">
+  Country boundaries may include overseas territories depending on the map dataset.
+</div>
+
+      {/* ✅ Client-only choropleth */}
+      <WorldChoropleth
+  title={`Shopper preference country heatmap (${range})`}
+  data={numericData}
+/>
     </div>
   );
 }

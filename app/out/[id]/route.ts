@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { buildTrackedProductUrl } from "@/lib/affiliate/url";
+import { ClickSourcePage } from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +18,36 @@ function pickHeader(req: NextRequest, keys: string[]) {
 function normalizeCountryCode(v: string | null) {
   const s = (v ?? "").trim().toUpperCase();
   return s.length === 2 ? s : null;
+}
+
+function normalizeCurrencyCode(v: string | null) {
+  const s = (v ?? "").trim().toUpperCase();
+  return s.length === 3 ? s : null;
+}
+
+function normalizeUuidLike(v: string | null) {
+  const s = (v ?? "").trim();
+  return s || null;
+}
+
+function normalizeSectionKey(v: string | null) {
+  const s = (v ?? "").trim();
+  return s || null;
+}
+
+function normalizePosition(v: string | null) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  const i = Math.floor(n);
+  return i > 0 ? i : null;
+}
+
+function normalizeSourcePage(v: string | null): ClickSourcePage | null {
+  const s = (v ?? "").trim().toUpperCase();
+  if (s === "HOME") return ClickSourcePage.HOME;
+  if (s === "SEARCH") return ClickSourcePage.SEARCH;
+  if (s === "BRAND") return ClickSourcePage.BRAND;
+  return null;
 }
 
 export async function GET(
@@ -58,11 +89,10 @@ export async function GET(
 
   if (!destinationUrl) return NextResponse.redirect(new URL("/", req.url));
 
-  // ✅ GEO from Vercel/infra headers (Node runtime)
   const countryRaw = pickHeader(req, [
     "x-vercel-ip-country",
     "x-country",
-    "cf-ipcountry", // cloudflare fallback if ever used
+    "cf-ipcountry",
   ]);
 
   const region = pickHeader(req, [
@@ -76,6 +106,19 @@ export async function GET(
   ]);
 
   const countryCode = normalizeCountryCode(countryRaw);
+  const shopperCountryCode = normalizeCountryCode(
+    req.cookies.get("vc_country")?.value ?? null
+  );
+  const shopperCurrencyCode = normalizeCurrencyCode(
+    req.cookies.get("vc_currency")?.value ?? null
+  );
+
+  // NEW
+  const { searchParams } = new URL(req.url);
+  const sourcePage = normalizeSourcePage(searchParams.get("src"));
+  const sectionId = normalizeUuidLike(searchParams.get("sid"));
+  const sectionKey = normalizeSectionKey(searchParams.get("skey"));
+  const position = normalizePosition(searchParams.get("pos"));
 
   await prisma.affiliateClick.create({
     data: {
@@ -86,6 +129,14 @@ export async function GET(
       countryCode,
       region: region ?? null,
       city: city ?? null,
+
+      shopperCountryCode,
+      shopperCurrencyCode,
+
+      sourcePage,
+      sectionId,
+      sectionKey,
+      position,
     },
   });
 

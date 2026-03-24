@@ -1,8 +1,10 @@
+// C:\Users\Asiya\projects\dalra\components\newsletter\NewsletterModal.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 
 const LS_KEY = "velore_newsletter_dismissed_v1";
+const PREFS_HANDLED_KEY = "vc_prefs_modal_handled";
 
 export function NewsletterModal() {
   const [open, setOpen] = useState(false);
@@ -10,6 +12,9 @@ export function NewsletterModal() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [prefsHandled, setPrefsHandled] = useState(false);
+
+  const NEWSLETTER_HANDLED_KEY = "vc_newsletter_modal_handled";
 
   const dismissed = useMemo(() => {
     if (typeof window === "undefined") return true;
@@ -17,17 +22,36 @@ export function NewsletterModal() {
   }, []);
 
   useEffect(() => {
-    if (dismissed) return;
-    const t = window.setTimeout(() => setOpen(true), 4500);
+    try {
+      setPrefsHandled(window.localStorage.getItem(PREFS_HANDLED_KEY) === "1");
+    } catch {
+      setPrefsHandled(false);
+    }
+
+    const onPrefsClosed = () => setPrefsHandled(true);
+    window.addEventListener("vc_preferences_modal_closed", onPrefsClosed);
+
+    return () => {
+      window.removeEventListener("vc_preferences_modal_closed", onPrefsClosed);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (dismissed || !prefsHandled) return;
+
+    const t = window.setTimeout(() => setOpen(true), 2500);
     return () => window.clearTimeout(t);
-  }, [dismissed]);
+  }, [dismissed, prefsHandled]);
 
   function close() {
-    setOpen(false);
-    try {
-      window.localStorage.setItem(LS_KEY, "1");
-    } catch {}
-  }
+  setOpen(false);
+  try {
+    window.localStorage.setItem(LS_KEY, "1");
+    window.localStorage.setItem(NEWSLETTER_HANDLED_KEY, "1");
+  } catch {}
+
+  window.dispatchEvent(new CustomEvent("vc_newsletter_modal_closed"));
+}
 
   async function submit() {
     setError(null);
@@ -57,7 +81,7 @@ export function NewsletterModal() {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center">
       <button
         aria-label="Close newsletter modal"
         onClick={close}

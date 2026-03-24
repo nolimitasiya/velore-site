@@ -49,6 +49,7 @@ function refreshNow() {
       <NavLink href="/brand/import" label="Import" />
       <NavLink href="/brand/billing" label="Billing" />
       <NavLink href="/brand/features" label="Features" />
+      <NavLink href="/brand/profile" label="Profile" />
 
       <button
         type="button"

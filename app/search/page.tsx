@@ -1,232 +1,320 @@
 // app/search/page.tsx
-import Link from "next/link";
-import { headers } from "next/headers";
-
-
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
-type SearchResult = {
-  id: string;
-  title: string;
-  slug: string;
-  price: string | null;
-  currency: string;
-  affiliateUrl: string | null;
-  brand: { name: string; slug: string };
-  images: { url: string }[];
+import SiteShell from "@/components/SiteShell";
+import ContinentFilters from "@/components/ContinentFilters";
+import { ProductGrid, type GridProduct } from "@/components/ProductGrid";
+import { prisma } from "@/lib/prisma";
+import { ProductType } from "@prisma/client";
+import { sortSizes, formatSizeLabel } from "@/lib/sizing/order";
+import { parseStorefrontFilters } from "@/lib/storefront/parseFilters";
+import { getAvailableStyles } from "@/lib/storefront/getAvailableStyles";
+import { buildStorefrontWhere } from "@/lib/storefront/buildStorefrontWhere";
+import { countryNameFromIso2 } from "@/lib/geo/countries";
+import { buildTrackedOutboundUrl } from "@/lib/affiliate/tracking";
+
+type Opt = { value: string; label: string };
+
+const STOREFRONT_TYPE_LABELS: Record<string, string> = {
+  ABAYA: "Abayas",
+  DRESS: "Dresses",
+  SKIRT: "Skirts",
+  TOP: "Tops",
+  HIJAB: "Hijabs",
+  ACTIVEWEAR: "Activewear",
+  SETS: "Sets",
+  MATERNITY: "Maternity",
+  KHIMAR: "Khimars",
+  JILBAB: "Jilbabs",
+  COATS_JACKETS: "Coats & Jackets",
 };
 
-type ApiResponse =
-  | { ok: true; products: SearchResult[]; error?: never }
-  | { ok: false; products?: SearchResult[]; error: string };
 
-const TYPES = ["abaya", "dress", "skirt", "top", "hijab"] as const;
-type ProductType = (typeof TYPES)[number];
-const ALLOWED_TYPES = new Set<string>(TYPES as unknown as string[]);
-
-// Next 16 can pass string | string[] | undefined
-function toStr(v: unknown) {
-  return Array.isArray(v) ? String(v[0] ?? "") : String(v ?? "");
+function titleCaseLabel(s: string) {
+  return s
+    .toLowerCase()
+    .replaceAll("_", " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 }
 
-function safeDecode(v: string) {
-  try {
-    return decodeURIComponent(v);
-  } catch {
-    return v;
-  }
+function normalizeText(s: string) {
+  return s.toLowerCase().replaceAll("_", " ").trim();
 }
 
+function matchingProductTypes(q: string): ProductType[] {
+  const nq = normalizeText(q);
 
-async function searchProducts(params: string): Promise<ApiResponse> {
-  const h = await headers();
-
-  const host = h.get("x-forwarded-host") ?? h.get("host");
-  const proto = h.get("x-forwarded-proto") ?? "http";
-
-  if (!host) {
-    console.error("[searchProducts] Missing host header");
-    return { ok: false, error: "Missing host header" };
-  }
-
-  const url = `${proto}://${host}/api/search?${params}`;
-
-  const res = await fetch(url, { cache: "no-store" });
-  const text = await res.text();
-
-  if (!res.ok) {
-    console.error("[searchProducts] API error", res.status, url, text);
-    return { ok: false, error: `API ${res.status}` };
-  }
-
-  if (!text) {
-    console.error("[searchProducts] Empty response body", url);
-    return { ok: false, error: "Empty response body" };
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch {
-    console.error("[searchProducts] Invalid JSON from API", url, text);
-    return { ok: false, error: "Invalid JSON from API" };
-  }
+  return (Object.values(ProductType) as ProductType[]).filter((t) => {
+    const enumText = normalizeText(t);
+    const labelText = normalizeText(titleCaseLabel(t));
+    return enumText.includes(nq) || labelText.includes(nq);
+  });
 }
-
 
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams:
-    | Promise<{
-        q?: string | string[];
-        category?: string | string[];
-        occasion?: string | string[];
-        material?: string | string[];
-        type?: string | string[];
-      }>
-    | {
-        q?: string | string[];
-        category?: string | string[];
-        occasion?: string | string[];
-        material?: string | string[];
-        type?: string | string[];
-      };
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const sp = await Promise.resolve(searchParams);
+  const sp = (await searchParams) ?? {};
 
-  const q = safeDecode(toStr(sp?.q)).trim();
-  const category = safeDecode(toStr(sp?.category)).trim();
-  const occasion = safeDecode(toStr(sp?.occasion)).trim();
-  const material = safeDecode(toStr(sp?.material)).trim();
+  const qRaw = Array.isArray(sp.q) ? sp.q[0] ?? "" : sp.q ?? "";
+  const q = String(qRaw).trim();
 
-  // ✅ Normalise + validate type
-  const rawType = safeDecode(toStr(sp?.type)).trim().toLowerCase();
-  const type: ProductType | "" = ALLOWED_TYPES.has(rawType) ? (rawType as ProductType) : "";
+  const filters = parseStorefrontFilters(sp);
+  const { types, sort } = filters;
 
-  // ✅ build query string for API
-  const qs = new URLSearchParams();
-  if (q) qs.set("q", q);
-  if (category) qs.set("category", category);
-  if (occasion) qs.set("occasion", occasion);
-  if (material) qs.set("material", material);
-  if (type) qs.set("type", type);
+  const orderBy =
+    sort === "price_asc"
+      ? [{ price: "asc" as const }, { publishedAt: "desc" as const }]
+      : sort === "price_desc"
+      ? [{ price: "desc" as const }, { publishedAt: "desc" as const }]
+      : [{ publishedAt: "desc" as const }];
 
-  // ✅ helper to preserve existing params while changing one
-  function buildHref(next: Partial<Record<string, string>>) {
-    const p = new URLSearchParams(qs.toString());
-    Object.entries(next).forEach(([k, v]) => {
-      if (!v) p.delete(k);
-      else p.set(k, v);
-    });
-    const s = p.toString();
-    return s ? `/search?${s}` : "/search";
-  }
+  const brandsRaw = await prisma.brand.findMany({
+    where: {
+      products: {
+        some: {
+          status: "APPROVED",
+          isActive: true,
+          publishedAt: { not: null },
+        },
+      },
+    },
+    orderBy: { name: "asc" },
+    select: { slug: true, name: true, baseCountryCode: true },
+    take: 1000,
+  });
 
-  const data = await searchProducts(qs.toString());
-  const products: SearchResult[] = data.ok ? data.products ?? [] : [];
+  const brandOptions: Opt[] = brandsRaw.map((b) => ({
+    value: b.slug,
+    label: b.name,
+  }));
+
+  const countryOptions: Opt[] = Array.from(
+    new Set(brandsRaw.map((b) => b.baseCountryCode).filter(Boolean))
+  )
+    .sort()
+    .map((cc) => ({
+      value: String(cc),
+      label: countryNameFromIso2(String(cc)),
+    }));
+
+  const typeOptions: Opt[] = Object.values(ProductType).map((t) => ({
+  value: t,
+  label: STOREFRONT_TYPE_LABELS[t] ?? titleCaseLabel(t),
+}));
+
+  const styleOptions: Opt[] = await getAvailableStyles(types);
+
+  const coloursRaw = await prisma.colour.findMany({
+    orderBy: { name: "asc" },
+    select: { slug: true, name: true },
+    take: 300,
+  });
+
+  const colorOptions: Opt[] = coloursRaw.map((c) => ({
+    value: c.slug,
+    label: c.name.toLowerCase(),
+  }));
+
+  const sizesRaw = await prisma.size.findMany({
+    orderBy: { name: "asc" },
+    select: { slug: true, name: true },
+    take: 500,
+  });
+
+  const sizeOptions = sizesRaw
+    .sort(sortSizes)
+    .map((s) => ({
+      value: s.slug,
+      label: formatSizeLabel(s.name),
+    }));
+
+  const baseWhere = buildStorefrontWhere({
+    filters,
+  });
+
+  const matchedTypes = q ? matchingProductTypes(q) : [];
+
+  const where = q
+    ? {
+        AND: [
+          baseWhere,
+          {
+            OR: [
+              { title: { contains: q, mode: "insensitive" as const } },
+              {
+                brand: {
+                  is: {
+                    name: { contains: q, mode: "insensitive" as const },
+                  },
+                },
+              },
+              ...(matchedTypes.length
+                ? [{ productType: { in: matchedTypes } }]
+                : []),
+              {
+                category: {
+                  is: {
+                    name: { contains: q, mode: "insensitive" as const },
+                  },
+                },
+              },
+              {
+                category: {
+                  is: {
+                    slug: { contains: q.toLowerCase(), mode: "insensitive" as const },
+                  },
+                },
+              },
+              {
+                productTags: {
+                  some: {
+                    tag: {
+                      name: { contains: q, mode: "insensitive" as const },
+                    },
+                  },
+                },
+              },
+              {
+                productTags: {
+                  some: {
+                    tag: {
+                      slug: { contains: q.toLowerCase(), mode: "insensitive" as const },
+                    },
+                  },
+                },
+              },
+              {
+                productStyles: {
+                  some: {
+                    style: {
+                      name: { contains: q, mode: "insensitive" as const },
+                    },
+                  },
+                },
+              },
+              {
+                productStyles: {
+                  some: {
+                    style: {
+                      slug: { contains: q.toLowerCase(), mode: "insensitive" as const },
+                    },
+                  },
+                },
+              },
+              {
+                productMaterials: {
+                  some: {
+                    material: {
+                      name: { contains: q, mode: "insensitive" as const },
+                    },
+                  },
+                },
+              },
+              {
+                productMaterials: {
+                  some: {
+                    material: {
+                      slug: { contains: q.toLowerCase(), mode: "insensitive" as const },
+                    },
+                  },
+                },
+              },
+              {
+                productOccasions: {
+                  some: {
+                    occasion: {
+                      name: { contains: q, mode: "insensitive" as const },
+                    },
+                  },
+                },
+              },
+              {
+                productOccasions: {
+                  some: {
+                    occasion: {
+                      slug: { contains: q.toLowerCase(), mode: "insensitive" as const },
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      }
+    : baseWhere;
+
+  const products = await prisma.product.findMany({
+    where,
+    orderBy,
+    take: 120,
+    select: {
+      id: true,
+      title: true,
+      price: true,
+      currency: true,
+      badges: true,
+      brand: { select: { name: true } },
+      images: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true } },
+    },
+  });
+
+  const mapped: GridProduct[] = products.map((p, index) => ({
+  id: p.id,
+  title: p.title,
+  brandName: p.brand?.name ?? null,
+  imageUrl: p.images?.[0]?.url ?? null,
+  price: p.price ? p.price.toString() : null,
+  currency: String(p.currency),
+  buyUrl: buildTrackedOutboundUrl(p.id, {
+    sourcePage: "SEARCH",
+    position: index + 1,
+  }),
+  badges: (p.badges ?? []) as any,
+}));
+
 
   return (
-    <div className="mx-auto max-w-6xl p-6">
-      <h1 className="text-center text-2xl font-semibold">
-        Search {q ? `for "${q}"` : ""}
-      </h1>
+    <SiteShell>
+      <main className="min-h-screen w-full bg-white">
+        <div className="mx-auto w-full max-w-[1800px] px-8 py-10 space-y-10">
+          <header className="space-y-2 text-center">
+  <h1 className="font-display text-4xl md:text-5xl tracking-[0.12em]">
+    {q ? `Results for "${q}"` : "All Products"}
+  </h1>
 
-      {/* If API failed, show message instead of silently showing nothing */}
-      {!data.ok && (
-        <div className="mt-4 text-center text-sm text-red-600">
-          Search API error: {data.error}
+  <div className="text-sm tracking-wide text-black/50">
+    {mapped.length} item{mapped.length === 1 ? "" : "s"}
+  </div>
+</header>
+
+          <div className="sticky top-0 z-30 bg-white/95 pb-4 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+  <ContinentFilters
+    brands={brandOptions}
+    countries={countryOptions}
+    types={typeOptions}
+    styles={styleOptions}
+    colors={colorOptions}
+    sizes={sizeOptions}
+  />
+</div>
+
+          {mapped.length === 0 ? (
+            <div className="rounded-2xl border border-black/10 bg-white p-10 text-center text-black/60">
+              No products found.
+            </div>
+          ) : (
+            <ProductGrid products={mapped} />
+          )}
         </div>
-      )}
-
-      {/* Filter chips (type) */}
-      <div className="mt-4 flex justify-center">
-        <div className="inline-flex flex-wrap justify-center gap-2 text-sm">
-          <Link
-            href={buildHref({ type: "" })}
-            className={[
-              "rounded-full border px-3 py-1 transition-colors",
-              type === "" ? "bg-black text-white border-black" : "hover:bg-black/5",
-            ].join(" ")}
-          >
-            All
-          </Link>
-
-          {TYPES.map((t) => {
-            const active = type === t;
-            return (
-              <Link
-                key={t}
-                href={buildHref({ type: t })}
-                className={[
-                  "rounded-full border px-3 py-1 capitalize transition-colors",
-                  active ? "bg-black text-white border-black" : "hover:bg-black/5",
-                ].join(" ")}
-              >
-                {t}
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Results */}
-      <div className="mt-8">
-        {products.length === 0 ? (
-          <div className="text-sm text-black/60 text-center">No products found.</div>
-        ) : (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {products.map((p) => {
-              const imageUrl = p.images?.[0]?.url ?? null;
-
-              return (
-                <div key={p.id} className="rounded-2xl border border-black/10 bg-white">
-                  <Link href={`/p/${p.slug}`} className="block">
-                    <div className="aspect-[3/4] w-full overflow-hidden rounded-t-2xl bg-black/5">
-                      {imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={imageUrl}
-                          alt={p.title}
-                          className="h-full w-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-xs text-black/40">
-                          No image
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="p-4">
-                      <div className="text-sm font-medium">{p.title}</div>
-                      <div className="mt-1 text-xs text-black/60 uppercase tracking-wide">
-                        {p.brand?.name ?? ""}
-                      </div>
-
-                      {p.price ? (
-                        <div className="mt-2 text-sm">
-                          {p.currency} {p.price}
-                        </div>
-                      ) : null}
-                    </div>
-                  </Link>
-
-                  <div className="px-4 pb-4">
-                    <Link
-                      href={`/out/${p.id}`}
-                      className="inline-flex w-full items-center justify-center rounded-md bg-black px-4 py-2 text-sm text-white"
-                    >
-                      Buy Now
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
+      </main>
+    </SiteShell>
   );
 }

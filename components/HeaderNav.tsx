@@ -6,17 +6,27 @@ import { usePathname } from "next/navigation";
 type NavItem = { label: string; href: string };
 
 const occasionLinks: NavItem[] = [
+  { label: "Everyday", href: "/categories/occasion/everyday" },
+  { label: "Workwear", href: "/categories/occasion/workwear" },
+  { label: "Wedding Guest", href: "/categories/occasion/wedding_guest" },
   { label: "Wedding", href: "/categories/occasion/wedding" },
   { label: "Eid", href: "/categories/occasion/eid" },
-  { label: "Evening", href: "/categories/occasion/evening" },
+  { label: "Party", href: "/categories/occasion/party" },
+  { label: "Formal", href: "/categories/occasion/formal" },
 ];
 
 const clothingLinks: NavItem[] = [
-  { label: "Abayas", href: "/categories/clothing?type=abaya" },
-  { label: "Dresses", href: "/categories/clothing?type=dress" },
-  { label: "Skirts", href: "/categories/clothing?type=skirt" },
-  { label: "Tops", href: "/categories/clothing?type=top" },
-  { label: "Hijabs", href: "/categories/clothing?type=hijab" },
+  { label: "Abayas", href: "/categories/clothing?type=ABAYA" },
+  { label: "Dresses", href: "/categories/clothing?type=DRESS" },
+  { label: "Skirts", href: "/categories/clothing?type=SKIRT" },
+  { label: "Tops", href: "/categories/clothing?type=TOP" },
+  { label: "Hijabs", href: "/categories/clothing?type=HIJAB" },
+  { label: "Activewear", href: "/categories/clothing?type=ACTIVEWEAR" },
+  { label: "Sets", href: "/categories/clothing?type=SETS" },
+  { label: "Maternity", href: "/categories/clothing?type=MATERNITY" },
+  { label: "Khimars", href: "/categories/clothing?type=KHIMAR" },
+  { label: "Jilbabs", href: "/categories/clothing?type=JILBAB" },
+  { label: "Coats & Jackets", href: "/categories/clothing?type=COATS_JACKETS" },
 ];
 
 // ✅ Apply the SAME vertical hit-area to all nav items
@@ -36,7 +46,7 @@ const dropdownItem =
 
 const dropdownPanel = [
   "absolute left-1/2 top-full -translate-x-1/2",
-  "w-56 rounded-2xl border bg-white shadow-sm",
+  "w-64 rounded-2xl border bg-white shadow-sm",
   // hidden until hover/focus
   "opacity-0 pointer-events-none translate-y-1",
   "transition-all duration-200",
@@ -52,7 +62,7 @@ export default function HeaderNav() {
 
   const isClothingActive = pathname.startsWith("/categories/clothing");
   const isOccasionActive = pathname.startsWith("/categories/occasion");
-  const isNextDayActive = pathname.startsWith("/next-day-delivery");
+  const isSaleActive = pathname.startsWith("/sale");
 
   return (
     <nav className="flex items-center justify-center gap-10">
@@ -127,9 +137,10 @@ export default function HeaderNav() {
       </div>
 
       {/* Next day delivery */}
+            {/* Sale */}
       <div className={navItemWrapper}>
-        <Link href="/next-day-delivery" className={navLink(isNextDayActive)}>
-          Next day delivery
+        <Link href="/sale" className={navLink(isSaleActive)}>
+          Sale
         </Link>
       </div>
     </nav>

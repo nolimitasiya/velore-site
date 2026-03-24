@@ -7,6 +7,7 @@ import CookieBanner from "@/components/CookieBanner";
 import { NewsletterSignup } from "@/components/NewsletterSignup";
 import { NewsletterModal } from "@/components/newsletter/NewsletterModal";
 import Link from "next/link";
+import ShopperPreferencesModal from "@/components/ShopperPreferencesModal";
 
 export default function SiteShell({ children }: { children: React.ReactNode }) {
   return (
@@ -92,6 +93,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
         </div>
       </footer>
 
+      <ShopperPreferencesModal />
       <CookieBanner />
       <NewsletterModal />
     </div>

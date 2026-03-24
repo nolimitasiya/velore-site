@@ -1,10 +1,147 @@
 // C:\Users\Asiya\projects\dalra\app\brand\(authed)\products\[id]\ProductEditClient.tsx
 "use client";
 
-import { useEffect, useMemo, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import countries from "world-countries";
 import { BRAND_CURRENCY_OPTIONS } from "@/lib/currency/codes";
+import { PRODUCT_TYPES } from "@/lib/taxonomy/productTypes";
 
+
+function RequestTaxonomyModal({
+  open,
+  onClose,
+  defaultType,
+  onSubmitted,
+  contextProductType,
+}: {
+  open: boolean;
+  onClose: () => void;
+  defaultType: "MATERIAL" | "COLOUR" | "SIZE" | "STYLE";
+  onSubmitted: () => void;
+  contextProductType?: string | null;
+}) {
+  const [type, setType] = useState<"MATERIAL" | "COLOUR" | "SIZE" | "STYLE">(defaultType);
+  const [name, setName] = useState("");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [okMsg, setOkMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setType(defaultType);
+    setName("");
+    setReason("");
+    setErr(null);
+    setOkMsg(null);
+  }, [open, defaultType]);
+
+  if (!open) return null;
+
+  async function submit() {
+    setBusy(true);
+    setErr(null);
+    setOkMsg(null);
+    try {
+      const r = await fetch("/api/brand/taxonomy/requests", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+  type,
+  name,
+  reason: reason.trim() || null,
+  ...((type === "MATERIAL" || type === "STYLE")
+  ? { productTypes: contextProductType ? [contextProductType] : [] }
+  : {}),
+}),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) {
+        setErr(j?.error ?? `Failed (${r.status})`);
+        return;
+      }
+      setOkMsg("Request submitted ✅ (pending review)");
+      onSubmitted();
+      setTimeout(() => onClose(), 600);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-xl">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-base font-semibold">Request new taxonomy</div>
+            <div className="text-xs text-black/60">Submit an item you think is missing.</div>
+          </div>
+          <button onClick={onClose} className="text-sm text-black/60 hover:text-black">
+            ✕
+          </button>
+        </div>
+
+        <div className="mt-4 space-y-3">
+          <label className="space-y-1 block">
+            <div className="text-sm font-medium">Type</div>
+            <select
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+              value={type}
+              onChange={(e) => setType(e.target.value as any)}
+            >
+              <option value="MATERIAL">Material</option>
+              <option value="COLOUR">Colour</option>
+              <option value="SIZE">Size</option>
+              <option value="STYLE">Style</option>
+            </select>
+          </label>
+
+          <label className="space-y-1 block">
+            <div className="text-sm font-medium">Name</div>
+            <input
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+              placeholder="e.g. Crinkle chiffon"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </label>
+
+          <label className="space-y-1 block">
+            <div className="text-sm font-medium">Reason (optional)</div>
+            <input
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+              placeholder="e.g. Common in hijabs"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          </label>
+
+          {err && <div className="rounded-xl bg-red-50 p-2 text-sm text-red-700">{err}</div>}
+          {okMsg && <div className="rounded-xl bg-emerald-50 p-2 text-sm text-emerald-800">{okMsg}</div>}
+
+          <div className="flex gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 rounded-lg border px-4 py-2 text-sm hover:bg-black/5"
+              disabled={busy}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={submit}
+              className="flex-1 rounded-lg bg-black px-4 py-2 text-sm text-white hover:opacity-90 disabled:opacity-60"
+              disabled={busy || name.trim().length < 2}
+            >
+              {busy ? "Submitting..." : "Submit request"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 type Status = "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "NEEDS_CHANGES" | "REJECTED";
 
@@ -30,22 +167,26 @@ type Product = {
 
   // relations coming from GET
   productMaterials?: { material: TaxItem }[];
+  productOccasions?: { occasion: TaxItem }[];
   productColours?: { colour: TaxItem }[];
   productSizes?: { size: TaxItem }[];
+  productStyles?: { style: TaxItem }[];
 };
 
-const PRODUCT_TYPES = ["ABAYA", "DRESS", "SKIRT", "TOP", "HIJAB"] as const;
+
+type BrandTaxRequest = {
+  id: string;
+  type: "MATERIAL" | "COLOUR" | "SIZE" | "STYLE";
+  name: string;
+  reason: string | null;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  createdAt: string;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+};
 
 const BADGES = [
-  "bestseller",
-  "new_in",
-  "editor_pick",
-  "modest_essential",
-  "limited_stock",
   "sale",
-  "ramadan_edit",
-  "eid_edit",
-  "workwear",
   "next_day",
 ] as const;
 
@@ -79,8 +220,10 @@ function uniqStr(xs: string[]) {
 function snapshotForDirtyCheck(
   prod: Product,
   selectedMaterialIds: string[],
+  selectedOccasionIds: string[],
   selectedColourIds: string[],
-  selectedSizeIds: string[]
+  selectedSizeIds: string[],
+  selectedStyleIds: string[]
 ) {
   return JSON.stringify({
     title: prod.title ?? "",
@@ -95,10 +238,14 @@ function snapshotForDirtyCheck(
     worldwideShipping: !!prod.worldwideShipping,
     shippingCountries: (prod.shippingCountries ?? []).map((x) => x.countryCode).sort(),
     badges: Array.isArray(prod.badges) ? [...prod.badges].sort() : [],
-    images: Array.isArray(prod.images) ? [...prod.images].sort((a, b) => a.sortOrder - b.sortOrder).map((x) => x.url) : [],
+    images: Array.isArray(prod.images)
+      ? [...prod.images].sort((a, b) => a.sortOrder - b.sortOrder).map((x) => x.url)
+      : [],
     materialIds: [...selectedMaterialIds].sort(),
+    occasionIds: [...selectedOccasionIds].sort(),
     colourIds: [...selectedColourIds].sort(),
     sizeIds: [...selectedSizeIds].sort(),
+    styleIds: [...selectedStyleIds].sort(),
   });
 }
 
@@ -113,16 +260,31 @@ export default function ProductEditClient({ id }: { id: string }) {
   const [p, setP] = useState<Product | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  
+const [myReqs, setMyReqs] = useState<BrandTaxRequest[]>([]);
+const [showMyReqs, setShowMyReqs] = useState(false); // collapsed by default
+const isExpanded = showMyReqs;
+const ariaExpanded = isExpanded ? "true" : "false";
+const ariaLabel = isExpanded
+  ? "Collapse taxonomy requests"
+  : "Expand taxonomy requests";
 
   // taxonomy options
-  const [materials, setMaterials] = useState<TaxItem[]>([]);
+   const [materials, setMaterials] = useState<TaxItem[]>([]);
+  const [occasions, setOccasions] = useState<TaxItem[]>([]);
   const [colours, setColours] = useState<TaxItem[]>([]);
   const [sizes, setSizes] = useState<TaxItem[]>([]);
+  const [styles, setStyles] = useState<TaxItem[]>([]);
+
+  const [reqOpen, setReqOpen] = useState(false);
+  const [reqDefaultType, setReqDefaultType] = useState<"MATERIAL" | "COLOUR" | "SIZE" | "STYLE">("MATERIAL");
 
   // selected ids
   const [selectedMaterialIds, setSelectedMaterialIds] = useState<string[]>([]);
+  const [selectedOccasionIds, setSelectedOccasionIds] = useState<string[]>([]);
   const [selectedColourIds, setSelectedColourIds] = useState<string[]>([]);
   const [selectedSizeIds, setSelectedSizeIds] = useState<string[]>([]);
+  const [selectedStyleIds, setSelectedStyleIds] = useState<string[]>([]);
 
   // ✅ “saved state” snapshot + tiny “Saved ✓” feedback
   const savedRef = useRef<string>("");
@@ -135,12 +297,19 @@ export default function ProductEditClient({ id }: { id: string }) {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, []);
 
-  const dirty = useMemo(() => {
+    const dirty = useMemo(() => {
     if (!p) return false;
     return (
-      snapshotForDirtyCheck(p, selectedMaterialIds, selectedColourIds, selectedSizeIds) !== savedRef.current
+            snapshotForDirtyCheck(
+        p,
+        selectedMaterialIds,
+        selectedOccasionIds,
+        selectedColourIds,
+        selectedSizeIds,
+        selectedStyleIds
+      ) !== savedRef.current
     );
-  }, [p, selectedMaterialIds, selectedColourIds, selectedSizeIds]);
+    }, [p, selectedMaterialIds, selectedOccasionIds, selectedColourIds, selectedSizeIds, selectedStyleIds]);
 
   const buyUrl = useMemo(() => {
     if (!p) return "";
@@ -185,45 +354,143 @@ export default function ProductEditClient({ id }: { id: string }) {
       images: Array.isArray(prod.images) ? prod.images : [],
       publishedAt: prod.publishedAt ?? null,
       productMaterials: Array.isArray(prod.productMaterials) ? prod.productMaterials : [],
+      productOccasions: Array.isArray(prod.productOccasions) ? prod.productOccasions : [],
       productColours: Array.isArray(prod.productColours) ? prod.productColours : [],
       productSizes: Array.isArray(prod.productSizes) ? prod.productSizes : [],
+      productStyles: Array.isArray(prod.productStyles) ? prod.productStyles : [],
     };
 
     setP(nextP);
+    // 3) load my taxonomy requests (brand history)
+try {
+  const rr = await fetch("/api/brand/taxonomy/requests?status=ALL", { cache: "no-store" });
+  const rj = await rr.json().catch(() => ({}));
+  if (rr.ok && rj.ok) setMyReqs(Array.isArray(rj.items) ? rj.items : []);
+} catch {
+  // silent – don’t block editing if this fails
+}
 
     // hydrate selected ids from relations
-    const matIds = uniqStr((nextP.productMaterials ?? []).map((x) => x.material?.id).filter(Boolean));
-    const colIds = uniqStr((nextP.productColours ?? []).map((x) => x.colour?.id).filter(Boolean));
-    const sizIds = uniqStr((nextP.productSizes ?? []).map((x) => x.size?.id).filter(Boolean));
+      const matIds = uniqStr(
+      (nextP.productMaterials ?? [])
+        .map((x: { material: TaxItem }) => x.material?.id)
+        .filter(Boolean) as string[]
+    );
+
+    const occIds = uniqStr(
+      (nextP.productOccasions ?? [])
+        .map((x: { occasion: TaxItem }) => x.occasion?.id)
+        .filter(Boolean) as string[]
+    );
+
+    const colIds = uniqStr(
+      (nextP.productColours ?? [])
+        .map((x: { colour: TaxItem }) => x.colour?.id)
+        .filter(Boolean) as string[]
+    );
+
+    const sizIds = uniqStr(
+      (nextP.productSizes ?? [])
+        .map((x: { size: TaxItem }) => x.size?.id)
+        .filter(Boolean) as string[]
+    );
+
+    const styIds = uniqStr(
+      (nextP.productStyles ?? [])
+        .map((x: { style: TaxItem }) => x.style?.id)
+        .filter(Boolean) as string[]
+    );
 
     setSelectedMaterialIds(matIds);
+    setSelectedOccasionIds(occIds);
     setSelectedColourIds(colIds);
     setSelectedSizeIds(sizIds);
+    setSelectedStyleIds(styIds);
 
     // 2) load taxonomy options (in parallel)
     try {
-      const [m, c, s] = await Promise.all([
-        fetchTaxonomy("/api/brand/taxonomy/materials"),
+                const [m, o, c, s, st] = await Promise.all([
+        nextP.productType
+          ? fetchTaxonomy(
+              `/api/brand/taxonomy/materials?productType=${encodeURIComponent(String(nextP.productType))}`
+            )
+          : Promise.resolve([]),
+        fetchTaxonomy("/api/brand/taxonomy/occasions"),
         fetchTaxonomy("/api/brand/taxonomy/colours"),
         fetchTaxonomy("/api/brand/taxonomy/sizes"),
+        nextP.productType
+          ? fetchTaxonomy(
+              `/api/brand/taxonomy/styles?productType=${encodeURIComponent(String(nextP.productType))}`
+            )
+          : Promise.resolve([]),
       ]);
+
       setMaterials(m);
+      setOccasions(o);
       setColours(c);
       setSizes(s);
+      setStyles(st);
     } catch (e: any) {
       // Don't block editing if taxonomy list fails, but show an error
       setError((prev) => prev ?? e?.message ?? "Failed to load taxonomy");
     }
 
     // ✅ after load, treat as “saved”
-    savedRef.current = snapshotForDirtyCheck(nextP, matIds, colIds, sizIds);
+    savedRef.current = snapshotForDirtyCheck(nextP, matIds, occIds, colIds, sizIds, styIds);
     setJustSaved(false);
   }
 
+
   useEffect(() => {
-    loadAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  loadAll();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [id]);
+
+  useEffect(() => {
+  if (!p?.productType) {
+    setMaterials([]);
+    setStyles([]);
+    setSelectedMaterialIds([]);
+    setSelectedStyleIds([]);
+    return;
+  }
+
+  (async () => {
+    try {
+      const pt = p.productType;
+      if (!pt) {
+        setMaterials([]);
+        setStyles([]);
+        setSelectedMaterialIds([]);
+        setSelectedStyleIds([]);
+        return;
+      }
+
+      const [m, st] = await Promise.all([
+        fetchTaxonomy(`/api/brand/taxonomy/materials?productType=${encodeURIComponent(pt)}`),
+        fetchTaxonomy(`/api/brand/taxonomy/styles?productType=${encodeURIComponent(pt)}`),
+      ]);
+
+      setMaterials(m);
+      setStyles(st);
+
+      setSelectedMaterialIds((prev) =>
+  prev.filter((id) => m.some((x: TaxItem) => x.id === id))
+);
+
+setSelectedStyleIds((prev) =>
+  prev.filter((id) => st.some((x: TaxItem) => x.id === id))
+);
+
+    } catch (e: any) {
+      setError((prev) => prev ?? e?.message ?? "Failed to load materials/styles");
+      setMaterials([]);
+      setStyles([]);
+    }
+  })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [p?.productType]);
+
 
   function toggleBadge(b: string) {
     if (!p) return;
@@ -240,6 +507,17 @@ export default function ProductEditClient({ id }: { id: string }) {
     setP({ ...p, shippingCountries: Array.from(set).map((cc) => ({ countryCode: cc })) });
   }
 
+  function formatProductTypeLabel(value: string) {
+  if (value === "COATS_JACKETS") return "Coats & Jackets";
+
+  return value
+    .toLowerCase()
+    .replaceAll("_", " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
   async function saveDraft() {
     if (!p) return;
     setSaving(true);
@@ -262,8 +540,10 @@ export default function ProductEditClient({ id }: { id: string }) {
 
         // ✅ new multi-select relations
         materialIds: selectedMaterialIds,
+        occasionIds: selectedOccasionIds,
         colourIds: selectedColourIds,
         sizeIds: selectedSizeIds,
+        styleIds: selectedStyleIds,
       };
 
       const r = await fetch(`/api/brand/products/${id}`, {
@@ -289,9 +569,23 @@ export default function ProductEditClient({ id }: { id: string }) {
 
   if (!p) return <div className="text-sm text-black/60">{error ?? "Loading..."}</div>;
 
+     // summary counts
+const pendingCount = myReqs.filter((r) => r.status === "PENDING").length;
+const approvedCount = myReqs.filter((r) => r.status === "APPROVED").length;
+const rejectedCount = myReqs.filter((r) => r.status === "REJECTED").length;
+
+const expanded: boolean = showMyReqs === true;
+
   return (
     <div className="space-y-6">
       {error && <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+      <RequestTaxonomyModal
+  open={reqOpen}
+  onClose={() => setReqOpen(false)}
+  defaultType={reqDefaultType}
+  onSubmitted={loadAll} // ✅
+  contextProductType={p?.productType ?? null}
+/>
 
       <div className="rounded-2xl border p-4 flex flex-wrap items-center gap-2">
         <span className="text-xs rounded-full border px-3 py-1 bg-black/5 border-black/10">
@@ -330,7 +624,77 @@ export default function ProductEditClient({ id }: { id: string }) {
         >
           {saving ? "Saving..." : justSaved ? "Saved ✓" : dirty ? "Save draft" : "No changes"}
         </button>
+        
       </div>
+     
+
+      <div className="rounded-2xl border p-4 space-y-2">
+  <div className="flex items-center justify-between">
+    <div className="font-medium">
+      My taxonomy requests{" "}
+      <span className="text-xs text-black/50">({myReqs.length})</span>
+
+      {!showMyReqs && myReqs.length > 0 && (
+        <span className="ml-2 text-xs text-black/60">
+          • {pendingCount} pending • {approvedCount} approved • {rejectedCount} rejected
+        </span>
+      )}
+    </div>
+   <button
+  type="button"
+  onClick={() => setShowMyReqs((v) => !v)}
+  className="rounded-lg border px-2 py-1 text-xs hover:bg-black/5"
+  aria-expanded={ariaExpanded}
+  aria-controls="my-taxonomy-requests"
+  aria-label={ariaLabel}
+>
+  {isExpanded ? "−" : "+"}
+</button>
+  </div>
+
+  <div id="my-taxonomy-requests" hidden={!showMyReqs} className="space-y-2">
+    {!myReqs.length ? (
+      <div className="text-xs text-black/60">No requests yet.</div>
+    ) : (
+      <>
+        {myReqs.slice(0, 12).map((r) => (
+          <div key={r.id} className="rounded-xl border p-3 text-sm">
+            <div className="flex items-center justify-between">
+              <div className="font-medium">
+                {r.type}: {r.name}
+              </div>
+              <span className="text-xs rounded-full border px-2 py-1">{r.status}</span>
+            </div>
+
+            {r.reason && <div className="text-xs text-black/60 mt-1">Reason: {r.reason}</div>}
+
+            {r.status !== "PENDING" && (
+              <div className="text-xs mt-2">
+                {r.reviewNote ? (
+                  <div className="rounded-lg bg-black/5 p-2">
+                    <span className="font-medium">Admin note:</span> {r.reviewNote}
+                  </div>
+                ) : (
+                  <div className="text-black/50">No admin note provided.</div>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+
+        {myReqs.length > 12 && (
+          <div className="text-xs text-black/50">Showing 12 of {myReqs.length}.</div>
+        )}
+      </>
+    )}
+  </div>
+
+  {!showMyReqs && (
+    <div className="text-xs text-black/60">
+      {myReqs.length ? "Collapsed — click + to view." : "No requests yet — submit one with “request new”."}
+    </div>
+  )}
+</div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-1">
@@ -409,16 +773,16 @@ export default function ProductEditClient({ id }: { id: string }) {
         <div className="font-medium">Product type</div>
 
         <div className="flex flex-wrap gap-2">
-          {PRODUCT_TYPES.map((t) => (
-            <Chip key={t} active={p.productType === t} onClick={() => setP({ ...p, productType: t })}>
-              {t.toLowerCase()}
-            </Chip>
-          ))}
+  {PRODUCT_TYPES.map((t) => (
+    <Chip key={t} active={p.productType === t} onClick={() => setP({ ...p, productType: t })}>
+      {formatProductTypeLabel(t)}
+    </Chip>
+  ))}
 
-          <Chip active={p.productType === null} onClick={() => setP({ ...p, productType: null })}>
-            clear
-          </Chip>
-        </div>
+  <Chip active={p.productType === null} onClick={() => setP({ ...p, productType: null })}>
+    clear
+  </Chip>
+</div>
 
         <div className="text-xs text-black/60">
           Current: <span className="font-medium">{p.productType ?? "—"}</span>
@@ -436,21 +800,125 @@ export default function ProductEditClient({ id }: { id: string }) {
           >
             clear
           </button>
+          <button
+  type="button"
+  className="text-xs text-black/60 hover:text-black"
+  onClick={() => {
+  if (!p?.productType) return; // already enforced in UI
+  setReqDefaultType("MATERIAL");
+  setReqOpen(true);
+}}
+>
+  request new
+</button>
+        </div>
+
+        {!p.productType ? (
+  <div className="text-xs text-black/50">
+    Select a <span className="font-medium">product type</span> first to choose materials.
+  </div>
+) : !materials.length ? (
+  <div className="text-xs text-black/50">No materials for this product type yet.</div>
+) : null}
+        {p.productType && materials.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {materials.map((m) => (
+              <Chip
+                key={m.id}
+                active={selectedMaterialIds.includes(m.id)}
+                onClick={() => toggleSelected(setSelectedMaterialIds, selectedMaterialIds, m.id)}
+              >
+                {m.name}
+              </Chip>
+            ))}
+          </div>
+        )}
+      </div>
+
+
+            {/* ✅ Occasions (multi-select chips) */}
+      <div className="rounded-2xl border p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="font-medium">Occasions</div>
+          <button
+            type="button"
+            className="text-xs text-black/60 hover:text-black"
+            onClick={() => setSelectedOccasionIds([])}
+          >
+            clear
+          </button>
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {materials.map((m) => (
+          {occasions.map((o) => (
             <Chip
-              key={m.id}
-              active={selectedMaterialIds.includes(m.id)}
-              onClick={() => toggleSelected(setSelectedMaterialIds, selectedMaterialIds, m.id)}
+              key={o.id}
+              active={selectedOccasionIds.includes(o.id)}
+              onClick={() => toggleSelected(setSelectedOccasionIds, selectedOccasionIds, o.id)}
             >
-              {m.name}
+              {o.name}
             </Chip>
           ))}
-          {!materials.length && <div className="text-xs text-black/50">No materials yet (seed them first).</div>}
+          {!occasions.length && (
+            <div className="text-xs text-black/50">No occasions yet.</div>
+          )}
         </div>
       </div>
+
+
+
+
+      {/* ✅ Styles (multi-select chips) */}
+      <div className="rounded-2xl border p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="font-medium">Styles</div>
+          <button
+            type="button"
+            className="text-xs text-black/60 hover:text-black"
+            onClick={() => setSelectedStyleIds([])}
+          >
+            clear
+          </button>
+          <button
+            type="button"
+            className="text-xs text-black/60 hover:text-black"
+            onClick={() => {
+              if (!p?.productType) return;
+              setReqDefaultType("STYLE");
+              setReqOpen(true);
+            }}
+          >
+            request new
+          </button>
+        </div>
+
+        {!p.productType ? (
+          <div className="text-xs text-black/50">
+            Select a <span className="font-medium">product type</span> first to choose styles.
+          </div>
+        ) : !styles.length ? (
+          <div className="text-xs text-black/50">No styles for this product type yet.</div>
+        ) : null}
+
+        {p.productType && styles.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {styles.map((s) => (
+              <Chip
+                key={s.id}
+                active={selectedStyleIds.includes(s.id)}
+                onClick={() => toggleSelected(setSelectedStyleIds, selectedStyleIds, s.id)}
+              >
+                {s.name}
+              </Chip>
+            ))}
+          </div>
+        )}
+      </div>
+
+
+
+
+
 
       {/* ✅ Colours (multi-select chips) */}
       <div className="rounded-2xl border p-4 space-y-3">
@@ -463,6 +931,16 @@ export default function ProductEditClient({ id }: { id: string }) {
           >
             clear
           </button>
+          <button
+  type="button"
+  className="text-xs text-black/60 hover:text-black"
+  onClick={() => {
+    setReqDefaultType("COLOUR");
+    setReqOpen(true);
+  }}
+>
+  request new
+</button>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -490,7 +968,19 @@ export default function ProductEditClient({ id }: { id: string }) {
           >
             clear
           </button>
+          <button
+  type="button"
+  className="text-xs text-black/60 hover:text-black"
+  onClick={() => {
+    setReqDefaultType("SIZE");
+    setReqOpen(true);
+  }}
+>
+  request new
+</button>
         </div>
+
+        
 
         <div className="flex flex-wrap gap-2">
           {sizes.map((s) => (

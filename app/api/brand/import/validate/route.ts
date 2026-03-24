@@ -267,12 +267,15 @@ export async function POST(req: Request) {
         continue;
       }
 
-      // duplicates in file
-      if (seenSourceUrls.has(sourceUrl)) {
-        rowErrors.push({ row: i + 2, error: `Duplicate source_url in file: "${sourceUrl}"` });
-        continue;
-      }
-      seenSourceUrls.add(sourceUrl);
+      // ✅ duplicates in file (warn only; last row wins)
+if (seenSourceUrls.has(sourceUrl)) {
+  warnings.push({
+    row: i + 2,
+    warning: `Duplicate source_url in file: "${sourceUrl}". Using the LAST occurrence.`,
+  });
+}
+seenSourceUrls.add(sourceUrl);
+validSourceUrls.push(sourceUrl);
 
       // product_slug sanity
       const productSlug = slugify(r.product_slug);
@@ -303,14 +306,23 @@ export async function POST(req: Request) {
       if (!r.stock) warnings.push({ row: i + 2, warning: "Stock not provided" });
       if (!r.tags) warnings.push({ row: i + 2, warning: "No tags provided" });
 
-      validSourceUrls.push(sourceUrl);
     }
 
     const total = rows.length;
     const invalid = rowErrors.length ? new Set(rowErrors.map((e) => e.row)).size : 0;
     const valid = total - invalid;
 
-    const uniqueSourceUrls = Array.from(new Set(validSourceUrls));
+// ✅ last-wins unique list (keeps the LAST occurrence)
+const uniqueSourceUrls = Array.from(new Set([...validSourceUrls].reverse())).reverse();
+
+const duplicateCount = validSourceUrls.length - uniqueSourceUrls.length;
+const duplicateExamples = duplicateCount
+  ? Array.from(
+      new Set(
+        validSourceUrls.filter((u, i) => validSourceUrls.indexOf(u) !== i)
+      )
+    ).slice(0, 5)
+  : [];
 
     const existing = uniqueSourceUrls.length
       ? await prisma.product.findMany({
@@ -337,7 +349,17 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ok: true,
-      summary: { total, valid, invalid, willCreate, willUpdate, willDeactivate },
+      summary: {
+  total,
+  valid,
+  invalid,
+  willCreate,
+  willUpdate,
+  willDeactivate,
+  duplicateSourceUrlsInFile: duplicateCount,
+  duplicateExamples,
+  effectiveRowsAfterDeduping: uniqueSourceUrls.length,
+},
       rowErrors,
       warnings,
     });

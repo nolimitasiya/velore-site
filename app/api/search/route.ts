@@ -23,33 +23,52 @@ export async function GET(req: Request) {
       : undefined;
 
   const products = await prisma.product.findMany({
-    where: {
+        where: {
+      status: "APPROVED",
       isActive: true,
-      publishedAt: { not: null }, // ✅ hide unpublished in search too
+      publishedAt: { not: null },
 
       ...(q && {
         OR: [
           { title: { contains: q, mode: "insensitive" } },
           { brand: { name: { contains: q, mode: "insensitive" } } },
           {
-  productTags: {
-    some: {
-      tag: {
-        slug: {
-          contains: q.toLowerCase(),
-          mode: "insensitive",
-        },
-      },
-    },
-  },
-},
-
+            productTags: {
+              some: {
+                tag: {
+                  slug: {
+                    contains: q.toLowerCase(),
+                    mode: "insensitive",
+                  },
+                },
+              },
+            },
+          },
         ],
       }),
 
-      ...(category && { category: { slug: category } }),
-      ...(occasion && { occasion: { slug: occasion } }),
-      ...(material && { material: { slug: material } }),
+      ...(category && { category: { is: { slug: category } } }),
+
+      ...(occasion && {
+        productOccasions: {
+          some: {
+            occasion: {
+              slug: occasion,
+            },
+          },
+        },
+      }),
+
+      ...(material && {
+        productMaterials: {
+          some: {
+            material: {
+              slug: material,
+            },
+          },
+        },
+      }),
+
       ...(productType && { productType }),
     },
 

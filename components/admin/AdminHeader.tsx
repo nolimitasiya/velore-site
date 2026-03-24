@@ -78,6 +78,11 @@ export function AdminHeader({
           badge={unseenWaitlistCount}
         />
 
+        <NavLink href="/admin/taxonomy/requests" label="Request" />
+
+        <NavLink href="/admin/storefront" label="Features" />
+
+
         <button
           type="button"
           onClick={refreshNow}

@@ -52,13 +52,15 @@ export async function POST(
       status: true,
       email: true,
       website: true,
+      companyName: true,
       countryCode: true,
       city: true,
     },
   });
 
-  if (!app)
+  if (!app) {
     return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+  }
 
   if (String(app.status).toLowerCase() !== "contract_signed") {
     return NextResponse.json(
@@ -68,7 +70,10 @@ export async function POST(
   }
 
   const email = app.email.trim().toLowerCase();
-  const brandName = guessBrandNameFromWebsite(app.website);
+
+  const brandName =
+    String(app.companyName ?? "").trim() || guessBrandNameFromWebsite(app.website);
+
   const brandSlug = slugify(brandName);
 
   const countryCode =
@@ -76,11 +81,10 @@ export async function POST(
 
   const city = String(app.city ?? "").trim() || null;
 
-  const baseRegion = countryCode
-    ? regionFromCountry(countryCode)
-    : null;
+  const baseRegion = countryCode ? regionFromCountry(countryCode) : null;
 
-  // ✅ Create or update brand
+  const websiteUrl = String(app.website ?? "").trim() || null;
+
   const brand = await prisma.brand.upsert({
     where: { slug: brandSlug },
     update: {
@@ -88,8 +92,8 @@ export async function POST(
       baseCountryCode: countryCode,
       baseRegion,
       baseCity: city,
-      websiteUrl: app.website?.trim() || null,
-      billingEmail: email, // Stripe billing email
+      websiteUrl,
+      billingEmail: email,
     },
     create: {
       slug: brandSlug,
@@ -97,19 +101,16 @@ export async function POST(
       baseCountryCode: countryCode,
       baseRegion,
       baseCity: city,
-      websiteUrl: app.website?.trim() || null,
+      websiteUrl,
       billingEmail: email,
     },
     select: { id: true, name: true, slug: true },
   });
 
-  // ✅ CREATE INVITE TOKEN
   const rawToken = crypto.randomBytes(32).toString("hex");
   const tokenHash = sha256(rawToken);
 
-  const expiresAt = new Date(
-    Date.now() + 1000 * 60 * 60 * 24 * 7 // 7 days
-  );
+  const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7);
 
   await prisma.brandInvite.create({
     data: {
@@ -121,13 +122,9 @@ export async function POST(
     },
   });
 
-  // ✅ Build onboarding URL
-  const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
   const onboardingUrl = `${siteUrl}/brand/onboarding?token=${rawToken}`;
 
-  // ✅ Send email
   await sendBrandInviteEmail({
     to: email,
     brandName: brand.name,
@@ -135,7 +132,6 @@ export async function POST(
     senderName: "Asiya",
   });
 
-  // ✅ Mark application as onboarded
   await prisma.brandApplication.update({
     where: { id },
     data: { status: "onboarded" },

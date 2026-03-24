@@ -14,7 +14,6 @@ function readCookie(name: string) {
 }
 
 function chosenCurrencyFromCookies(): string {
-  // prefers vc_currency, falls back to dalra_currency, then GBP
   const vc = readCookie("vc_currency");
   const dalra = readCookie("dalra_currency");
   return safeCurrency(vc || dalra || "") ?? "GBP";
@@ -32,12 +31,17 @@ export default function MoneyLabel({
   const [rates, setRates] = useState<Rates | null>(null);
   const [chosen, setChosen] = useState<string>(() => chosenCurrencyFromCookies());
 
-  // keep chosen currency in sync if user changes cookies client-side
   useEffect(() => {
-    const id = window.setInterval(() => {
-      setChosen(chosenCurrencyFromCookies());
-    }, 750);
-    return () => window.clearInterval(id);
+    const syncChosen = () => setChosen(chosenCurrencyFromCookies());
+
+    syncChosen();
+    window.addEventListener("vc_preferences_changed", syncChosen);
+    window.addEventListener("vc_currency_changed", syncChosen);
+
+    return () => {
+      window.removeEventListener("vc_preferences_changed", syncChosen);
+      window.removeEventListener("vc_currency_changed", syncChosen);
+    };
   }, []);
 
   useEffect(() => {
@@ -45,11 +49,9 @@ export default function MoneyLabel({
 
     async function loadRates() {
       try {
-        // session cache
         const cached = sessionStorage.getItem("vc_ecb_rates");
         if (cached) {
           const parsed = JSON.parse(cached) as { at: number; rates: Rates };
-          // 12h
           if (Date.now() - parsed.at < 1000 * 60 * 60 * 12) {
             setRates(parsed.rates);
             return;
@@ -65,21 +67,16 @@ export default function MoneyLabel({
         sessionStorage.setItem("vc_ecb_rates", JSON.stringify(data));
         setRates(data.rates);
       } catch {
-        // ignore; fallback will show base currency
+        // fallback handled below
       }
     }
 
     loadRates();
+
     return () => {
       cancelled = true;
     };
   }, []);
-  useEffect(() => {
-  const onChange = () => setChosen(chosenCurrencyFromCookies());
-  window.addEventListener("vc_currency_changed", onChange);
-  return () => window.removeEventListener("vc_currency_changed", onChange);
-}, []);
-
 
   const display = useMemo(() => {
     const base = amount == null || amount === "" ? null : Number(amount);
@@ -89,7 +86,6 @@ export default function MoneyLabel({
     const to = String(chosen || "GBP").toUpperCase();
 
     if (!rates) {
-      // fallback while loading
       return formatMoney(base, (safeCurrency(from) ?? "GBP") as any);
     }
 

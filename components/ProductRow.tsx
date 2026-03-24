@@ -15,7 +15,7 @@ export type StorefrontProduct = {
 export function ProductRow({ products }: { products: StorefrontProduct[] }) {
   return (
     <div className="mx-auto w-full max-w-[1800px] px-8">
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-4 md:grid-cols-4 gap-6">
         {products.map((p) => {
           const href = p.buyUrl?.trim() || null;
 

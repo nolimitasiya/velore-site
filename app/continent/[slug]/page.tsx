@@ -7,6 +7,23 @@ import SiteShell from "@/components/SiteShell";
 import ContinentFilters from "@/components/ContinentFilters";
 import { ProductGrid, type GridProduct } from "@/components/ProductGrid";
 import { Badge, ProductType, type Region } from "@prisma/client";
+import { sortSizes, formatSizeLabel } from "@/lib/sizing/order";
+import { getAvailableStyles } from "@/lib/storefront/getAvailableStyles";
+import { parseStorefrontFilters } from "@/lib/storefront/parseFilters";
+import { buildStorefrontWhere } from "@/lib/storefront/buildStorefrontWhere";
+import { countryNameFromIso2 } from "@/lib/geo/countries";
+
+type Opt = { value: string; label: string };
+
+function titleCaseLabel(s: string) {
+  return s
+    .toLowerCase()
+    .replaceAll("_", " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
 
 const REGION_MAP: Record<string, Region> = {
   africa: "AFRICA",
@@ -30,11 +47,6 @@ function niceTitle(slug: string) {
     .join(" ");
 }
 
-/**
- * IMPORTANT:
- * Number("") === 0, so we must treat empty strings as null
- * otherwise you accidentally apply price >= 0 and exclude null prices.
- */
 function toNum(v: unknown): number | null {
   if (v == null) return null;
   const s = String(v).trim();
@@ -60,22 +72,8 @@ export default async function ContinentPage({
   const region = REGION_MAP[slug.toLowerCase()];
   if (!region) return notFound();
 
-  // ---- read filters from URL (robust parsing)
-  const brandSlug = qp(sp.brand);
-  const country = qp(sp.country).toUpperCase();
-
-  const typeRaw = qp(sp.type).toUpperCase();
-  const type: ProductType | "" =
-    typeRaw && isProductType(typeRaw) ? (typeRaw as ProductType) : "";
-
-  const color = qp(sp.color).toLowerCase();
-
-  // ✅ NEW: material slug (stored lowercase in URL)
-  const material = qp(sp.material).toLowerCase();
-
-  const min = toNum(qp(sp.min));
-  const max = toNum(qp(sp.max));
-  const sort = qp(sp.sort) || "new";
+  const filters = parseStorefrontFilters(sp);
+  const { types, sort } = filters;
 
   const orderBy =
     sort === "price_asc"
@@ -84,13 +82,7 @@ export default async function ContinentPage({
       ? [{ price: "desc" as const }, { publishedAt: "desc" as const }]
       : [{ publishedAt: "desc" as const }];
 
-  const sale = qp(sp.sale);
-  const nextDay = qp(sp.next_day);
-  
-  const saleOn = sale === "1" || sale.toLowerCase() === "true";
-  const nextDayOn = nextDay === "1" || nextDay.toLowerCase() === "true";
 
-  // ---- options for filters (from DB)
   const brandsRaw = await prisma.brand.findMany({
     where: { baseRegion: region },
     orderBy: { name: "asc" },
@@ -98,96 +90,55 @@ export default async function ContinentPage({
     take: 500,
   });
 
-  const brandOptions = brandsRaw.map((b) => ({ value: b.slug, label: b.name }));
+  const brandOptions: Opt[] = brandsRaw.map((b) => ({
+    value: b.slug,
+    label: b.name,
+  }));
 
-  const countryOptions = Array.from(
+    const countryOptions: Opt[] = Array.from(
     new Set(brandsRaw.map((b) => b.baseCountryCode).filter(Boolean))
   )
     .sort()
-    .map((cc) => ({ value: String(cc), label: String(cc) }));
+    .map((cc) => ({
+      value: String(cc),
+      label: countryNameFromIso2(String(cc)),
+    }));
 
-  const typeOptions = Object.values(ProductType).map((t) => ({
+  const typeOptions: Opt[] = Object.values(ProductType).map((t) => ({
     value: t,
-    label: t.replaceAll("_", " "),
+    label: titleCaseLabel(t),
   }));
+
+    const styleOptions: Opt[] = await getAvailableStyles(types);
 
   const coloursRaw = await prisma.colour.findMany({
     orderBy: { name: "asc" },
     select: { slug: true, name: true },
     take: 200,
   });
-  const colorOptions = coloursRaw.map((c) => ({ value: c.slug, label: c.name }));
 
-  // ✅ NEW: materials options (uses your Material model)
-  const materialsRaw = await prisma.material.findMany({
-  where: {
-    productMaterials: {
-      some: {
-        product: {
-          status: "APPROVED",
-          isActive: true,
-          publishedAt: { not: null },
-          brand: { is: { baseRegion: region } },
-        },
-      },
-    },
-  },
-  orderBy: { name: "asc" },
-  select: { slug: true, name: true },
-  take: 300,
-});
-const materialOptions = materialsRaw.map((m) => ({ value: m.slug, label: m.name }));
+  const colorOptions: Opt[] = coloursRaw.map((c) => ({
+    value: c.slug,
+    label: c.name.toLowerCase(),
+  }));
 
+  const sizesRaw = await prisma.size.findMany({
+    orderBy: { name: "asc" },
+    select: { slug: true, name: true },
+    take: 500,
+  });
 
-  // ---- build prisma filters (matches your schema)
-  const where: any = {
-    status: "APPROVED",
-    isActive: true,
-    publishedAt: { not: null },
+  const sizeOptions = sizesRaw
+    .sort(sortSizes)
+    .map((s) => ({
+      value: s.slug,
+      label: formatSizeLabel(s.name),
+    }));
 
-    brand: {
-      is: {
-        baseRegion: region,
-        ...(brandSlug ? { slug: brandSlug } : {}),
-        ...(country ? { baseCountryCode: country } : {}),
-      },
-    },
-
-    ...(type ? { productType: type } : {}),
-
-    ...(min != null || max != null
-      ? {
-          price: {
-            ...(min != null ? { gte: min } : {}),
-            ...(max != null ? { lte: max } : {}),
-          },
-        }
-      : {}),
-
-    ...(color
-      ? {
-          productColours: {
-            some: {
-              colour: { slug: color },
-            },
-          },
-        }
-      : {}),
-
-    // ✅ NEW: material filter via join table ProductMaterial
-    ...(material
-      ? {
-          productMaterials: {
-            some: {
-              material: { slug: material },
-            },
-          },
-        }
-      : {}),
-
-      ...(saleOn ? { badges: { has: Badge.sale } } : {}),
-      ...(nextDayOn ? { badges: { has: Badge.next_day } } : {}),
-  };
+     const where = buildStorefrontWhere({
+    filters,
+    region,
+  });
 
   const products = await prisma.product.findMany({
     where,
@@ -211,17 +162,15 @@ const materialOptions = materialsRaw.map((m) => ({ value: m.slug, label: m.name 
   });
 
   const mapped: GridProduct[] = products.map((p) => ({
-  id: p.id,
-  title: p.title,
-  brandName: p.brand?.name ?? null,
-  imageUrl: p.images?.[0]?.url ?? null,
-  price: p.price ? p.price.toString() : null,
-  currency: String(p.currency),
-  buyUrl: `/out/${p.id}`, // ✅ tracked everywhere
-  badges: (p.badges ?? []) as any,
-}));
-
-
+    id: p.id,
+    title: p.title,
+    brandName: p.brand?.name ?? null,
+    imageUrl: p.images?.[0]?.url ?? null,
+    price: p.price ? p.price.toString() : null,
+    currency: String(p.currency),
+    buyUrl: `/out/${p.id}`,
+    badges: (p.badges ?? []) as any,
+  }));
 
   const title = niceTitle(slug);
 
@@ -242,8 +191,9 @@ const materialOptions = materialsRaw.map((m) => ({ value: m.slug, label: m.name 
             brands={brandOptions}
             countries={countryOptions}
             types={typeOptions}
+            styles={styleOptions}
             colors={colorOptions}
-            materials={materialOptions} // ✅ NEW
+            sizes={sizeOptions}
           />
 
           <ProductGrid products={mapped} />

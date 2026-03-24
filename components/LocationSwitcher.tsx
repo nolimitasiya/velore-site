@@ -1,15 +1,18 @@
+// C:\Users\Asiya\projects\dalra\components\LocationSwitcher.tsx
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   DEFAULT_LOCATION,
+  getLocationByCountry,
   MAJOR_LOCATIONS,
-  Location,
-  currencySortKey,
+  normalizeCountryCode,
 } from "@/data/locations";
-
-const LS_KEY = "dalra_location";
+import {
+  BRAND_CURRENCY_OPTIONS,
+  normalizeCurrencyCode,
+} from "@/lib/currency/codes";
+import { saveShopperPreferences, readInitialShopperPreferences } from "@/lib/shopperPreferencesClient";
 
 function flagUrl(code: string) {
   return `https://flagcdn.com/w20/${code.toLowerCase()}.png`;
@@ -36,156 +39,111 @@ function Flag({
   );
 }
 
-function setCookie(name: string, value: string, days = 365) {
-  const expires = new Date(Date.now() + days * 864e5).toUTCString();
-  document.cookie = `${name}=${encodeURIComponent(
-    value
-  )}; expires=${expires}; path=/; SameSite=Lax`;
-}
-
 export default function LocationSwitcher() {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [current, setCurrent] = useState<Location>(DEFAULT_LOCATION);
+  const [country, setCountry] = useState(DEFAULT_LOCATION.code);
+  const [currency, setCurrency] = useState(DEFAULT_LOCATION.currency);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
-  // Load saved location
+  const countries = useMemo(
+    () => [...MAJOR_LOCATIONS].sort((a, b) => a.name.localeCompare(b.name)),
+    []
+  );
+
+  const currencies = useMemo(() => BRAND_CURRENCY_OPTIONS, []);
+  const currentLocation = getLocationByCountry(country) ?? DEFAULT_LOCATION;
+
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(LS_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Location;
-      if (parsed?.code && parsed?.currency && parsed?.name) setCurrent(parsed);
-    } catch {
-      // ignore
-    }
+    const initial = readInitialShopperPreferences();
+    setCountry(initial.country);
+    setCurrency(initial.currency);
   }, []);
 
-  // Close on ESC
+  useEffect(() => {
+    const onPrefsChanged = (event: Event) => {
+      const custom = event as CustomEvent<{ country?: string; currency?: string }>;
+      if (custom.detail?.country) setCountry(normalizeCountryCode(custom.detail.country));
+      if (custom.detail?.currency) setCurrency(normalizeCurrencyCode(custom.detail.currency));
+    };
+
+    window.addEventListener("vc_preferences_changed", onPrefsChanged as EventListener);
+    return () =>
+      window.removeEventListener("vc_preferences_changed", onPrefsChanged as EventListener);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
+
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
+
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+  async function save() {
+    setSaving(true);
+    setError("");
 
-    const base = q
-      ? MAJOR_LOCATIONS.filter(
-          (c) =>
-            c.name.toLowerCase().includes(q) ||
-            c.code.toLowerCase().includes(q) ||
-            c.currency.toLowerCase().includes(q)
-        )
-      : MAJOR_LOCATIONS;
-
-    // Group by currency
-    const groups = new Map<string, Location[]>();
-    for (const item of base) {
-      if (!groups.has(item.currency)) groups.set(item.currency, []);
-      groups.get(item.currency)!.push(item);
+    try {
+      await saveShopperPreferences({ country, currency });
+      setOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setSaving(false);
     }
-
-    const ordered = Array.from(groups.entries()).sort(
-      (a, b) => currencySortKey(a[0]) - currencySortKey(b[0])
-    );
-
-    // Sort inside each currency group
-    for (const [, items] of ordered) {
-      items.sort((a, b) => a.name.localeCompare(b.name));
-    }
-
-    return ordered;
-  }, [query]);
-
-  // ✅ THIS is where it goes (client-side)
- async function choose(loc: Location) {
-  setCurrent(loc);
-  setOpen(false);
-  setQuery("");
-
-  try {
-    localStorage.setItem(LS_KEY, JSON.stringify(loc));
-  } catch {}
-
-  setCookie("dalra_country", loc.code);
-
-  // ✅ Normalize currency to match Prisma enum
-  const code = String(loc.currency || "").trim().toUpperCase();
-
-  // ✅ (optional) hard guard: fallback if not supported
-  const safeCode = code;
-
-
-  const r = await fetch("/api/currency/set", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ currency: safeCode }),
-    credentials: "include",
-  });
-
-  // 🔥 Debug: see why it's 400
-  if (!r.ok) {
-    console.log("currency/set failed", r.status, await r.text(), { sent: safeCode, raw: loc.currency });
-    return;
   }
-
-  setCookie("vc_currency", safeCode);
-  setCookie("dalra_currency", safeCode);
-
-  window.dispatchEvent(new CustomEvent("vc_currency_changed"));
-  router.refresh();
-}
-
 
   return (
     <>
-      {/* Flag button (header left) */}
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label="Change location"
+        aria-label="Change location and currency"
         className="inline-flex items-center gap-3 rounded-full px-3 py-2 text-white/90 transition-colors hover:text-white"
       >
-        <Flag code={current.code} name={current.name} size={22} />
+        <Flag code={currentLocation.code} name={currentLocation.name} size={22} />
 
-        <span className="text-sm tracking-widest text-white/80 hidden lg:inline">
-          {current.currency}
+        <span className="hidden lg:inline text-sm tracking-widest text-white/80">
+          {currency}
         </span>
 
         <span className="text-white/60 text-sm">▾</span>
       </button>
 
-      {/* Overlay */}
       {open && (
         <div
-          className="fixed inset-0 z-50 bg-black/50"
+          className="fixed inset-0 z-[70] bg-black/45"
           onClick={() => setOpen(false)}
         />
       )}
 
-      {/* Modal */}
       <div
         className={[
-          "fixed left-1/2 top-1/2 z-[60] w-[min(92vw,820px)] -translate-x-1/2 -translate-y-1/2",
-          "rounded-3xl bg-white shadow-xl border",
+          "fixed left-1/2 top-1/2 z-[71] w-[min(92vw,680px)] -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-black/10 bg-white text-black shadow-2xl",
           "transition-opacity duration-200",
-          open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
+          open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
         ].join(" ")}
         role="dialog"
         aria-modal="true"
-        aria-label="Change location"
+        aria-label="Change location and currency"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b px-6 py-5">
-          <div className="font-heading text-lg text-black">Change location</div>
+        <div className="flex items-start justify-between gap-4 border-b px-6 py-5">
+          <div>
+            <div className="font-heading text-lg text-black">
+              Change location and currency
+            </div>
+            <div className="mt-1 text-sm text-black/60">
+              Veilora shows estimated local pricing. Final checkout currency may vary by retailer.
+            </div>
+          </div>
+
           <button
             type="button"
-            className="rounded-full px-3 py-2 text-black/60 hover:text-black hover:bg-black/[0.04]"
+            className="rounded-full px-3 py-2 text-black/60 hover:bg-black/[0.04] hover:text-black"
             onClick={() => setOpen(false)}
             aria-label="Close"
           >
@@ -193,67 +151,80 @@ export default function LocationSwitcher() {
           </button>
         </div>
 
-        {/* Search */}
-        <div className="px-6 py-4 border-b">
-          <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-black/40">
-              🔍
-            </span>
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search country or currency"
-              className="w-full rounded-2xl border px-10 py-3 text-sm outline-none focus:ring-2 focus:ring-black/10"
-              autoFocus
-            />
+        <div className="space-y-5 px-6 py-6">
+          <div>
+            <label
+              htmlFor="header-country-select"
+              className="mb-2 block text-xs tracking-[0.18em] text-black/50"
+            >
+              COUNTRY
+            </label>
+
+            <div className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3">
+              <Flag code={currentLocation.code} name={currentLocation.name} size={20} />
+              <select
+                id="header-country-select"
+                value={country}
+                onChange={(e) => setCountry(normalizeCountryCode(e.target.value))}
+                className="w-full bg-white text-sm text-black outline-none"
+              >
+                {countries.map((loc) => (
+                  <option key={loc.code} value={loc.code}>
+                    {loc.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-        </div>
 
-        {/* List */}
-        <div className="max-h-[60vh] overflow-auto px-2 py-2">
-          {filtered.length === 0 ? (
-            <div className="px-6 py-10 text-sm text-black/60">No results.</div>
-          ) : (
-            filtered.map(([currency, items]) => (
-              <div key={currency} className="mb-3">
-                <div className="px-4 pt-3 pb-2 text-xs tracking-widest text-black/50">
-                  {currency}
-                </div>
+          <div>
+            <label
+              htmlFor="header-currency-select"
+              className="mb-2 block text-xs tracking-[0.18em] text-black/50"
+            >
+              CURRENCY
+            </label>
 
-                <div className="rounded-2xl overflow-hidden border mx-2">
-                  {items.map((loc) => {
-                    const active =
-                      loc.code === current.code &&
-                      loc.currency === current.currency;
+            <div className="rounded-2xl border border-black/10 bg-white px-4 py-3">
+              <select
+                id="header-currency-select"
+                value={currency}
+                onChange={(e) => setCurrency(normalizeCurrencyCode(e.target.value))}
+                className="w-full bg-white text-sm text-black outline-none"
+              >
+                {currencies.map((opt) => (
+                  <option key={opt.code} value={opt.code}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-                    return (
-                      <button
-                        key={loc.code}
-                        type="button"
-                        onClick={() => choose(loc)}
-                        className={[
-                          "w-full flex items-center justify-between px-4 py-4 text-left",
-                          "transition-colors hover:bg-black/[0.03]",
-                          active ? "bg-black/[0.04]" : "bg-white",
-                          "border-b last:border-b-0",
-                        ].join(" ")}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Flag code={loc.code} name={loc.name} size={20} />
-                          <div className="text-sm text-black">{loc.name}</div>
-                        </div>
+          {error ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          ) : null}
 
-                        <div className="text-sm text-black/60 tabular-nums">
-                          {loc.symbol ? `${loc.symbol} ` : ""}
-                          {loc.currency}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))
-          )}
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="rounded-full border border-black/15 px-5 py-2 text-sm text-black/70 hover:bg-black/[0.03]"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              onClick={save}
+              disabled={saving}
+              className="rounded-full bg-black px-5 py-2 text-sm font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {saving ? "Saving..." : "Save preferences"}
+            </button>
+          </div>
         </div>
       </div>
     </>

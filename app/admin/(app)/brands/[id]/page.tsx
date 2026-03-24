@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
 import BrandSwitcher from "./BrandSwitcher";
 import BrandNotesEditor from "./BrandNotesEditor";
+import BrandHomepageSettingsEditor from "./BrandHomepageSettingsEditor";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -45,9 +46,24 @@ export default async function AdminBrandDetailPage({
     <main className="mx-auto w-full max-w-5xl px-6 py-10">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">{brand.name}</h1>
-          <p className="mt-1 text-sm text-black/50">{brand.slug}</p>
-        </div>
+  <div className="flex flex-wrap items-center gap-3">
+    <h1 className="text-2xl font-semibold">{brand.name}</h1>
+
+    {brand.showOnHomepage ? (
+      <span className="inline-flex items-center rounded-full bg-[#6b1f2b] px-3 py-1 text-xs font-medium tracking-wide text-white">
+        Featured on homepage
+      </span>
+    ) : null}
+  </div>
+
+  <p className="mt-1 text-sm text-black/50">{brand.slug}</p>
+
+  {brand.showOnHomepage && brand.homepageOrder ? (
+    <p className="mt-2 text-xs text-black/50">
+      Homepage order: {brand.homepageOrder}
+    </p>
+  ) : null}
+</div>
 
         <div className="flex items-center gap-3">
           <BrandSwitcher currentId={brand.id} brands={allBrands} />
@@ -61,7 +77,7 @@ export default async function AdminBrandDetailPage({
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+           <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="rounded-2xl border border-black/10 bg-white p-6">
           <div className="grid grid-cols-1 gap-4">
             <div>
@@ -89,6 +105,12 @@ export default async function AdminBrandDetailPage({
             </div>
           </div>
         </div>
+
+        <BrandHomepageSettingsEditor
+          brandId={brand.id}
+          initialShowOnHomepage={brand.showOnHomepage}
+          initialHomepageOrder={brand.homepageOrder}
+        />
 
         <BrandNotesEditor brandId={brand.id} initialNotes={brand.notes} />
       </div>

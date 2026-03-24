@@ -15,17 +15,17 @@ model AdminUser {
   name                     String?
   createdAt                DateTime          @default(now())
   reviewedTaxonomyRequests TaxonomyRequest[] @relation("TaxonomyReviewedBy")
-  lastSeenWaitlistAt DateTime?
-  lastSeenApplicationsAt DateTime?
+  lastSeenWaitlistAt       DateTime?
+  lastSeenApplicationsAt   DateTime?
 }
 
 model User {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email     String   @unique
-  password  String
-  name      String?
-  createdAt DateTime @default(now())
-  lastSeenWaitlistAt   DateTime?
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email              String    @unique
+  password           String
+  name               String?
+  createdAt          DateTime  @default(now())
+  lastSeenWaitlistAt DateTime?
 
   brandMemberships BrandMembership[]
   importJobs       ImportJob[]
@@ -67,13 +67,20 @@ model BrandInvite {
 ///  * Catalog models
 ///  * =========================
 model Brand {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name       String
-  slug       String   @unique
-  websiteUrl String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  adminNotes String?
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String
+  slug             String   @unique
+  websiteUrl       String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  adminNotes       String?
+  coverImageUrl    String?
+  coverImageFocalX Float    @default(50)
+  coverImageFocalY Float    @default(50)
+
+  showOnHomepage Boolean @default(false)
+  homepageOrder  Int?
+
   notes BrandNote[]
 
   products         Product[]
@@ -109,22 +116,20 @@ model Brand {
   lastInvoiceStatus        String?
   pastDueSince             DateTime? // used for your 5/14/30 logic
 
-
-   // ---------------------------
+  // ---------------------------
   // Affiliate (Phase 1.5)
   // ---------------------------
   affiliateProvider AffiliateProvider? // optional for now
-  affiliateStatus   AffiliateStatus     @default(PENDING)
+  affiliateStatus   AffiliateStatus    @default(PENDING)
   affiliateBaseUrl  String?
 
-// ---------------------------
-//  Instagram API
-// ---------------------------
+  // ---------------------------
+  //  Instagram API
+  // ---------------------------
 
-instagramUserId   String?  // the IG user id (business/creator)
-instagramToken    String?  // long-lived token (store carefully)
+  instagramUserId String? // the IG user id (business/creator)
+  instagramToken  String? // long-lived token (store carefully)
 
-  
   // ---------------------------
   // Feature bookings + style feed
   // ---------------------------
@@ -158,12 +163,23 @@ model Occasion {
   productOccasions ProductOccasion[]
 }
 
+model MaterialAllowedProductType {
+  materialId  String      @db.Uuid
+  productType ProductType
+
+  material Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@id([materialId, productType])
+  @@index([productType])
+}
+
 model Material {
   id   String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name String
   slug String @unique
 
-  productMaterials ProductMaterial[]
+  productMaterials    ProductMaterial[]
+  allowedProductTypes MaterialAllowedProductType[]
 }
 
 model Product {
@@ -196,10 +212,12 @@ model Product {
   worldwideShipping Boolean                  @default(false)
   shippingCountries ProductShippingCountry[]
 
-  productTags        ProductTag[]
-  productMaterials   ProductMaterial[]
-  productOccasions   ProductOccasion[]
-  adminNotifications AdminNotification[]
+  productTags            ProductTag[]
+  productMaterials       ProductMaterial[]
+  productOccasions       ProductOccasion[]
+  productStyles          ProductStyle[]
+  adminNotifications     AdminNotification[]
+  storefrontSectionItems StorefrontSectionItem[]
 
   // (Optional but useful)
   submittedAt DateTime?
@@ -259,16 +277,16 @@ model NewsletterSubscriber {
   confirmedAt      DateTime?
   unsubscribeToken String?   @unique
   unsubscribedAt   DateTime?
-  countryCode String? @db.Char(2)
+  countryCode      String?   @db.Char(2)
 }
 
 model BrandApplication {
-  id                 String                 @id @default(cuid())
-  website            String?
-  email              String
-  notes              String?
-  companyName     String?
-  platformHosted  PlatformHosted? // new enum
+  id                  String          @id @default(cuid())
+  website             String?
+  email               String
+  notes               String?
+  companyName         String?
+  platformHosted      PlatformHosted? // new enum
   platformHostedOther String?
 
   status             BrandApplicationStatus @default(new)
@@ -290,6 +308,7 @@ model BrandApplication {
   @@index([email])
   @@index([platformHosted])
 }
+
 enum PlatformHosted {
   SHOPIFY
   GODADDY
@@ -328,17 +347,30 @@ enum BrandApplicationStatus {
   rejected
 }
 
+enum ClickSourcePage {
+  HOME
+  SEARCH
+  BRAND
+}
+
 model AffiliateClick {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  productId String?  @db.Uuid
-  brandId   String   @db.Uuid
-  clickedAt DateTime @default(now())
-  countryCode String? @db.Char(2)  // ISO-2 e.g. "GB"
-  region      String?              // e.g. "ENG" or "California" depending on provider
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId   String?  @db.Uuid
+  brandId     String   @db.Uuid
+  clickedAt   DateTime @default(now())
+  countryCode String?  @db.Char(2)
+  region      String?
   city        String?
 
-  destinationUrl String? // ✅ ADD THIS
+  destinationUrl      String?
+  shopperCountryCode  String? @db.Char(2)
+  shopperCurrencyCode String? @db.Char(3)
 
+  // NEW: analytics context
+  sourcePage ClickSourcePage?
+  sectionId  String? @db.Uuid
+  sectionKey String?
+  position   Int?
 
   product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   brand   Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
@@ -346,6 +378,13 @@ model AffiliateClick {
   @@index([brandId, clickedAt])
   @@index([productId, clickedAt])
   @@index([countryCode, clickedAt])
+  @@index([shopperCountryCode, clickedAt])
+  @@index([shopperCurrencyCode, clickedAt])
+
+  // NEW
+  @@index([sourcePage, clickedAt])
+  @@index([sectionId, clickedAt])
+  @@index([sectionKey, clickedAt])
 }
 
 model AffiliateEarning {
@@ -392,14 +431,20 @@ enum ProductType {
   SKIRT
   TOP
   HIJAB
+  ACTIVEWEAR
+  SETS
+  MATERNITY
+  KHIMAR
+  JILBAB
+  COATS_JACKETS
 }
 
 model WaitlistSubscriber {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name      String
-  email     String   @unique
-  countryCode String? @db.Char(2)
-  createdAt DateTime @default(now())
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  email       String   @unique
+  countryCode String?  @db.Char(2)
+  createdAt   DateTime @default(now())
 }
 
 enum ProductStatus {
@@ -414,6 +459,9 @@ enum TaxonomyType {
   TAG
   MATERIAL
   OCCASION
+  COLOUR
+  SIZE
+  STYLE
 }
 
 enum TaxonomyRequestStatus {
@@ -520,11 +568,13 @@ model TaxonomyRequest {
   reviewedAt        DateTime?
   reviewedByAdminId String? // ✅ add this back
   reviewedByAdmin   AdminUser?            @relation("TaxonomyReviewedBy", fields: [reviewedByAdminId], references: [id])
+  reviewNote        String?
+  productTypes      ProductType[]         @default([])
 
   brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([type, slug]) // prevents duplicate requests for same slug
+  @@unique([brandId, type, slug]) // prevents duplicate requests for same slug
   @@index([brandId, status, createdAt])
   @@index([type, status])
   @@index([reviewedByAdminId])
@@ -649,6 +699,91 @@ model StyleFeedPost {
   @@index([isActive, postedAt])
 }
 
+model StorefrontSection {
+  id                            String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key                           String                @unique
+  title                         String
+  type                          StorefrontSectionType @default(COUNTRY)
+  targetCountryCode             String?               @db.Char(2) // used mainly for COUNTRY sections
+  campaignAppliesToAllCountries Boolean               @default(false) // used mainly for CAMPAIGN sections
+  isActive                      Boolean               @default(true)
+  isDefault                     Boolean               @default(false) // temporary: keep for safe migration
+  maxItems                      Int                   @default(4)
+  sortOrder                     Int                   @default(0)
+  createdAt                     DateTime              @default(now())
+  updatedAt                     DateTime              @updatedAt
+
+  items             StorefrontSectionItem[]
+  campaignCountries StorefrontSectionCountry[]
+
+  @@index([type])
+  @@index([targetCountryCode])
+  @@index([isActive])
+  @@index([sortOrder])
+  @@index([isActive, type])
+  @@index([isActive, targetCountryCode])
+}
+
+model StorefrontSectionItem {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sectionId String   @db.Uuid
+  productId String   @db.Uuid
+  position  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  section StorefrontSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  product Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([sectionId, productId])
+  @@unique([sectionId, position])
+  @@index([sectionId])
+  @@index([productId])
+  @@index([sectionId, position])
+}
+
+model StorefrontSectionCountry {
+  sectionId   String @db.Uuid
+  countryCode String @db.Char(2)
+
+  section StorefrontSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@id([sectionId, countryCode])
+  @@index([countryCode])
+  @@index([sectionId])
+}
+
+model Style {
+  id   String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name String
+  slug String @unique
+
+  productStyles       ProductStyle[]
+  allowedProductTypes StyleAllowedProductType[]
+}
+
+model StyleAllowedProductType {
+  styleId     String      @db.Uuid
+  productType ProductType
+
+  style Style @relation(fields: [styleId], references: [id], onDelete: Cascade)
+
+  @@id([styleId, productType])
+  @@index([productType])
+}
+
+model ProductStyle {
+  productId String @db.Uuid
+  styleId   String @db.Uuid
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  style   Style   @relation(fields: [styleId], references: [id], onDelete: Cascade)
+
+  @@id([productId, styleId])
+  @@index([styleId])
+  @@index([productId])
+}
+
 enum PasswordResetUserType {
   ADMIN
   BRAND
@@ -695,10 +830,16 @@ model BrandNote {
   content   String
   createdAt DateTime @default(now())
 
-  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
   @@index([brandId])
-}                    
+}
+
+enum StorefrontSectionType {
+  DEFAULT
+  COUNTRY
+  CAMPAIGN
+}
 
 
 

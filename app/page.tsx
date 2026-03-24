@@ -6,6 +6,7 @@ import { headers, cookies } from "next/headers";
 import Gate from "@/app/(gate)/Gate";
 import LiveHome from "@/components/LiveHome";
 import SiteShell from "@/components/SiteShell";
+import { getShopperPreferences } from "@/lib/shopperPreferences";
 
 export default async function Page({
   searchParams,
@@ -15,12 +16,13 @@ export default async function Page({
   headers();
 
   const sp = (await searchParams) ?? {};
+  const shopperPrefs = await getShopperPreferences();
 
   const region =
     typeof sp.region === "string" ? sp.region : undefined;
 
   const country =
-    typeof sp.country === "string" ? sp.country : undefined;
+    typeof sp.country === "string" ? sp.country : shopperPrefs.country;
 
   const launchMode = process.env.LAUNCH_MODE === "true";
   const cookieStore = await cookies();

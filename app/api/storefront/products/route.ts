@@ -1,7 +1,7 @@
 // C:\Users\Asiya\projects\dalra\app\api\storefront\products\route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { Region } from "@prisma/client";
+import { Region, ProductType } from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,54 +16,130 @@ function toIso2(x: string | null): string | null {
   return v.length === 2 ? v : null;
 }
 
+function splitCsv(x: string | null) {
+  return String(x ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function toProductType(x: string | null): ProductType | null {
+  const v = String(x ?? "").trim().toUpperCase();
+  return (Object.values(ProductType) as string[]).includes(v)
+    ? (v as ProductType)
+    : null;
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
 
   const take = Math.min(Number(searchParams.get("take") ?? 12) || 12, 48);
 
+  const q = (searchParams.get("q") ?? "").trim();
+  const brandId = (searchParams.get("brandId") ?? "").trim() || null;
+
   const region = toRegion(searchParams.get("region"));
   const country = toIso2(searchParams.get("country"));
+  const type = toProductType(searchParams.get("type"));
+  const material = (searchParams.get("material") ?? "").trim().toLowerCase();
+  const sizes = splitCsv(searchParams.get("size")).map((s) => s.toLowerCase());
+
+  const sectionId = searchParams.get("sectionId");
+
+  
+
+  let sectionCountry: string | null = null;
+
+  if (sectionId) {
+    const section = await prisma.storefrontSection.findUnique({
+      where: { id: sectionId },
+      select: {
+        type: true,
+        targetCountryCode: true,
+      },
+    });
+
+    sectionCountry =
+      section?.type === "COUNTRY" ? section.targetCountryCode ?? null : null;
+  }
 
   const products = await prisma.product.findMany({
     where: {
-  status: "APPROVED",
-  isActive: true,
-  publishedAt: { not: null },
+      status: "APPROVED",
+      isActive: true,
+      publishedAt: { not: null },
 
-  brand: {
-    affiliateStatus: "ACTIVE",
-    ...(region ? { baseRegion: region } : {}),
-    ...(country ? { baseCountryCode: country } : {}),
-  },
+      brand: {
+        affiliateStatus: "ACTIVE",
+        ...(brandId ? { id: brandId } : {}),
+        ...(region ? { baseRegion: region } : {}),
+        ...(sectionCountry
+          ? { baseCountryCode: sectionCountry }
+          : country
+          ? { baseCountryCode: country }
+          : {}),
+      },
 
-  OR: [
-    { affiliateUrl: { not: null } },
-    { brand: { affiliateBaseUrl: { not: null } } },
-  ],
-},
+      ...(type ? { productType: type } : {}),
 
-    orderBy: { publishedAt: "desc" },
+      ...(material
+        ? { productMaterials: { some: { material: { slug: material } } } }
+        : {}),
+
+      ...(sizes.length
+        ? { productSizes: { some: { size: { slug: { in: sizes } } } } }
+        : {}),
+
+      ...(q
+        ? {
+            OR: [
+              { title: { contains: q, mode: "insensitive" } },
+              { slug: { contains: q.toLowerCase() } },
+              { brand: { name: { contains: q, mode: "insensitive" } } },
+              { brand: { slug: { contains: q.toLowerCase() } } },
+            ],
+          }
+        : {}),
+
+      AND: [
+        {
+          OR: [
+            { affiliateUrl: { not: null } },
+            { brand: { affiliateBaseUrl: { not: null } } },
+          ],
+        },
+      ],
+    },
+
+    orderBy: [
+      ...(q ? [] : [{ publishedAt: "desc" as const }]),
+      { updatedAt: "desc" as const },
+    ],
     take,
+
     select: {
       id: true,
       title: true,
       slug: true,
       price: true,
       currency: true,
+      isActive: true,
+      publishedAt: true,
+      status: true,
       affiliateUrl: true,
       sourceUrl: true,
       brand: {
         select: {
+          id: true,
           name: true,
-    slug: true,
-    baseRegion: true,
-    baseCountryCode: true,
-    baseCity: true,
-    affiliateStatus: true,
-    affiliateBaseUrl: true,
-  },
-},
-
+          slug: true,
+          baseRegion: true,
+          baseCountryCode: true,
+          baseCity: true,
+          affiliateStatus: true,
+          affiliateBaseUrl: true,
+        },
+      },
       images: {
         orderBy: { sortOrder: "asc" },
         take: 1,
@@ -78,10 +154,16 @@ export async function GET(req: Request) {
       id: p.id,
       title: p.title,
       slug: p.slug,
-
       price: p.price ? p.price.toString() : null,
       currency: p.currency,
-
+      isActive: p.isActive,
+      publishedAt: p.publishedAt ? p.publishedAt.toISOString() : null,
+      status: p.status,
+      brand: {
+        id: p.brand?.id ?? "",
+        name: p.brand?.name ?? "",
+        slug: p.brand?.slug ?? "",
+      },
       brandName: p.brand?.name ?? "",
       brandSlug: p.brand?.slug ?? "",
       brandRegion: p.brand?.baseRegion ?? null,

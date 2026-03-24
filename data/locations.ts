@@ -1,14 +1,51 @@
+// C:\Users\Asiya\projects\dalra\data\locations.ts
 export type Location = {
   code: string;       // ISO 3166-1 alpha-2 (e.g., "GB")
   name: string;       // "United Kingdom"
-  currency: string;   // "GBP"
-  symbol?: string;    // optional display (e.g., "£")
+  currency: string;   // default/suggested currency
+  symbol?: string;
 };
 
-const CURRENCY_ORDER = ["GBP", "EUR", "USD", "CHF", "AED", "SAR", "QAR", "KWD", "BHD", "OMR", "CAD", "AUD", "NZD", "SGD", "HKD", "JPY", "KRW", "CNY", "INR", "ZAR", "NGN", "KES", "EGP", "MAD", "TRY", "BRL", "MXN", "ARS", "CLP", "COP", "PEN", "IDR", "MYR", "THB", "VND", "PHP"];
+const CURRENCY_ORDER = [
+  "GBP",
+  "EUR",
+  "USD",
+  "CHF",
+  "AED",
+  "SAR",
+  "QAR",
+  "KWD",
+  "BHD",
+  "OMR",
+  "CAD",
+  "AUD",
+  "NZD",
+  "SGD",
+  "HKD",
+  "JPY",
+  "KRW",
+  "CNY",
+  "INR",
+  "ZAR",
+  "NGN",
+  "KES",
+  "EGP",
+  "MAD",
+  "TRY",
+  "BRL",
+  "MXN",
+  "ARS",
+  "CLP",
+  "COP",
+  "PEN",
+  "IDR",
+  "MYR",
+  "THB",
+  "VND",
+  "PHP",
+];
 
 export const MAJOR_LOCATIONS: Location[] = [
-  // EUROPE (EUR + local)
   { code: "GB", name: "United Kingdom", currency: "GBP", symbol: "£" },
   { code: "IE", name: "Ireland", currency: "EUR", symbol: "€" },
   { code: "FR", name: "France", currency: "EUR", symbol: "€" },
@@ -26,19 +63,16 @@ export const MAJOR_LOCATIONS: Location[] = [
   { code: "PL", name: "Poland", currency: "PLN" },
   { code: "TR", name: "Turkey", currency: "TRY", symbol: "₺" },
 
-  // NORTH AMERICA
   { code: "US", name: "United States", currency: "USD", symbol: "$" },
   { code: "CA", name: "Canada", currency: "CAD", symbol: "$" },
   { code: "MX", name: "Mexico", currency: "MXN", symbol: "$" },
 
-  // SOUTH AMERICA
   { code: "BR", name: "Brazil", currency: "BRL", symbol: "R$" },
   { code: "AR", name: "Argentina", currency: "ARS" },
   { code: "CL", name: "Chile", currency: "CLP" },
   { code: "CO", name: "Colombia", currency: "COP" },
   { code: "PE", name: "Peru", currency: "PEN" },
 
-  // MIDDLE EAST (GCC + key)
   { code: "AE", name: "United Arab Emirates", currency: "AED", symbol: "د.إ" },
   { code: "SA", name: "Saudi Arabia", currency: "SAR", symbol: "﷼" },
   { code: "QA", name: "Qatar", currency: "QAR" },
@@ -47,7 +81,6 @@ export const MAJOR_LOCATIONS: Location[] = [
   { code: "OM", name: "Oman", currency: "OMR" },
   { code: "JO", name: "Jordan", currency: "JOD" },
 
-  // AFRICA
   { code: "MA", name: "Morocco", currency: "MAD", symbol: "د.م." },
   { code: "DZ", name: "Algeria", currency: "DZD" },
   { code: "TN", name: "Tunisia", currency: "TND" },
@@ -57,7 +90,6 @@ export const MAJOR_LOCATIONS: Location[] = [
   { code: "ZA", name: "South Africa", currency: "ZAR", symbol: "R" },
   { code: "GH", name: "Ghana", currency: "GHS" },
 
-  // ASIA
   { code: "IN", name: "India", currency: "INR", symbol: "₹" },
   { code: "PK", name: "Pakistan", currency: "PKR" },
   { code: "BD", name: "Bangladesh", currency: "BDT" },
@@ -72,14 +104,33 @@ export const MAJOR_LOCATIONS: Location[] = [
   { code: "VN", name: "Vietnam", currency: "VND", symbol: "₫" },
   { code: "PH", name: "Philippines", currency: "PHP", symbol: "₱" },
 
-  // OCEANIA
   { code: "AU", name: "Australia", currency: "AUD", symbol: "$" },
   { code: "NZ", name: "New Zealand", currency: "NZD", symbol: "$" },
 ];
 
-export const DEFAULT_LOCATION: Location = { code: "GB", name: "United Kingdom", currency: "GBP", symbol: "£" };
+export const DEFAULT_LOCATION: Location = {
+  code: "GB",
+  name: "United Kingdom",
+  currency: "GBP",
+  symbol: "£",
+};
 
-// Used to group currencies in a nice order (GBP/EUR/USD/CHF first, etc.)
+const LOCATION_BY_CODE = new Map(
+  MAJOR_LOCATIONS.map((loc) => [loc.code.toUpperCase(), loc])
+);
+
+export function normalizeCountryCode(input: unknown) {
+  return String(input ?? "").trim().toUpperCase();
+}
+
+export function getLocationByCountry(code: string) {
+  return LOCATION_BY_CODE.get(normalizeCountryCode(code)) ?? null;
+}
+
+export function isSupportedCountry(code: string) {
+  return LOCATION_BY_CODE.has(normalizeCountryCode(code));
+}
+
 export function currencySortKey(currency: string) {
   const idx = CURRENCY_ORDER.indexOf(currency);
   return idx === -1 ? 999 : idx;

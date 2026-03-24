@@ -17,7 +17,7 @@ function isPublicPath(pathname: string) {
   }
 
   // Any static file extension
-  return /\.(png|jpg|jpeg|webp|svg|ico|css|js|map|txt|xml)$/.test(pathname);
+  return /\.(png|jpg|jpeg|webp|svg|ico|css|js|map|txt|xml|json|geojson|topojson)$/.test(pathname);
 }
 
 export function middleware(req: NextRequest) {
@@ -31,6 +31,7 @@ if (pathname.startsWith("/api/cron/")) {
     return NextResponse.next();
   }
   
+  if (pathname.startsWith("/maps/")) return NextResponse.next();
 
   // ---------------------------
   // PUBLIC LOCKDOWN (only when launchMode = true)
@@ -52,8 +53,15 @@ if (pathname.startsWith("/api/cron/")) {
     const isOut = pathname === "/out" || pathname.startsWith("/out/");
     const isContinent = pathname === "/continent" || pathname.startsWith("/continent/");
     const isBrands = pathname === "/brands" || pathname.startsWith("/brands/");
-    const isNextDay = pathname === "/next-day-delivery" || pathname.startsWith("/next-day-delivery/");
     const isCurrencyApi = pathname.startsWith("/api/currency/");
+    const isShopperPreferencesApi = pathname.startsWith("/api/shopper-preferences/");
+    const isSale = pathname === "/sale" || pathname.startsWith("/sale/");
+    const isSearch = pathname === "/search" || pathname.startsWith("/search/");
+    const isSearchApi = pathname === "/api/search" || pathname.startsWith("/api/search/");
+
+    const isStorefront =
+  pathname === "/storefront" || pathname.startsWith("/storefront/");
+const isStorefrontApi = pathname.startsWith("/api/storefront/");
 
     
 
@@ -79,6 +87,7 @@ if (pathname.startsWith("/api/cron/")) {
       isBrandApplyPage ||
       isPublicApi ||
       isCurrencyApi || 
+       isShopperPreferencesApi ||
       isAdmin ||
       isAdminApi ||
       isBrand ||
@@ -88,7 +97,11 @@ if (pathname.startsWith("/api/cron/")) {
       isOut ||
       isContinent ||
       isBrands ||
-      isNextDay;
+      isSale || 
+      isSearch ||
+      isSearchApi ||
+      isStorefront ||
+      isStorefrontApi; 
       
 
     if (!allowPublic) {
@@ -137,6 +150,7 @@ if (pathname.startsWith("/api/cron/")) {
   pathname.startsWith("/api/brand-apply/")||
   
   pathname.startsWith("/api/currency/");
+  pathname.startsWith("/api/shopper-preferences/");
 
 
 

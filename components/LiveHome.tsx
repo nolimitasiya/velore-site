@@ -10,6 +10,8 @@ import { BrandMosaic, type StorefrontBrandTile } from "@/components/BrandMosaic"
 import { prisma } from "@/lib/prisma";
 import { demo } from "@/data/demo";
 import type { Region } from "@prisma/client";
+import { resolveHomepageStorefrontSection } from "@/lib/storefrontSections";
+import { buildTrackedOutboundUrl } from "@/lib/affiliate/tracking";
 
 type LiveHomeProps = {
   region?: string;
@@ -19,7 +21,6 @@ type LiveHomeProps = {
 /* ---------------------------------- */
 /* Helpers */
 /* ---------------------------------- */
-
 function toStorefrontProducts(
   products: Array<{
     id: string;
@@ -30,14 +31,17 @@ function toStorefrontProducts(
     brand: { name: string } | null;
   }>
 ): StorefrontProduct[] {
-  return products.map((p) => ({
+  return products.map((p, index) => ({
     id: p.id,
     title: p.title,
     brandName: p.brand?.name ?? null,
     imageUrl: p.images?.[0]?.url ?? null,
     price: p.price ? p.price.toString() : null,
     currency: p.currency,
-    buyUrl: `/out/${p.id}`, // ✅ always tracked
+    buyUrl: buildTrackedOutboundUrl(p.id, {
+      sourcePage: "HOME",
+      position: index + 1,
+    }),
   }));
 }
 
@@ -69,52 +73,29 @@ export default async function LiveHome({ region, country }: LiveHomeProps) {
   const selectedRegion = normalizeRegion(region);
   const selectedCountry = normalizeCountry(country);
 
+  
+    /* --------------------------- */
+  /* SHOP TRENDY / PERSONALISED SLOT */
   /* --------------------------- */
-  /* SHOP TRENDY */
-  /* --------------------------- */
 
-  const trendyRaw = await prisma.product.findMany({
-    where: {
-  status: "APPROVED",
-  isActive: true,
-  publishedAt: { not: null },
+  const finalSection = await resolveHomepageStorefrontSection(selectedCountry);
 
-  brand: {
-    affiliateStatus: "ACTIVE",
-    ...(selectedRegion ? { baseRegion: selectedRegion } : {}),
-    ...(selectedCountry ? { baseCountryCode: selectedCountry } : {}),
-  },
-
-  OR: [
-    { affiliateUrl: { not: null } },
-    { brand: { affiliateBaseUrl: { not: null } } },
-  ],
-},
-
-
-
-    orderBy: { publishedAt: "desc" },
-    take: 12,
-    select: {
-  id: true,
-  title: true,
-  price: true,
-  currency: true,
-  affiliateUrl: true,
-  sourceUrl: true,
-  brand: { select: { name: true, affiliateBaseUrl: true } },
-  images: { 
-
-        orderBy: { sortOrder: "asc" },
-        take: 1,
-        select: { url: true },
-      },
-    },
-  });
-
-  const trendy: StorefrontProduct[] = toStorefrontProducts(
-    trendyRaw as any
-  );
+/* map to UI */
+const trendy: StorefrontProduct[] =
+  finalSection?.items.map((i, index) => ({
+    id: i.product.id,
+    title: i.product.title,
+    brandName: i.product.brand?.name ?? null,
+    imageUrl: i.product.images?.[0]?.url ?? null,
+    price: i.product.price ? i.product.price.toString() : null,
+    currency: i.product.currency,
+    buyUrl: buildTrackedOutboundUrl(i.product.id, {
+      sourcePage: "HOME",
+      sectionId: finalSection.id,
+      sectionKey: finalSection.key,
+      position: index + 1,
+    }),
+  })) ?? [];
 
   /* --------------------------- */
   /* STYLE FEED */
@@ -152,21 +133,36 @@ export default async function LiveHome({ region, country }: LiveHomeProps) {
       ? liveStyleFeed
       : (demo.styleFeed as any);
 
-  /* --------------------------- */
+  
+
+   /* --------------------------- */
   /* Brand Mosaic */
   /* --------------------------- */
 
-  const mosaicTiles: StorefrontBrandTile[] = (
-    demo.brandTiles as any[]
-  ).map((t) => ({
-    id: String(t.id),
-    name: String(t.name),
-    slug: String(t.slug ?? "")
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)+/g, ""),
-    imageUrl: String(t.imageUrl),
+
+  const brandsDb = await prisma.brand.findMany({
+  where: {
+    showOnHomepage: true,
+    coverImageUrl: { not: null },
+  },
+  orderBy: [
+    { homepageOrder: "asc" },
+    { createdAt: "desc" },
+  ],
+  take: 6,
+  select: {
+    id: true,
+    name: true,
+    slug: true,
+    coverImageUrl: true,
+  },
+});
+
+  const mosaicTiles: StorefrontBrandTile[] = brandsDb.map((b) => ({
+    id: b.id,
+    name: b.name,
+    slug: b.slug,
+    imageUrl: b.coverImageUrl!,
   }));
 
   /* --------------------------- */
@@ -178,8 +174,10 @@ return (
     <Hero imageUrl={demo.heroImage} />
     <SaleTicker />
 
-    <SectionTitle>Shop Trendy</SectionTitle>
-    <ProductRow products={trendy} />
+    <SectionTitle>
+  {finalSection?.title ?? "Shop Trendy"}
+</SectionTitle>
+     <ProductRow products={trendy} />
 
     <SloganAndContinents
       slogan="Where global brands and international style meet"

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import AffiliateControls from "./AffiliateControls";
 import ForceResetButton from "./ForceResetButton";
+import HomepageOrderControls from "./HomepageOrderControls";
 
 type BrandRow = {
   id: string;
@@ -11,6 +12,8 @@ type BrandRow = {
   affiliateStatus: "PENDING" | "ACTIVE" | "PAUSED";
   affiliateProvider: string | null;
   affiliateBaseUrl: string | null;
+  showOnHomepage: boolean;
+  homepageOrder: number | null;
 };
 
 function affiliateBadge(status: "PENDING" | "ACTIVE" | "PAUSED") {
@@ -62,31 +65,48 @@ export default function BrandRowClient({ b }: { b: BrandRow }) {
         status
       )} hover:bg-black/[0.03]`}
     >
-      {/* Brand */}
       <td className="px-4 py-4">
-        <div className="font-medium text-[15px]">{b.name}</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="font-medium text-[15px]">{b.name}</div>
+
+          {b.showOnHomepage ? (
+            <span className="inline-flex items-center rounded-full bg-[#6b1f2b] px-2.5 py-1 text-[11px] font-medium tracking-wide text-white">
+              Featured
+            </span>
+          ) : null}
+
+          {b.showOnHomepage && b.homepageOrder ? (
+            <span className="inline-flex items-center rounded-full border border-black/10 bg-black/[0.03] px-2.5 py-1 text-[11px] text-black/70">
+              Order {b.homepageOrder}
+            </span>
+          ) : null}
+        </div>
+
         <div className="text-xs text-black/50">{b.slug}</div>
       </td>
 
-      {/* Status */}
       <td className="px-4 py-4">
         <span className={badge.cls}>{badge.label}</span>
       </td>
 
-      {/* Affiliate Controls */}
       <td
         className="px-4 py-4 text-right"
         onClick={(e) => e.stopPropagation()}
       >
-        <AffiliateControls
-          brandId={b.id}
-          initialStatus={b.affiliateStatus}
-          initialProvider={b.affiliateProvider}
-          initialBaseUrl={b.affiliateBaseUrl}
-        />
+        <div className="flex items-center justify-end gap-2">
+          {b.showOnHomepage ? (
+            <HomepageOrderControls brandId={b.id} />
+          ) : null}
+
+          <AffiliateControls
+            brandId={b.id}
+            initialStatus={b.affiliateStatus}
+            initialProvider={b.affiliateProvider}
+            initialBaseUrl={b.affiliateBaseUrl}
+          />
+        </div>
       </td>
 
-      {/* Actions */}
       <td
         className="px-4 py-4"
         onClick={(e) => e.stopPropagation()}

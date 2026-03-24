@@ -1,8 +1,8 @@
-// C:\Users\Asiya\projects\dalra\components\ContinentFilters.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState} from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
 
 type Opt = { value: string; label: string };
 
@@ -10,27 +10,95 @@ type Props = {
   brands: Opt[];
   countries: Opt[];
   types: Opt[];
+  styles?: Opt[];
   colors: Opt[];
-  materials?: Opt[];
+  sizes?: Opt[];
+  showCountries?: boolean;
 };
 
 type PanelKey =
   | "root"
   | "type"
+  | "style"
   | "brand"
   | "country"
   | "color"
-  | "material"
+  | "size"
   | "price"
-  | "offers"; // ✅ NEW
+  | "offers";
 
-function qpFirst(sp: URLSearchParams, key: string) {
-  return sp.get(key) ?? "";
+
+  const PANEL_LABELS: Record<PanelKey, string> = {
+  root: "FILTER",
+  type: "CATEGORY",
+  style: "STYLE",
+  brand: "BRAND",
+  country: "COUNTRY",
+  color: "COLOUR",
+  size: "SIZE",
+  price: "PRICE",
+  offers: "OFFERS",
+};
+
+type Draft = {
+  types: string[];
+  styles: string[];
+  brands: string[];
+  countries: string[];
+  colors: string[];
+  sizes: string[];
+  min: string;
+  max: string;
+  sort: string;
+  sale: string;
+  next_day: string;
+};
+
+function qpAll(sp: URLSearchParams, key: string) {
+  return sp
+    .getAll(key)
+    .flatMap((v) => String(v).split(","))
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function buildLookup(options: Opt[]) {
+  const m = new Map<string, string>();
+  for (const o of options) {
+    m.set(o.value.toUpperCase(), o.label);
+  }
+  return m;
 }
 
 function labelFor(opts: Opt[] | undefined, value: string) {
   if (!opts || !value) return "";
   return opts.find((o) => o.value === value)?.label ?? value;
+}
+
+function labelsFor(opts: Opt[] | undefined, values: string[]) {
+  return values.map((v) => labelFor(opts, v) || v);
+}
+
+function summaryLabel(opts: Opt[] | undefined, values: string[], maxVisible = 3) {
+  if (!values.length) return "All";
+
+  const labels = labelsFor(opts, values);
+
+  if (labels.length <= maxVisible) {
+    return labels.join(", ");
+  }
+
+  return `${labels.slice(0, maxVisible).join(", ")} +${labels.length - maxVisible} more`;
+}
+
+function offersLabel(sale: string, nextDay: string) {
+  const hasSale = !!sale;
+  const hasNextDay = !!nextDay;
+
+  if (hasSale && hasNextDay) return "Sale, Next Day Delivery";
+  if (hasSale) return "Sale";
+  if (hasNextDay) return "Next Day Delivery";
+  return "All";
 }
 
 function priceLabel(min: string, max: string) {
@@ -47,54 +115,200 @@ function truthyParam(v: string) {
   return s === "1" || s === "true" || s === "yes" || s === "on";
 }
 
+function unique(xs: string[]) {
+  return Array.from(new Set(xs.map((x) => x.trim()).filter(Boolean)));
+}
+
+function appendMulti(next: URLSearchParams, key: string, values: string[]) {
+  next.delete(key);
+  for (const value of unique(values)) {
+    next.append(key, value);
+  }
+}
+
 export default function ContinentFilters({
   brands,
   countries,
   types,
+  styles = [],
   colors,
-  materials = [],
+  sizes = [],
+  showCountries = true,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
+  const countryLookup = useMemo(() => buildLookup(countries), [countries]);
 
   const [open, setOpen] = useState(false);
   const [panel, setPanel] = useState<PanelKey>("root");
 
-  const [draft, setDraft] = useState(() => ({
-    type: qpFirst(sp, "type"),
-    brand: qpFirst(sp, "brand"),
-    country: qpFirst(sp, "country"),
-    color: qpFirst(sp, "color"),
-    material: qpFirst(sp, "material"),
-    min: qpFirst(sp, "min"),
-    max: qpFirst(sp, "max"),
-    sort: qpFirst(sp, "sort") || "new",
+  const [liveStyles, setLiveStyles] = useState<Opt[]>(styles);
+  const [stylesLoading, setStylesLoading] = useState(false);
+  const lastTypesRef = useRef<string[]>([]);
 
-    // ✅ NEW
-    sale: truthyParam(qpFirst(sp, "sale")) ? "1" : "",
-    next_day: truthyParam(qpFirst(sp, "next_day")) ? "1" : "",
+const [previewCount, setPreviewCount] = useState<number | null>(null);
+const [countLoading, setCountLoading] = useState(false);
+
+
+  const [draft, setDraft] = useState<Draft>(() => ({
+    types: unique(qpAll(sp, "type").map((v) => v.toUpperCase())),
+    styles: unique(qpAll(sp, "style").map((v) => v.toLowerCase())),
+    brands: unique(qpAll(sp, "brand")),
+    countries: showCountries
+  ? unique(qpAll(sp, "country").map((v) => v.toUpperCase()))
+  : [],
+    colors: unique(qpAll(sp, "color").map((v) => v.toLowerCase())),
+    sizes: unique(qpAll(sp, "size").map((v) => v.toLowerCase())),
+    min: sp.get("min") ?? "",
+    max: sp.get("max") ?? "",
+    sort: sp.get("sort") ?? "new",
+    sale: truthyParam(sp.get("sale") ?? "") ? "1" : "",
+    next_day: truthyParam(sp.get("next_day") ?? "") ? "1" : "",
   }));
+
+  useEffect(() => {
+    setLiveStyles(styles);
+  }, [styles]);
+
+ useEffect(() => {
+  if (!open) return;
+
+  const selectedTypes = unique(draft.types.map((v) => v.toUpperCase()));
+
+  // prevent unnecessary refetch
+  const same =
+    selectedTypes.length === lastTypesRef.current.length &&
+    selectedTypes.every((v, i) => v === lastTypesRef.current[i]);
+
+  if (same) return;
+
+  lastTypesRef.current = selectedTypes;
+    const controller = new AbortController();
+
+    async function loadStyles() {
+      try {
+        setStylesLoading(true);
+
+        const qs = new URLSearchParams();
+        for (const t of selectedTypes) {
+          qs.append("type", t);
+        }
+
+        const res = await fetch(`/api/storefront/filters?${qs.toString()}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json?.ok) return;
+
+        const nextStyles = Array.isArray(json.styles) ? json.styles : [];
+        setLiveStyles(nextStyles);
+
+        if (draft.styles.length) {
+          const allowed = new Set(nextStyles.map((s: Opt) => s.value));
+          const filteredSelected = draft.styles.filter((s) => allowed.has(s));
+          if (filteredSelected.length !== draft.styles.length) {
+            setDraft((d) => ({ ...d, styles: filteredSelected }));
+          }
+        }
+      } catch (err: any) {
+        if (err?.name !== "AbortError") {
+          setLiveStyles(styles);
+        }
+      } finally {
+        setStylesLoading(false);
+      }
+    }
+
+    loadStyles();
+    return () => controller.abort();
+  }, [open, draft.types, styles, draft.styles]);
+
+  useEffect(() => {
+  if (!open) return;
+
+  const controller = new AbortController();
+
+  async function loadPreviewCount() {
+    try {
+      setCountLoading(true);
+
+      const qs = new URLSearchParams();
+      qs.set("pathname", pathname);
+
+      for (const v of draft.types) qs.append("type", v);
+      for (const v of draft.styles) qs.append("style", v);
+      for (const v of draft.brands) qs.append("brand", v);
+      for (const v of draft.countries) qs.append("country", v);
+      for (const v of draft.colors) qs.append("color", v);
+      for (const v of draft.sizes) qs.append("size", v);
+
+      if (draft.min.trim()) qs.set("min", draft.min.trim());
+      if (draft.max.trim()) qs.set("max", draft.max.trim());
+      if (draft.sort.trim()) qs.set("sort", draft.sort.trim());
+      if (draft.sale.trim()) qs.set("sale", draft.sale.trim());
+      if (draft.next_day.trim()) qs.set("next_day", draft.next_day.trim());
+
+      const res = await fetch(`/api/storefront/count?${qs.toString()}`, {
+        cache: "no-store",
+        signal: controller.signal,
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json?.ok) return;
+
+      setPreviewCount(typeof json.count === "number" ? json.count : 0);
+    } catch (err: any) {
+      if (err?.name !== "AbortError") {
+        setPreviewCount(null);
+      }
+    } finally {
+      setCountLoading(false);
+    }
+  }
+
+  loadPreviewCount();
+
+  return () => controller.abort();
+}, [
+  open,
+  pathname,
+  draft.types,
+  draft.styles,
+  draft.brands,
+  draft.countries,
+  draft.colors,
+  draft.sizes,
+  draft.min,
+  draft.max,
+  draft.sort,
+  draft.sale,
+  draft.next_day,
+]);
 
   function syncDraftFromUrl() {
     setDraft({
-      type: qpFirst(sp, "type"),
-      brand: qpFirst(sp, "brand"),
-      country: qpFirst(sp, "country"),
-      color: qpFirst(sp, "color"),
-      material: qpFirst(sp, "material"),
-      min: qpFirst(sp, "min"),
-      max: qpFirst(sp, "max"),
-      sort: qpFirst(sp, "sort") || "new",
-
-      // ✅ NEW
-      sale: truthyParam(qpFirst(sp, "sale")) ? "1" : "",
-      next_day: truthyParam(qpFirst(sp, "next_day")) ? "1" : "",
+      types: unique(qpAll(sp, "type").map((v) => v.toUpperCase())),
+      styles: unique(qpAll(sp, "style").map((v) => v.toLowerCase())),
+      brands: unique(qpAll(sp, "brand")),
+      countries: showCountries
+  ? unique(qpAll(sp, "country").map((v) => v.toUpperCase()))
+  : [],
+      colors: unique(qpAll(sp, "color").map((v) => v.toLowerCase())),
+      sizes: unique(qpAll(sp, "size").map((v) => v.toLowerCase())),
+      min: sp.get("min") ?? "",
+      max: sp.get("max") ?? "",
+      sort: sp.get("sort") ?? "new",
+      sale: truthyParam(sp.get("sale") ?? "") ? "1" : "",
+      next_day: truthyParam(sp.get("next_day") ?? "") ? "1" : "",
     });
   }
 
   function openDrawer() {
     syncDraftFromUrl();
+    setPreviewCount(null);
     setPanel("root");
     setOpen(true);
   }
@@ -104,8 +318,26 @@ export default function ContinentFilters({
     setPanel("root");
   }
 
-  function apply() {
+     function apply() {
     const next = new URLSearchParams(sp.toString());
+
+    const currentTypes = unique(qpAll(sp, "type").map((v) => v.toUpperCase()));
+    const nextTypes = unique(draft.types.map((v) => v.toUpperCase()));
+
+    const typesChanged =
+      currentTypes.length !== nextTypes.length ||
+      currentTypes.some((v, i) => v !== nextTypes[i]);
+
+    appendMulti(next, "type", draft.types);
+    appendMulti(next, "style", draft.styles);
+    appendMulti(next, "brand", draft.brands);
+    if (showCountries) {
+  appendMulti(next, "country", draft.countries);
+} else {
+  next.delete("country");
+}
+    appendMulti(next, "color", draft.colors);
+    appendMulti(next, "size", draft.sizes);
 
     const setOrDelete = (key: string, value: string) => {
       const v = String(value ?? "").trim();
@@ -113,18 +345,17 @@ export default function ContinentFilters({
       else next.delete(key);
     };
 
-    setOrDelete("type", draft.type);
-    setOrDelete("brand", draft.brand);
-    setOrDelete("country", draft.country);
-    setOrDelete("color", draft.color);
-    setOrDelete("material", draft.material);
     setOrDelete("min", draft.min);
     setOrDelete("max", draft.max);
     setOrDelete("sort", draft.sort);
-
-    // ✅ NEW
     setOrDelete("sale", draft.sale);
     setOrDelete("next_day", draft.next_day);
+
+    // ✅ Search page UX:
+    // only clear q if the selected product type actually changed
+    if (pathname.startsWith("/search") && typesChanged && nextTypes.length > 0) {
+      next.delete("q");
+    }
 
     const qs = next.toString();
     router.push(qs ? `${pathname}?${qs}` : pathname);
@@ -133,41 +364,63 @@ export default function ContinentFilters({
 
   function clearAll() {
     setDraft({
-      type: "",
-      brand: "",
-      country: "",
-      color: "",
-      material: "",
+      types: [],
+      styles: [],
+      brands: [],
+      countries: [],
+      colors: [],
+      sizes: [],
       min: "",
       max: "",
       sort: "new",
-
-      // ✅ NEW
       sale: "",
       next_day: "",
     });
   }
 
-  function removeOne(
-    key:
-      | "type"
-      | "brand"
-      | "country"
-      | "color"
-      | "material"
-      | "price"
-      | "sale"
-      | "next_day"
-  ) {
+  function removeOne(key: string) {
     const next = new URLSearchParams(sp.toString());
 
     if (key === "price") {
       next.delete("min");
       next.delete("max");
       setDraft((d) => ({ ...d, min: "", max: "" }));
-    } else {
-      next.delete(key);
-      setDraft((d) => ({ ...d, [key]: "" } as any));
+    } else if (key === "sale") {
+      next.delete("sale");
+      setDraft((d) => ({ ...d, sale: "" }));
+    } else if (key === "next_day") {
+      next.delete("next_day");
+      setDraft((d) => ({ ...d, next_day: "" }));
+    } else if (key.startsWith("type:")) {
+      const slug = key.slice("type:".length);
+      const updated = draft.types.filter((x) => x !== slug);
+      appendMulti(next, "type", updated);
+      setDraft((d) => ({ ...d, types: updated }));
+    } else if (key.startsWith("style:")) {
+      const slug = key.slice("style:".length);
+      const updated = draft.styles.filter((x) => x !== slug);
+      appendMulti(next, "style", updated);
+      setDraft((d) => ({ ...d, styles: updated }));
+    } else if (key.startsWith("brand:")) {
+      const slug = key.slice("brand:".length);
+      const updated = draft.brands.filter((x) => x !== slug);
+      appendMulti(next, "brand", updated);
+      setDraft((d) => ({ ...d, brands: updated }));
+    } else if (key.startsWith("country:")) {
+      const slug = key.slice("country:".length);
+      const updated = draft.countries.filter((x) => x !== slug);
+      appendMulti(next, "country", updated);
+      setDraft((d) => ({ ...d, countries: updated }));
+    } else if (key.startsWith("color:")) {
+      const slug = key.slice("color:".length);
+      const updated = draft.colors.filter((x) => x !== slug);
+      appendMulti(next, "color", updated);
+      setDraft((d) => ({ ...d, colors: updated }));
+    } else if (key.startsWith("size:")) {
+      const slug = key.slice("size:".length);
+      const updated = draft.sizes.filter((x) => x !== slug);
+      appendMulti(next, "size", updated);
+      setDraft((d) => ({ ...d, sizes: updated }));
     }
 
     const qs = next.toString();
@@ -176,17 +429,9 @@ export default function ContinentFilters({
 
   function clearAllAndApply() {
     const next = new URLSearchParams(sp.toString());
-    [
-      "type",
-      "brand",
-      "country",
-      "color",
-      "material",
-      "min",
-      "max",
-      "sale",
-      "next_day",
-    ].forEach((k) => next.delete(k));
+    ["type", "style", "brand", "country", "color", "size", "min", "max", "sale", "next_day"].forEach((k) =>
+      next.delete(k)
+    );
     next.set("sort", "new");
     const qs = next.toString();
     router.push(qs ? `${pathname}?${qs}` : pathname);
@@ -194,22 +439,45 @@ export default function ContinentFilters({
   }
 
   const chips = useMemo(() => {
-    const out: Array<{ key: any; label: string }> = [];
-    if (draft.type) out.push({ key: "type", label: labelFor(types, draft.type) || draft.type });
-    if (draft.brand) out.push({ key: "brand", label: labelFor(brands, draft.brand) || draft.brand });
-    if (draft.country) out.push({ key: "country", label: draft.country });
-    if (draft.color) out.push({ key: "color", label: labelFor(colors, draft.color) || draft.color });
-    if (draft.material)
-      out.push({ key: "material", label: labelFor(materials, draft.material) || draft.material });
-    if (draft.min || draft.max) out.push({ key: "price", label: priceLabel(draft.min, draft.max) });
+    const out: Array<{ key: string; label: string }> = [];
 
-    // ✅ NEW
+    for (const t of draft.types) {
+      out.push({ key: `type:${t}`, label: labelFor(types, t) || t });
+    }
+
+    for (const s of draft.styles) {
+      out.push({ key: `style:${s}`, label: labelFor(liveStyles, s) || s });
+    }
+
+    for (const b of draft.brands) {
+      out.push({ key: `brand:${b}`, label: labelFor(brands, b) || b });
+    }
+
+    if (showCountries) {
+  for (const c of draft.countries) {
+    out.push({
+      key: `country:${c}`,
+      label: countryLookup.get(c.toUpperCase()) ?? c,
+    });
+  }
+}
+
+    for (const c of draft.colors) {
+      out.push({ key: `color:${c}`, label: labelFor(colors, c) || c });
+    }
+
+    for (const s of draft.sizes) {
+      out.push({ key: `size:${s}`, label: labelFor(sizes, s) || s });
+    }
+
+    if (draft.min || draft.max) out.push({ key: "price", label: priceLabel(draft.min, draft.max) });
     if (draft.sale) out.push({ key: "sale", label: "Sale" });
     if (draft.next_day) out.push({ key: "next_day", label: "Next Day Delivery" });
 
     return out;
-  }, [draft, brands, types, colors, materials]);
-
+  }, [draft, brands, types, liveStyles, colors, sizes]);
+  
+const activeFilterCount = chips.length;
   return (
     <>
       <div className="flex flex-col gap-3">
@@ -238,11 +506,11 @@ export default function ContinentFilters({
           </select>
 
           <button
-            onClick={openDrawer}
-            className="h-10 rounded-full border border-black/10 bg-white px-4 text-sm font-medium hover:bg-black/[0.02]"
-          >
-            Filter
-          </button>
+  onClick={openDrawer}
+  className="h-10 rounded-full border border-black/10 bg-white px-4 text-sm font-medium hover:bg-black/[0.02]"
+>
+  {activeFilterCount > 0 ? `Filter (${activeFilterCount})` : "Filter"}
+</button>
         </div>
 
         {chips.length > 0 && (
@@ -288,7 +556,7 @@ export default function ContinentFilters({
               )}
 
               <div className="text-base font-semibold tracking-wide">
-                {panel === "root" ? "FILTER" : panel.toUpperCase()}
+                {PANEL_LABELS[panel]}
               </div>
 
               <button onClick={closeDrawer} aria-label="Close" className="text-xl leading-none">
@@ -299,66 +567,133 @@ export default function ContinentFilters({
             <div className="h-[calc(100%-120px)] overflow-y-auto">
               {panel === "root" && (
                 <div className="divide-y divide-black/10">
-                  <FilterRow label="Product Type" valueLabel={labelFor(types, draft.type) || "All"} onClick={() => setPanel("type")} />
-                  <FilterRow label="Brand" valueLabel={labelFor(brands, draft.brand) || "All"} onClick={() => setPanel("brand")} />
-                  <FilterRow label="Country" valueLabel={draft.country || "All"} onClick={() => setPanel("country")} />
-                  <FilterRow label="Colour" valueLabel={labelFor(colors, draft.color) || "All"} onClick={() => setPanel("color")} />
-                  {materials.length > 0 && (
-                    <FilterRow label="Material" valueLabel={labelFor(materials, draft.material) || "All"} onClick={() => setPanel("material")} />
-                  )}
+  <FilterRow
+    label="Category"
+    valueLabel={summaryLabel(types, draft.types)}
+    onClick={() => setPanel("type")}
+  />
 
-                  {/* ✅ NEW */}
-                  <FilterRow
-                    label="Offers & Delivery"
-                    valueLabel={
-                      [draft.sale ? "Sale" : null, draft.next_day ? "Next day" : null].filter(Boolean).join(" • ") || "All"
-                    }
-                    onClick={() => setPanel("offers")}
-                  />
+  <FilterRow
+    label="Size"
+    valueLabel={summaryLabel(sizes, draft.sizes)}
+    onClick={() => setPanel("size")}
+  />
 
-                  <FilterRow label="Price" valueLabel={priceLabel(draft.min, draft.max)} onClick={() => setPanel("price")} />
-                </div>
+  <FilterRow
+    label="Colour"
+    valueLabel={summaryLabel(colors, draft.colors)}
+    onClick={() => setPanel("color")}
+  />
+
+  <FilterRow
+    label="Style"
+    valueLabel={summaryLabel(liveStyles, draft.styles)}
+    onClick={() => setPanel("style")}
+  />
+
+  <FilterRow
+    label="Brand"
+    valueLabel={summaryLabel(brands, draft.brands)}
+    onClick={() => setPanel("brand")}
+  />
+
+  {showCountries && (
+    <FilterRow
+      label="Country"
+      valueLabel={summaryLabel(countries, draft.countries)}
+      onClick={() => setPanel("country")}
+    />
+  )}
+
+  <FilterRow
+    label="Price"
+    valueLabel={priceLabel(draft.min, draft.max)}
+    onClick={() => setPanel("price")}
+  />
+
+  <FilterRow
+    label="Offers"
+    valueLabel={offersLabel(draft.sale, draft.next_day)}
+    onClick={() => setPanel("offers")}
+  />
+</div>
               )}
 
               {panel === "type" && (
-                <ChoiceList options={types} value={draft.type} onPick={(v) => setDraft((d) => ({ ...d, type: v }))} />
+                <ChoiceListMulti
+                  options={types}
+                  value={draft.types}
+                  onPick={(nextTypes) => {
+                    setDraft((d) => ({
+                      ...d,
+                      types: nextTypes.map((v) => v.toUpperCase()),
+                    }));
+                  }}
+                  searchable
+                  searchPlaceholder="Search product type…"
+                />
+              )}
+
+              {panel === "style" && (
+                <div>
+                  
+
+                  {!stylesLoading && liveStyles.length === 0 && (
+                    <div className="px-5 py-4 text-sm text-black/50">
+                      No styles available for these product types.
+                    </div>
+                  )}
+
+                  <ChoiceListMulti
+                    options={liveStyles}
+                    value={draft.styles}
+                    onPick={(v) => setDraft((d) => ({ ...d, styles: v }))}
+                    searchable
+                    searchPlaceholder="Search style…"
+                  />
+                </div>
               )}
 
               {panel === "brand" && (
-                <ChoiceList
+                <ChoiceListMulti
                   options={brands}
-                  value={draft.brand}
-                  onPick={(v) => setDraft((d) => ({ ...d, brand: v }))}
+                  value={draft.brands}
+                  onPick={(v) => setDraft((d) => ({ ...d, brands: v }))}
                   searchable
                   searchPlaceholder="Search brand…"
                 />
               )}
 
-              {panel === "country" && (
-                <ChoiceList options={countries} value={draft.country} onPick={(v) => setDraft((d) => ({ ...d, country: v }))} />
-              )}
+              {showCountries && panel === "country" && (
+  <ChoiceListMulti
+    options={countries}
+    value={draft.countries}
+    onPick={(v) => setDraft((d) => ({ ...d, countries: v.map((x) => x.toUpperCase()) }))}
+    searchable
+    searchPlaceholder="Search country…"
+  />
+)}
 
               {panel === "color" && (
-                <ChoiceList
+                <ChoiceListMulti
                   options={colors}
-                  value={draft.color}
-                  onPick={(v) => setDraft((d) => ({ ...d, color: v }))}
+                  value={draft.colors}
+                  onPick={(v) => setDraft((d) => ({ ...d, colors: v }))}
                   searchable
                   searchPlaceholder="Search colour…"
                 />
               )}
 
-              {panel === "material" && (
-                <ChoiceList
-                  options={materials}
-                  value={draft.material}
-                  onPick={(v) => setDraft((d) => ({ ...d, material: v }))}
+              {panel === "size" && (
+                <ChoiceListMulti
+                  options={sizes}
+                  value={draft.sizes}
+                  onPick={(v) => setDraft((d) => ({ ...d, sizes: v }))}
                   searchable
-                  searchPlaceholder="Search material…"
+                  searchPlaceholder="Search size…"
                 />
               )}
 
-              {/* ✅ NEW offers toggles */}
               {panel === "offers" && (
                 <OffersPanel
                   saleOn={!!draft.sale}
@@ -369,18 +704,32 @@ export default function ContinentFilters({
               )}
 
               {panel === "price" && (
-                <PricePanel min={draft.min} max={draft.max} onChange={(next) => setDraft((d) => ({ ...d, ...next }))} />
+                <PricePanel
+                  min={draft.min}
+                  max={draft.max}
+                  onChange={(next) => setDraft((d) => ({ ...d, ...next }))}
+                />
               )}
             </div>
 
             <div className="absolute bottom-0 left-0 right-0 border-t border-black/10 bg-white p-4">
               <div className="grid grid-cols-2 gap-3">
-                <button onClick={clearAll} className="h-12 rounded-none border border-black/20 bg-white text-sm font-semibold tracking-[0.15em]">
+                <button
+                  onClick={clearAll}
+                  className="h-12 rounded-none border border-black/20 bg-white text-sm font-semibold tracking-[0.15em]"
+                >
                   CLEAR
                 </button>
-                <button onClick={apply} className="h-12 rounded-none bg-black text-sm font-semibold tracking-[0.15em] text-white">
-                  VIEW ITEMS
-                </button>
+                <button
+  onClick={apply}
+  className="h-12 rounded-none bg-black text-sm font-semibold tracking-[0.15em] text-white"
+>
+  {previewCount != null
+    ? `VIEW ${previewCount} ITEM${previewCount === 1 ? "" : "S"}`
+    : countLoading
+    ? "VIEW ITEMS"
+    : "VIEW ITEMS"}
+</button>
               </div>
             </div>
           </aside>
@@ -390,26 +739,18 @@ export default function ContinentFilters({
   );
 }
 
-function FilterRow({
-  label,
-  valueLabel,
-  onClick,
-}: {
-  label: string;
-  valueLabel: string;
-  onClick: () => void;
-}) {
+function FilterRow({ label, valueLabel, onClick }: { label: string; valueLabel: string; onClick: () => void }) {
   return (
     <button onClick={onClick} className="w-full px-5 py-4 text-left hover:bg-black/[0.02]">
       <div className="flex items-center justify-between gap-4">
         <div className="text-sm font-medium">{label}</div>
-        <div className="text-sm text-black/60">{valueLabel}</div>
+        <div className="max-w-[55%] truncate text-right text-sm text-black/60">{valueLabel}</div>
       </div>
     </button>
   );
 }
 
-function ChoiceList({
+function ChoiceListMulti({
   options,
   value,
   onPick,
@@ -417,8 +758,8 @@ function ChoiceList({
   searchPlaceholder,
 }: {
   options: Opt[];
-  value: string;
-  onPick: (v: string) => void;
+  value: string[];
+  onPick: (v: string[]) => void;
   searchable?: boolean;
   searchPlaceholder?: string;
 }) {
@@ -430,15 +771,20 @@ function ChoiceList({
     return options.filter((o) => o.label.toLowerCase().includes(qq));
   }, [options, q, searchable]);
 
+  const selected = new Set(value);
+
+  function toggle(v: string) {
+    const next = new Set(selected);
+    if (next.has(v)) next.delete(v);
+    else next.add(v);
+    onPick(Array.from(next));
+  }
+
   return (
     <div>
       {searchable && (
-        <div className="px-5 py-4 border-b border-black/10">
-          <label className="sr-only" htmlFor="filter-search">
-            Search
-          </label>
+        <div className="border-b border-black/10 px-5 py-4">
           <input
-            id="filter-search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder={searchPlaceholder || "Search…"}
@@ -448,22 +794,22 @@ function ChoiceList({
       )}
 
       <div className="divide-y divide-black/10">
-        <button onClick={() => onPick("")} className="w-full px-5 py-4 text-left hover:bg-black/[0.02]">
+        <button onClick={() => onPick([])} className="w-full px-5 py-4 text-left hover:bg-black/[0.02]">
           <div className="flex items-center justify-between">
             <div className="text-sm">All</div>
-            {value === "" && <span className="text-sm">✓</span>}
+            {value.length === 0 && <span className="text-sm">✓</span>}
           </div>
         </button>
 
         {filtered.map((o) => (
           <button
             key={o.value}
-            onClick={() => onPick(o.value)}
+            onClick={() => toggle(o.value)}
             className="w-full px-5 py-4 text-left hover:bg-black/[0.02]"
           >
             <div className="flex items-center justify-between gap-4">
               <div className="text-sm">{o.label}</div>
-              {value === o.value && <span className="text-sm">✓</span>}
+              {selected.has(o.value) && <span className="text-sm">✓</span>}
             </div>
           </button>
         ))}
@@ -484,48 +830,40 @@ function OffersPanel({
   onToggleNextDay: () => void;
 }) {
   return (
-    <div className="p-5 space-y-3">
+    <div className="space-y-3 p-5">
       <div className="text-sm text-black/60">Choose offers and delivery options.</div>
 
       <button
-        onClick={onToggleSale}
-        className="w-full rounded-xl border border-black/10 px-4 py-3 text-left hover:bg-black/[0.02]"
-      >
-        <div className="flex items-center justify-between">
-          <div className="text-sm font-medium">Sale</div>
-          <div className="text-sm">{saleOn ? "✓" : ""}</div>
-        </div>
-      </button>
+  onClick={onToggleSale}
+  className="w-full rounded-none"
+>
+  <div className="flex items-center justify-between">
+    <div className="text-sm font-medium">Sale</div>
+    <div className="text-sm">{saleOn ? "✓" : ""}</div>
+  </div>
+</button>
 
-      <button
-        onClick={onToggleNextDay}
-        className="w-full rounded-xl border border-black/10 px-4 py-3 text-left hover:bg-black/[0.02]"
-      >
-        <div className="flex items-center justify-between">
-          <div className="text-sm font-medium">Next Day Delivery</div>
-          <div className="text-sm">{nextDayOn ? "✓" : ""}</div>
-        </div>
-      </button>
+<button
+  onClick={onToggleNextDay}
+  className="w-full rounded-none"
+>
+  <div className="flex items-center justify-between">
+    <div className="text-sm font-medium">Next Day Delivery</div>
+    <div className="text-sm">{nextDayOn ? "✓" : ""}</div>
+  </div>
+</button>
     </div>
   );
 }
 
-function PricePanel({
-  min,
-  max,
-  onChange,
-}: {
-  min: string;
-  max: string;
-  onChange: (next: { min: string; max: string }) => void;
-}) {
+function PricePanel({ min, max, onChange }: { min: string; max: string; onChange: (next: { min: string; max: string }) => void }) {
   return (
-    <div className="p-5 space-y-4">
+    <div className="space-y-4 p-5">
       <div className="text-sm text-black/60">Enter min/max. (Leave blank for no limit)</div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs text-black/60 mb-1" htmlFor="minPrice">
+          <label className="mb-1 block text-xs text-black/60" htmlFor="minPrice">
             Min
           </label>
           <input
@@ -539,7 +877,7 @@ function PricePanel({
         </div>
 
         <div>
-          <label className="block text-xs text-black/60 mb-1" htmlFor="maxPrice">
+          <label className="mb-1 block text-xs text-black/60" htmlFor="maxPrice">
             Max
           </label>
           <input
