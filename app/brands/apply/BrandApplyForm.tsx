@@ -312,7 +312,7 @@ const sectionWrap = "rounded-2xl border border-black/10 bg-white p-5 md:p-7 text
             <div className="mt-1 grid grid-cols-[220px_1fr] gap-3">
               <select
                 id="phoneCountry"
-                className="rounded-xl border px-3 py-2 bg-white"
+                className="rounded-xl border border-black/15 bg-white px-3 py-2 text-black"
                 value={form.phoneCountry}
                 onChange={(e) => setForm({ ...form, phoneCountry: e.target.value })}
                 aria-labelledby={phoneLegendId}
@@ -332,7 +332,7 @@ const sectionWrap = "rounded-2xl border border-black/10 bg-white p-5 md:p-7 text
 
               <input
                 id="phoneNumber"
-                className="rounded-xl border px-3 py-2"
+                className="rounded-xl border border-black/15 bg-white px-3 py-2 text-black placeholder:text-black/40"
                 value={form.phoneNumber}
                 onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
                 placeholder="Phone number"
@@ -432,7 +432,7 @@ const sectionWrap = "rounded-2xl border border-black/10 bg-white p-5 md:p-7 text
 
               {form.cityChoice === "Other" && (
                 <input
-                  className="mt-2 w-full rounded-xl border px-3 py-2"
+                  className="mt-2 w-full rounded-xl border border-black/15 bg-white px-3 py-2 text-black placeholder:text-black/40"
                   value={form.cityOther}
                   onChange={(e) => setForm({ ...form, cityOther: e.target.value })}
                   placeholder="Type your city"
@@ -508,7 +508,7 @@ const sectionWrap = "rounded-2xl border border-black/10 bg-white p-5 md:p-7 text
             <div className="mt-1 grid grid-cols-1 gap-3 md:grid-cols-[220px_1fr]">
               <select
                 id="socialPlatform"
-                className="rounded-xl border px-3 py-2 bg-white"
+                className="rounded-xl border border-black/15 bg-white px-3 py-2 text-black placeholder:text-black/40"
                 value={form.socialPlatform}
                 required
                 disabled={submitting}
@@ -579,7 +579,7 @@ const sectionWrap = "rounded-2xl border border-black/10 bg-white p-5 md:p-7 text
       <button
         type="submit"
         disabled={!canSubmit || submitting}
-        className="w-full rounded-xl bg-black px-4 py-3 text-white disabled:opacity-50"
+        className="w-full rounded-xl bg-[var(--accent)] px-4 py-3 font-medium text-white shadow-sm transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {submitting ? "Sending…" : "Submit application"}
       </button>
