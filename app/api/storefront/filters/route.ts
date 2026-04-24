@@ -11,6 +11,20 @@ function isProductType(v: string): v is ProductType {
   return (Object.values(ProductType) as string[]).includes(v);
 }
 
+function formatProductTypeLabel(value: string) {
+  if (value === "COATS_JACKETS") return "Coats & Jackets";
+  if (value === "HOODIE_SWEATSHIRT") return "Hoodie & Sweatshirt";
+  if (value === "T_SHIRT") return "T-Shirt";
+
+  return value
+    .toLowerCase()
+    .replaceAll("_", " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 function parseCsv(value: string | null): string[] {
   return String(value ?? "")
     .split(",")
@@ -36,19 +50,15 @@ export async function GET(req: NextRequest) {
     selectedTypes.length === 1 ? selectedTypes[0] : "";
 
   const products = await prisma.product.findMany({
-    where: {
-      status: "APPROVED",
-      isActive: true,
-      publishedAt: { not: null },
-      brand: { affiliateStatus: "ACTIVE" },
-      OR: [
-        { affiliateUrl: { not: null } },
-        { brand: { affiliateBaseUrl: { not: null } } },
-      ],
-      ...(selectedTypes.length
-        ? { productType: { in: selectedTypes } }
-        : {}),
-    },
+  where: {
+    status: "APPROVED",
+    isActive: true,
+    publishedAt: { not: null },
+
+    ...(selectedTypes.length
+      ? { productType: { in: selectedTypes } }
+      : {}),
+  },
     select: {
       productType: true,
       brand: {
@@ -107,7 +117,10 @@ export async function GET(req: NextRequest) {
     ).values()
   ).sort((a, b) => a.label.localeCompare(b.label));
 
-  const typeOpts = types.map((t) => ({ value: t, label: t }));
+    const typeOpts = types.map((t) => ({
+    value: t,
+    label: formatProductTypeLabel(t),
+  }));
 
   return NextResponse.json({
     ok: true,

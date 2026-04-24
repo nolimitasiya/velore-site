@@ -1,89 +1,124 @@
+import SiteShell from "@/components/SiteShell";
+
 export default function PrivacyPolicyPage() {
   return (
-    <main className="mx-auto w-full max-w-[1800px] px-8 py-16">
-      <h1 className="font-heading text-4xl mb-8">Privacy Policy</h1>
+    <SiteShell>
+      <section className="mx-auto w-full max-w-[1800px] px-8 py-16 md:py-24">
+        <div className="mx-auto max-w-3xl text-center">
+          <p className="mb-4 text-sm uppercase tracking-[0.18em] text-black/50">
+            Privacy Policy
+          </p>
 
-      <div className="max-w-2xl space-y-6 text-black/70 leading-relaxed">
-        <p>
-          Veilora Club respects your privacy and is committed to protecting your
-          personal data. This Privacy Policy explains how we collect, use,
-          and safeguard information when you interact with our platform.
-        </p>
+          <h1 className="font-heading text-2xl leading-tight md:text-5xl">
+            Your privacy, respected and protected.
+          </h1>
 
-        <h2 className="font-heading text-xl text-black">Who we are</h2>
-        <p>
-          Veilora Club is a curated fashion discovery platform showcasing products
-          from third-party retailers. Veilora Club does not sell products directly
-          or process payments.
-        </p>
+          <p className="mt-6 mx-auto max-w-2xl text-base leading-8 text-black/70 md:text-lg">
+            At Veilora Club, we are committed to protecting your personal data
+            and respecting your privacy. This policy outlines how we collect,
+            use, and safeguard information when you interact with our platform.
+          </p>
+        </div>
 
-        <h2 className="font-heading text-xl text-black">
-          What information we collect
-        </h2>
-        <p>
-          We only collect personal data that you choose to provide. This may
-          include:
-        </p>
-        <ul className="list-disc pl-6 space-y-2">
-          <li>Your email address (for enquiries or communication)</li>
-          <li>Information submitted through our contact form</li>
-        </ul>
+        <div className="mt-16 mx-auto max-w-5xl space-y-10 text-black/70 leading-8">
+          <div>
+            <h2 className="font-heading text-xl text-black">Who we are</h2>
+            <p className="mt-4">
+              Veilora Club is a curated fashion discovery platform showcasing
+              products from third-party brands. We do not sell products directly
+              or process payments. Any purchases are completed through the
+              respective brand’s website.
+            </p>
+          </div>
 
-        <h2 className="font-heading text-xl text-black">
-          How we use your information
-        </h2>
-        <p>
-          We use your information solely to:
-        </p>
-        <ul className="list-disc pl-6 space-y-2">
-          <li>Respond to enquiries or messages you send us</li>
-          <li>Communicate with you where you have requested information</li>
-        </ul>
+          <div>
+            <h2 className="font-heading text-xl text-black">
+              Information we collect
+            </h2>
+            <p className="mt-4">
+              We only collect personal data that you choose to provide. This may
+              include:
+            </p>
+            <ul className="mt-4 list-disc pl-6 space-y-2">
+              <li>Your email address for enquiries or communication</li>
+              <li>Information submitted through forms on our platform</li>
+            </ul>
+          </div>
 
-        <p>
-          We do not sell, rent, or trade your personal data.
-        </p>
+          <div>
+            <h2 className="font-heading text-xl text-black">
+              How we use your information
+            </h2>
+            <p className="mt-4">
+              We use your information solely to:
+            </p>
+            <ul className="mt-4 list-disc pl-6 space-y-2">
+              <li>Respond to enquiries or messages you send us</li>
+              <li>Provide information you have requested</li>
+              <li>Improve and personalise your experience on our platform</li>
+              <li>Understand how users interact with Veilora Club, including browsing and shopping behaviour, to enhance our services</li>
+            </ul>
+            <p className="mt-4">
+              We may share aggregated and anonymised insights with our brand partners, such as product performance or click-through data. This information does not identify individual users.
 
-        <h2 className="font-heading text-xl text-black">
-          Data storage and security
-        </h2>
-        <p>
-          We take appropriate measures to protect your personal data and
-          limit access to authorised parties only. Data is retained only
-          for as long as necessary to fulfil its purpose.
-        </p>
+We do not sell, rent, or share your personal data with third parties for marketing purposes.
+            </p>
+          </div>
 
-        <h2 className="font-heading text-xl text-black">
-          Your rights
-        </h2>
-        <p>
-          Under data protection laws, you have the right to request access
-          to, correction of, or deletion of your personal data. You may also
-          withdraw consent at any time.
-        </p>
+          <div>
+            <h2 className="font-heading text-xl text-black">
+              Data storage and security
+            </h2>
+            <p className="mt-4">
+              We take appropriate technical and organisational measures to
+              protect your personal data and limit access to authorised parties
+              only. Data is retained only for as long as necessary to fulfil its
+              intended purpose.
+            </p>
+          </div>
 
-        <p>
-          To exercise your rights, please contact us using the details
-          provided on our website.
-        </p>
+          <div>
+            <h2 className="font-heading text-xl text-black">Your rights</h2>
+            <p className="mt-4">
+              Under applicable data protection laws, you have the right to
+              request access to, correction of, or deletion of your personal
+              data. You may also withdraw your consent at any time.
+            </p>
+            <p className="mt-4">
+              To exercise these rights, please contact us using the details
+              provided on our website.
+            </p>
+          </div>
 
-        <h2 className="font-heading text-xl text-black">
-          Cookies
-        </h2>
-        <p>
-          Veilora Club uses essential cookies to ensure the website functions
-          correctly. Optional cookies may be used in the future to improve
-          performance and user experience.
-        </p>
+          <div>
+            <h2 className="font-heading text-xl text-black">Cookies</h2>
+            <p className="mt-4">
+              Veilora Club uses essential cookies to ensure the website functions
+              correctly. We may introduce optional cookies in the future to
+              enhance performance and improve user experience.
+            </p>
+          </div>
 
-        <h2 className="font-heading text-xl text-black">
-          Updates to this policy
-        </h2>
-        <p>
-          We may update this Privacy Policy from time to time. Any changes
-          will be reflected on this page.
-        </p>
-      </div>
-    </main>
+          <div>
+            <h2 className="font-heading text-xl text-black">
+              Updates to this policy
+            </h2>
+            <p className="mt-4">
+              We may update this Privacy Policy from time to time. Any changes
+              will be reflected on this page.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-20 border-t border-black/10 pt-12 text-center">
+          <div className="mx-auto max-w-3xl">
+            <p className="text-black/60 italic">With care,</p>
+            <p className="mt-1 font-heading text-lg tracking-[0.08em] uppercase">
+              Veilora Club
+            </p>
+          </div>
+        </div>
+      </section>
+    </SiteShell>
   );
 }

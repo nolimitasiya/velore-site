@@ -50,6 +50,24 @@ function normalizeSourcePage(v: string | null): ClickSourcePage | null {
   return null;
 }
 
+function normalizePageNumber(v: string | null) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  const i = Math.floor(n);
+  return i > 0 ? i : null;
+}
+
+function normalizeBooleanFlag(v: string | null) {
+  if (v === "1") return true;
+  if (v === "0") return false;
+  return null;
+}
+
+function normalizeContextType(v: string | null) {
+  const s = (v ?? "").trim().toUpperCase();
+  return s || null;
+}
+
 export async function GET(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> }
@@ -119,7 +137,11 @@ export async function GET(
   const sectionId = normalizeUuidLike(searchParams.get("sid"));
   const sectionKey = normalizeSectionKey(searchParams.get("skey"));
   const position = normalizePosition(searchParams.get("pos"));
+  const pageNumber = normalizePageNumber(searchParams.get("page"));
+  const isExpandedPageOne = normalizeBooleanFlag(searchParams.get("expanded"));
+  const contextType = normalizeContextType(searchParams.get("ctx"));
 
+  try {
   await prisma.affiliateClick.create({
     data: {
       brandId: product.brandId,
@@ -137,8 +159,14 @@ export async function GET(
       sectionId,
       sectionKey,
       position,
+      pageNumber,
+      isExpandedPageOne,
+      contextType,
     },
   });
+} catch (error) {
+  console.error("affiliateClick.create failed", error);
+}
 
-  return NextResponse.redirect(destinationUrl);
+return NextResponse.redirect(destinationUrl);
 }

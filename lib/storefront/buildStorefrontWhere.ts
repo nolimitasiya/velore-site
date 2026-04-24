@@ -1,4 +1,10 @@
-import { Badge, Prisma, Region } from "@prisma/client";
+import {
+  AffiliateStatus,
+  Badge,
+  BrandAccountStatus,
+  Prisma,
+  Region,
+} from "@prisma/client";
 import type { StorefrontFilters } from "@/lib/storefront/parseFilters";
 
 type BuildStorefrontWhereArgs = {
@@ -24,7 +30,6 @@ export function buildStorefrontWhere({
     min,
     max,
     saleOn,
-    nextDayOn,
   } = filters;
 
   const brandWhere =
@@ -32,13 +37,24 @@ export function buildStorefrontWhere({
       ? {
           brand: {
             is: {
+              accountStatus: BrandAccountStatus.ACTIVE,
+              affiliateStatus: AffiliateStatus.ACTIVE,
               ...(region ? { baseRegion: region } : {}),
               ...(brands.length ? { slug: { in: brands } } : {}),
-              ...(countries.length ? { baseCountryCode: { in: countries } } : {}),
+              ...(countries.length
+                ? { baseCountryCode: { in: countries } }
+                : {}),
             },
           },
         }
-      : {};
+      : {
+          brand: {
+            is: {
+              accountStatus: BrandAccountStatus.ACTIVE,
+              affiliateStatus: AffiliateStatus.ACTIVE,
+            },
+          },
+        };
 
   const categoryWhere = categoryIds.length
     ? {
@@ -113,10 +129,7 @@ export function buildStorefrontWhere({
         }
       : {};
 
-  const badgeWhere = {
-    ...(saleOn ? { badges: { has: Badge.sale } } : {}),
-    ...(nextDayOn ? { badges: { has: Badge.next_day } } : {}),
-  };
+  const badgeWhere = saleOn ? { badges: { has: Badge.sale } } : {};
 
   return {
     status: "APPROVED",

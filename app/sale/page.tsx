@@ -4,18 +4,29 @@ export const fetchCache = "force-no-store";
 
 import SiteShell from "@/components/SiteShell";
 import ContinentFilters from "@/components/ContinentFilters";
+import StorefrontPagination from "@/components/StorefrontPagination";
 import { ProductGrid, type GridProduct } from "@/components/ProductGrid";
 import { prisma } from "@/lib/prisma";
-import { ProductType } from "@prisma/client";
+import {
+  AffiliateStatus,
+  BrandAccountStatus,
+  ProductType,
+} from "@prisma/client";
 import { sortSizes, formatSizeLabel } from "@/lib/sizing/order";
 import { parseStorefrontFilters } from "@/lib/storefront/parseFilters";
 import { getAvailableStyles } from "@/lib/storefront/getAvailableStyles";
 import { buildStorefrontWhere } from "@/lib/storefront/buildStorefrontWhere";
 import { countryNameFromIso2 } from "@/lib/geo/countries";
+import { getMerchPageOneProducts } from "@/lib/storefront/getMerchPageOneProducts";
+import { getStorefrontPaginationState } from "@/lib/storefront/pagination";
 
 type Opt = { value: string; label: string };
 
 function titleCaseLabel(s: string) {
+  if (s === "COATS_JACKETS") return "Coats & Jackets";
+  if (s === "HOODIE_SWEATSHIRT") return "Hoodie & Sweatshirt";
+  if (s === "T_SHIRT") return "T-Shirt";
+
   return s
     .toLowerCase()
     .replaceAll("_", " ")
@@ -34,6 +45,23 @@ export default async function SalePage({
   const filters = parseStorefrontFilters(sp);
   const { types, sort } = filters;
 
+  const hasActiveFilters =
+    filters.brands.length > 0 ||
+    filters.countries.length > 0 ||
+    filters.types.length > 0 ||
+    filters.styles.length > 0 ||
+    filters.colors.length > 0 ||
+    filters.sizes.length > 0 ||
+    filters.min != null ||
+    filters.max != null ||
+    filters.saleOn;
+
+  const shouldUseMerchPageOne = !hasActiveFilters && sort === "new";
+
+  const pagination = getStorefrontPaginationState(sp);
+  const { currentPage, isExpandedPageOne, pageOneVisibleCount, take } =
+    pagination;
+
   const orderBy =
     sort === "price_asc"
       ? [{ price: "asc" as const }, { publishedAt: "desc" as const }]
@@ -43,6 +71,8 @@ export default async function SalePage({
 
   const brandsRaw = await prisma.brand.findMany({
     where: {
+      accountStatus: BrandAccountStatus.ACTIVE,
+      affiliateStatus: AffiliateStatus.ACTIVE,
       products: {
         some: {
           status: "APPROVED",
@@ -95,12 +125,10 @@ export default async function SalePage({
     take: 500,
   });
 
-  const sizeOptions = sizesRaw
-    .sort(sortSizes)
-    .map((s) => ({
-      value: s.slug,
-      label: formatSizeLabel(s.name),
-    }));
+  const sizeOptions = sizesRaw.sort(sortSizes).map((s) => ({
+    value: s.slug,
+    label: formatSizeLabel(s.name),
+  }));
 
   const where = {
     ...buildStorefrontWhere({
@@ -109,40 +137,88 @@ export default async function SalePage({
     badges: { has: "sale" as any },
   };
 
-  const products = await prisma.product.findMany({
-    where,
-    orderBy,
-    take: 120,
-    select: {
-      id: true,
-      title: true,
-      price: true,
-      currency: true,
-      badges: true,
-      brand: { select: { name: true } },
-      images: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true } },
-    },
-  });
+  const totalCount = await prisma.product.count({ where });
 
-  const mapped: GridProduct[] = products.map((p) => ({
-    id: p.id,
-    title: p.title,
-    brandName: p.brand?.name ?? null,
-    imageUrl: p.images?.[0]?.url ?? null,
-    price: p.price ? p.price.toString() : null,
-    currency: String(p.currency),
-    buyUrl: `/out/${p.id}`,
-    badges: (p.badges ?? []) as any,
-  }));
+  let mapped: GridProduct[] = [];
+
+  if (shouldUseMerchPageOne && currentPage === 1) {
+    mapped = await getMerchPageOneProducts("SALE", pageOneVisibleCount);
+  } else {
+    let whereForPage = where;
+    let skip = 0;
+
+    if (shouldUseMerchPageOne && currentPage >= 2) {
+      const protectedPageOneProducts = await getMerchPageOneProducts(
+        "SALE",
+        48
+      );
+
+      const protectedIds = protectedPageOneProducts.map((p) => p.id);
+
+      whereForPage = {
+        ...where,
+        id: { notIn: protectedIds },
+      };
+
+      skip = (currentPage - 2) * 24;
+    } else if (currentPage === 1) {
+      skip = 0;
+    } else {
+      skip = 48 + (currentPage - 2) * 24;
+    }
+
+    const products = await prisma.product.findMany({
+      where: whereForPage,
+      orderBy,
+      skip,
+      take,
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        currency: true,
+        badges: true,
+        brand: { select: { name: true } },
+        images: {
+          orderBy: { sortOrder: "asc" },
+          take: 1,
+          select: { url: true },
+        },
+      },
+    });
+
+    mapped = products.map((p, index) => ({
+  id: p.id,
+  title: p.title,
+  brandName: p.brand?.name ?? null,
+  imageUrl: p.images?.[0]?.url ?? null,
+  price: p.price ? p.price.toString() : null,
+  currency: String(p.currency),
+  buyUrl: `/out/${p.id}`,
+  badges: (p.badges ?? []) as any,
+  analytics: {
+    sourcePage: "SEARCH" as const,
+    sectionKey: "sale_grid",
+    position: index + 1,
+    pageNumber: currentPage,
+    isExpandedPageOne: currentPage === 1 ? isExpandedPageOne : false,
+    contextType:
+      shouldUseMerchPageOne && currentPage >= 2 ? "GRID_AFTER_MERCH" : "GRID",
+  },
+}));
+  }
 
   return (
     <SiteShell>
       <main className="min-h-screen w-full bg-white">
-        <div className="mx-auto w-full max-w-[1800px] px-8 py-10 space-y-8">
+        <div className="mx-auto w-full max-w-[1800px] space-y-8 px-8 py-10">
           <header className="text-center">
-            <h1 className="font-display text-4xl md:text-5xl tracking-[0.12em]">
+            <h1 className="font-display text-4xl tracking-[0.12em] md:text-5xl">
               Sale
             </h1>
+            <p className="mt-3 text-sm text-black/60 md:text-base">
+              Discover reduced pieces.
+            </p>
           </header>
 
           <ContinentFilters
@@ -159,7 +235,16 @@ export default async function SalePage({
               No items match your filters.
             </div>
           ) : (
-            <ProductGrid products={mapped} />
+            <section id="products">
+              <ProductGrid products={mapped} />
+              <StorefrontPagination
+                pathname="/sale"
+                searchParams={sp}
+                totalItems={totalCount}
+                currentPage={currentPage}
+                isExpandedPageOne={isExpandedPageOne}
+              />
+            </section>
           )}
         </div>
       </main>

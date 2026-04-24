@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 type Props = {
   id: string;
   isActive: boolean;
-  publishedAt: string | null; // keep string so it's safe to pass from server
+  publishedAt: string | null;
 };
 
 export function ProductActions({ id, isActive, publishedAt }: Props) {
@@ -40,11 +40,13 @@ export function ProductActions({ id, isActive, publishedAt }: Props) {
   }
 
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-2">
       <button
         onClick={toggleActive}
-        className={`px-3 py-1 text-sm rounded ${
-          isActive ? "bg-green-600 text-white" : "bg-gray-200"
+        className={`inline-flex items-center justify-center rounded-xl px-3.5 py-2 text-sm font-medium transition ${
+          isActive
+            ? "border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+            : "border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
         }`}
       >
         {isActive ? "Active" : "Inactive"}
@@ -52,8 +54,10 @@ export function ProductActions({ id, isActive, publishedAt }: Props) {
 
       <button
         onClick={togglePublish}
-        className={`px-3 py-1 text-sm rounded ${
-          publishedAt ? "bg-black text-white" : "bg-gray-200"
+        className={`inline-flex items-center justify-center rounded-xl px-3.5 py-2 text-sm font-medium transition ${
+          publishedAt
+            ? "bg-black text-white hover:bg-black/90"
+            : "border border-black/10 bg-white text-neutral-700 hover:bg-black/[0.03]"
         }`}
       >
         {publishedAt ? "Published" : "Draft"}

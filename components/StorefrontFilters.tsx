@@ -113,7 +113,7 @@ export default function StorefrontFilters({
       "min",
       "max",
       "sale",
-      "next_day",
+
     ].forEach((k) => url.searchParams.delete(k));
 
     router.push(`${pathname}?${url.searchParams.toString()}`);

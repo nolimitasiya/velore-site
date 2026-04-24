@@ -12,11 +12,10 @@ export type StorefrontBrandTile = {
 
 export function BrandMosaic({ tiles }: { tiles: StorefrontBrandTile[] }) {
   return (
-    <section className="bg-[#eee]">
-      <div className="mx-auto w-full max-w-[1800px] px-8 pb-2">
-        <SectionTitle>Shop by Brand</SectionTitle>
-
-        <div className="grid grid-cols-2 gap-0">
+    <section className="bg-background">
+      <div className="mx-auto w-full max-w-[1800px] px-8 pt-8 pb-10">
+        <SectionTitle>Emerging Brands</SectionTitle>
+        <div className="mt-8 grid grid-cols-2 gap-0">
           {tiles.slice(0, 6).map((t) => (
             <Link
               key={t.id}

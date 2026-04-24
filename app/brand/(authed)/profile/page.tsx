@@ -13,10 +13,10 @@ export default async function BrandProfilePage() {
       id: true,
       name: true,
       slug: true,
+      instagramHandle: true,
       coverImageUrl: true,
       coverImageFocalX: true,
       coverImageFocalY: true,
-      
     },
   });
 
@@ -28,18 +28,16 @@ export default async function BrandProfilePage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Profile</h1>
-        <p className="mt-1 text-sm text-black/60">
-          Add your brand cover image for the public Shop by Brands page.
-        </p>
       </div>
 
       <BrandProfileForm
-  initialName={brand.name}
-  initialSlug={brand.slug}
-  initialCoverImageUrl={brand.coverImageUrl}
-  initialCoverImageFocalX={brand.coverImageFocalX}
-  initialCoverImageFocalY={brand.coverImageFocalY}
-/>
+        initialName={brand.name}
+        initialSlug={brand.slug}
+        initialInstagramHandle={brand.instagramHandle}
+        initialCoverImageUrl={brand.coverImageUrl}
+        initialCoverImageFocalX={brand.coverImageFocalX}
+        initialCoverImageFocalY={brand.coverImageFocalY}
+      />
     </div>
   );
 }

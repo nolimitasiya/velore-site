@@ -1,5 +1,11 @@
 import { prisma } from "@/lib/prisma";
-import { StorefrontSectionType } from "@prisma/client";
+import {
+  AffiliateStatus,
+  BrandAccountStatus,
+  ProductStatus,
+  StorefrontSectionType,
+} from "@prisma/client";
+
 
 const storefrontSectionInclude = {
   items: {
@@ -20,6 +26,8 @@ const storefrontSectionInclude = {
             select: {
               name: true,
               affiliateBaseUrl: true,
+              accountStatus: true,
+              affiliateStatus: true,
             },
           },
           images: {
@@ -38,13 +46,51 @@ const storefrontSectionInclude = {
   },
 };
 
+function isPubliclyShoppableProduct(
+  item: {
+    product: {
+      publishedAt: Date | null;
+      isActive: boolean;
+      status: ProductStatus;
+      brand: {
+        accountStatus: BrandAccountStatus;
+        affiliateStatus: AffiliateStatus;
+      } | null;
+    } | null;
+  }
+) {
+  const product = item.product;
+  if (!product) return false;
+
+  return (
+    product.status === ProductStatus.APPROVED &&
+    product.isActive === true &&
+    product.publishedAt != null &&
+    product.brand?.accountStatus === BrandAccountStatus.ACTIVE &&
+    product.brand?.affiliateStatus === AffiliateStatus.ACTIVE
+  );
+}
+
+function trimSectionItems<T extends { items: any[]; maxItems: number }>(section: T | null) {
+  if (!section) return null;
+
+  const eligibleItems = section.items
+    .filter(isPubliclyShoppableProduct)
+    .slice(0, section.maxItems);
+
+  return {
+    ...section,
+    items: eligibleItems,
+  };
+}
+
 export async function resolveHomepageStorefrontSection(country?: string | null) {
   const normalizedCountry =
     typeof country === "string" && country.trim().length === 2
       ? country.trim().toUpperCase()
       : null;
 
-  const campaignMatch = await prisma.storefrontSection.findFirst({
+  const campaignMatchRaw = await prisma.storefrontSection.findFirst({
     where: {
       isActive: true,
       type: StorefrontSectionType.CAMPAIGN,
@@ -68,11 +114,12 @@ export async function resolveHomepageStorefrontSection(country?: string | null) 
     include: storefrontSectionInclude,
   });
 
-  if (campaignMatch) {
+  const campaignMatch = trimSectionItems(campaignMatchRaw);
+  if (campaignMatch && campaignMatch.items.length > 0) {
     return campaignMatch;
   }
 
-  const countryMatch = normalizedCountry
+  const countryMatchRaw = normalizedCountry
     ? await prisma.storefrontSection.findFirst({
         where: {
           isActive: true,
@@ -84,11 +131,12 @@ export async function resolveHomepageStorefrontSection(country?: string | null) 
       })
     : null;
 
-  if (countryMatch) {
+  const countryMatch = trimSectionItems(countryMatchRaw);
+  if (countryMatch && countryMatch.items.length > 0) {
     return countryMatch;
   }
 
-  const fallback = await prisma.storefrontSection.findFirst({
+  const fallbackRaw = await prisma.storefrontSection.findFirst({
     where: {
       isActive: true,
       type: StorefrontSectionType.DEFAULT,
@@ -97,5 +145,5 @@ export async function resolveHomepageStorefrontSection(country?: string | null) 
     include: storefrontSectionInclude,
   });
 
-  return fallback;
+  return trimSectionItems(fallbackRaw);
 }

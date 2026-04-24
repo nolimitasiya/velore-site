@@ -11,14 +11,18 @@ function NavLink({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className={`rounded-lg px-3 py-2 text-sm border transition-colors ${
-        active ? "bg-black text-white border-black" : "hover:bg-black/5 border-black/10"
-      }`}
+      className={[
+        "inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-medium transition-all",
+        active
+          ? "border border-black bg-black text-white shadow-[0_6px_18px_rgba(0,0,0,0.12)]"
+          : "border border-black/10 bg-white text-neutral-700 hover:border-black/15 hover:bg-neutral-50 hover:text-neutral-950",
+      ].join(" ")}
     >
       {label}
     </Link>
   );
 }
+
 export function BrandHeader({ brandName }: { brandName: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -33,43 +37,46 @@ export function BrandHeader({ brandName }: { brandName: string }) {
       setBusy(false);
     }
   }
-function refreshNow() {
+
+  function refreshNow() {
     const url = new URL(window.location.href);
     url.searchParams.set("r", String(Date.now()));
     window.location.assign(url.toString());
   }
- return (
-  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-    <div className="hidden sm:block w-[120px]" />
 
-    {/* center: tabs */}
-    <div className="flex flex-wrap justify-center gap-2 sm:flex-1">
-      <NavLink href="/brand/revenue" label="Analytics" />
-      <NavLink href="/brand/products" label="Products" />
-      <NavLink href="/brand/import" label="Import" />
-      <NavLink href="/brand/billing" label="Billing" />
-      <NavLink href="/brand/features" label="Features" />
-      <NavLink href="/brand/profile" label="Profile" />
+  return (
+    <div className="rounded-[28px] border border-black/8 bg-white/95 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.04)] backdrop-blur-sm md:p-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        {/* left: brand identity */}
+        
 
-      <button
-        type="button"
-        onClick={refreshNow}
-        className="rounded-lg px-3 py-2 text-sm border border-black/10 hover:bg-black/5"
-      >
-        Refresh
-      </button>
+        {/* center: nav */}
+        <div className="flex flex-1 flex-wrap items-center justify-start gap-2 lg:justify-center">
+          <NavLink href="/brand/revenue" label="Analytics" />
+          <NavLink href="/brand/products" label="Products" />
+          <NavLink href="/brand/import" label="Import" />
+          <NavLink href="/brand/profile" label="Profile" />
+
+          <button
+            type="button"
+            onClick={refreshNow}
+            className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 transition hover:border-black/15 hover:bg-neutral-50 hover:text-neutral-950"
+          >
+            Refresh
+          </button>
+        </div>
+
+        {/* right: logout */}
+        <div className="flex justify-start lg:justify-end">
+          <button
+            onClick={logout}
+            disabled={busy}
+            className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 transition hover:border-black/15 hover:bg-neutral-50 hover:text-neutral-950 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {busy ? "Logging out..." : "Logout"}
+          </button>
+        </div>
+      </div>
     </div>
-
-    {/* right: logout */}
-    <div className="flex justify-center sm:justify-end sm:w-[120px]">
-      <button
-        onClick={logout}
-        disabled={busy}
-        className="rounded-lg px-3 py-2 text-sm border border-black/10 hover:bg-black/5 disabled:opacity-50"
-      >
-        {busy ? "..." : "Logout"}
-      </button>
-    </div>
-  </div>
-);
+  );
 }

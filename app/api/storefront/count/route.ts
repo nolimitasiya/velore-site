@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Badge, Region } from "@prisma/client";
+import { Badge, Region, ProductType } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { parseStorefrontFilters, type RawSearchParams } from "@/lib/storefront/parseFilters";
@@ -23,8 +23,32 @@ const CLOTHING_CATEGORY_SLUGS = [
   "khimar",
   "swimwear_modest",
   "hijabs",
+];
+const ACCESSORY_CATEGORY_SLUGS = [
   "accessories",
-  "shoes",
+  "rings",
+  "bracelets",
+  "necklaces",
+  "earrings",
+  "watches",
+];
+
+const OCCASION_PRODUCT_TYPES: ProductType[] = [
+  ProductType.ABAYA,
+  ProductType.DRESS,
+  ProductType.SKIRT,
+  ProductType.TOP,
+  ProductType.HIJAB,
+  ProductType.ACTIVEWEAR,
+  ProductType.SETS,
+  ProductType.MATERNITY,
+  ProductType.KHIMAR,
+  ProductType.JILBAB,
+  ProductType.COATS_JACKETS,
+  ProductType.HOODIE_SWEATSHIRT,
+  ProductType.PANTS,
+  ProductType.BLAZER,
+  ProductType.T_SHIRT,
 ];
 
 const ALLOWED_OCCASION_SLUGS = ["wedding", "eid", "formal"];
@@ -77,17 +101,65 @@ export async function GET(req: NextRequest) {
         filters,
         categoryIds: clothingCatIds,
       });
-    } else if (pathname.startsWith("/categories/occasion/")) {
+    }else if (pathname.startsWith("/categories/accessories")) {
+      const selectedAccessoryCategory =
+        (url.searchParams.get("category") || "").trim().toLowerCase();
+
+      const accessoryCategories = await prisma.category.findMany({
+        where: { slug: { in: ACCESSORY_CATEGORY_SLUGS } },
+        select: { id: true, slug: true },
+      });
+
+      const selectedAccessoryRow = selectedAccessoryCategory
+        ? accessoryCategories.find((c) => c.slug === selectedAccessoryCategory)
+        : null;
+
+      const accessoryCategoryIds = selectedAccessoryRow
+        ? [selectedAccessoryRow.id]
+        : accessoryCategories.map((c) => c.id);
+
+      where = selectedAccessoryRow
+  ? {
+      ...buildStorefrontWhere({
+        filters: {
+          ...filters,
+          types: filters.types.length ? filters.types : ["ACCESSORIES" as const],
+        },
+      }),
+      categoryId: selectedAccessoryRow.id,
+    }
+  : {
+      ...buildStorefrontWhere({
+        filters: {
+          ...filters,
+          types: filters.types.length ? filters.types : ["ACCESSORIES" as const],
+        },
+      }),
+      AND: [
+        {
+          OR: [
+            { categoryId: { in: accessoryCategoryIds } },
+            { productType: "ACCESSORIES" as const },
+          ],
+        },
+      ],
+    };
+        }else if (pathname.startsWith("/categories/occasion/")) {
       const slug = pathname.replace("/categories/occasion/", "").split("/")[0]?.toLowerCase() || "";
 
       if (!ALLOWED_OCCASION_SLUGS.includes(slug)) {
         return NextResponse.json({ ok: false, error: "Invalid occasion" }, { status: 400 });
       }
 
-      where = buildStorefrontWhere({
-        filters,
-        occasionSlug: slug,
-      });
+      where = {
+  ...buildStorefrontWhere({
+    filters,
+    occasionSlug: slug,
+  }),
+  productType: filters.types.length
+    ? { in: filters.types }
+    : { in: OCCASION_PRODUCT_TYPES },
+};
     } else if (pathname.startsWith("/sale")) {
       where = {
         ...buildStorefrontWhere({

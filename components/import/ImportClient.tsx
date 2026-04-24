@@ -21,8 +21,123 @@ type Props = {
   importUrl: string;
   historyUrl: string;
   requireToken?: boolean;
-  tokenEnvVarName?: string; // only used for admin
+  tokenEnvVarName?: string;
 };
+
+function SectionCard({
+  eyebrow,
+  title,
+  description,
+  actions,
+  children,
+}: {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-[28px] border border-black/8 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+      <div className="border-b border-black/6 bg-[linear-gradient(180deg,#fff_0%,#fbf8f2_100%)] px-5 py-5 md:px-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="max-w-2xl">
+            {eyebrow ? (
+              <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-400">
+                {eyebrow}
+              </div>
+            ) : null}
+            <h2 className="mt-2 text-xl font-semibold tracking-tight text-neutral-950">
+              {title}
+            </h2>
+            {description ? (
+              <p className="mt-1 text-sm text-neutral-500">{description}</p>
+            ) : null}
+          </div>
+
+          {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+        </div>
+      </div>
+
+      <div className="p-5 md:p-6">{children}</div>
+    </section>
+  );
+}
+
+function SoftButton({
+  children,
+  onClick,
+  disabled,
+  className = "",
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={[
+        "rounded-full border border-black/10 bg-white px-4 py-2 text-sm text-neutral-700 transition hover:bg-black/[0.03] disabled:cursor-not-allowed disabled:opacity-50",
+        className,
+      ].join(" ")}
+    >
+      {children}
+    </button>
+  );
+}
+
+function PrimaryButton({
+  children,
+  onClick,
+  disabled,
+  className = "",
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={[
+        "rounded-full bg-black px-4 py-2 text-sm text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50",
+        className,
+      ].join(" ")}
+    >
+      {children}
+    </button>
+  );
+}
+
+function InfoPill({
+  children,
+  tone = "neutral",
+}: {
+  children: React.ReactNode;
+  tone?: "neutral" | "success" | "danger" | "warning";
+}) {
+  const toneClass =
+    tone === "success"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+      : tone === "danger"
+      ? "border-red-200 bg-red-50 text-red-700"
+      : tone === "warning"
+      ? "border-yellow-200 bg-yellow-50 text-yellow-800"
+      : "border-black/10 bg-white text-neutral-700";
+
+  return (
+    <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs ${toneClass}`}>
+      {children}
+    </span>
+  );
+}
 
 export default function ImportClient({
   title = "Import",
@@ -57,8 +172,7 @@ export default function ImportClient({
       ? (process.env as any)[tokenEnvVarName] ?? process.env.NEXT_PUBLIC_ADMIN_IMPORT_TOKEN ?? ""
       : "";
 
-      const templateCsv = useMemo(() => {
-    // ✅ BRAND SIMPLE TEMPLATE (4 columns only)
+  const templateCsv = useMemo(() => {
     const brandHeader = ["product_slug", "product_name", "source_url", "image_url"];
 
     const brandExample = [
@@ -70,7 +184,6 @@ export default function ImportClient({
       },
     ];
 
-    // ✅ ADMIN: keep current advanced template so you don't break admin imports
     const commonAdvanced = [
       "product_slug",
       "product_name",
@@ -128,15 +241,15 @@ export default function ImportClient({
     return Papa.unparse(brandExample, { columns: brandHeader, quotes: true });
   }, [mode]);
 
-
   function downloadTemplate() {
     const blob = new Blob([templateCsv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = mode === "admin"
-  ? "veilora_admin_import_template.csv"
-  : "veilora_brand_import_template.csv";
+    a.download =
+      mode === "admin"
+        ? "veilora_admin_import_template.csv"
+        : "veilora_brand_import_template.csv";
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -217,356 +330,446 @@ export default function ImportClient({
   }
 
   function isXlsxFile(f: File) {
-  const name = (f?.name ?? "").toLowerCase();
-  return name.endsWith(".xlsx");
-}
-
-  function handleFile(f: File) {
-  setFile(f);
-  setConfirmOpen(false);
-  setSyncMissing(false);
-  setError(null);
-  setValidation(null);
-  setImportResult(null);
-
-  // ✅ Preview handling
-  if (isXlsxFile(f)) {
-    // XLSX cannot be Papa-parsed; skip preview
-    setPreviewRows([]);
-    setPreviewCols([]);
-    setPreviewNote("Preview is only available for CSV files. XLSX upload is supported and will still validate/import.");
-  } else {
-    setPreviewNote(null);
-
-    Papa.parse<Row>(f, {
-      header: true,
-      skipEmptyLines: true,
-      transformHeader: (h) => h.trim().toLowerCase().replace(/\s+/g, "_"),
-      complete: (res) => {
-        const rows = (res.data ?? []).slice(0, 20);
-        setPreviewRows(rows);
-        setPreviewCols(rows[0] ? Object.keys(rows[0]) : []);
-      },
-    });
+    const name = (f?.name ?? "").toLowerCase();
+    return name.endsWith(".xlsx");
   }
 
-  validateFile(f);
-}
+  function handleFile(f: File) {
+    setFile(f);
+    setConfirmOpen(false);
+    setSyncMissing(false);
+    setError(null);
+    setValidation(null);
+    setImportResult(null);
 
-const canImport =
-validation?.ok && (validation.summary?.invalid ?? 1) === 0 && !!file;
-
-const requiredBrandFields = ["product_slug", "product_name", "source_url", "image_url"] as const;
-
-const emptyRequiredFields =
-  mode !== "brand" || previewRows.length === 0
-    ? []
-    : requiredBrandFields.filter((k) =>
-        previewRows.some((r) => !String(r[k] ?? "").trim())
+    if (isXlsxFile(f)) {
+      setPreviewRows([]);
+      setPreviewCols([]);
+      setPreviewNote(
+        "Preview is only available for CSV files. XLSX upload is supported and will still validate/import."
       );
+    } else {
+      setPreviewNote(null);
 
-     
+      Papa.parse<Row>(f, {
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: (h) => h.trim().toLowerCase().replace(/\s+/g, "_"),
+        complete: (res) => {
+          const rows = (res.data ?? []).slice(0, 20);
+          setPreviewRows(rows);
+          setPreviewCols(rows[0] ? Object.keys(rows[0]) : []);
+        },
+      });
+    }
 
-  
+    validateFile(f);
+  }
+
+  const canImport =
+    validation?.ok && (validation.summary?.invalid ?? 1) === 0 && !!file;
+
+  const requiredBrandFields = [
+    "product_slug",
+    "product_name",
+    "source_url",
+    "image_url",
+  ] as const;
+
+  const emptyRequiredFields =
+    mode !== "brand" || previewRows.length === 0
+      ? []
+      : requiredBrandFields.filter((k) =>
+          previewRows.some((r) => !String(r[k] ?? "").trim())
+        );
+
   return (
-    <main className="max-w-6xl mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{title}</h1>
-        <button onClick={downloadTemplate} className="rounded-lg border px-3 py-2 text-sm">
-          Download CSV Template
-        </button>
-      </div>
-
-      <div className="rounded-2xl border p-4 space-y-3">
-        <label
-          htmlFor="csvFile"
-          className="inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm hover:bg-black/5"
-        >
-          📂 Upload CSV
-        </label>
-
-        <input
-          id="csvFile"
-          type="file"
-          accept=".csv,.xlsx"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0] ?? null;
-            if (f) handleFile(f);
-          }}
-        />
-
-               {file && (
-          <>
-            <div className="text-sm text-black/60 flex flex-wrap items-center gap-x-3 gap-y-1">
-              <span>
-                Selected file: <span className="font-medium">{file.name}</span>
-              </span>
-              <span className="text-black/40">•</span>
-              <span>{(file.size / 1024).toFixed(1)} KB</span>
-              <span className="text-black/40">•</span>
-              <span className="uppercase">{file.name.split(".").pop()}</span>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setFile(null);
-                  setPreviewRows([]);
-                  setPreviewCols([]);
-                  setSyncMissing(false);
-                  setConfirmOpen(false);
-                  setValidation(null);
-                  setImportResult(null);
-                  setError(null);
-                  setShowAdvanced(false);
-                }}
-                className="ml-auto rounded-lg border px-3 py-1.5 text-xs hover:bg-black/5"
-              >
-                Clear file
-              </button>
+    <main className="mx-auto max-w-6xl space-y-8 bg-[#fcfbf8] p-6 md:p-8">
+      <section className="overflow-hidden rounded-[28px] border border-black/8 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+        <div className="border-b border-black/6 bg-[linear-gradient(180deg,#fff_0%,#fbf8f2_100%)] px-5 py-5 md:px-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-2xl">
+              <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-400">
+                Catalogue import
+              </div>
+              <h1 className="mt-2 text-2xl font-semibold tracking-tight text-neutral-950">
+                {title}
+              </h1>
+              <p className="mt-1 text-sm text-neutral-500">
+                Upload a CSV or XLSX file, validate it, preview the structure, and import it into the catalogue.
+              </p>
             </div>
 
-            <div className="text-xs text-black/50">
-              Tip: if you edited the CSV in Excel, <span className="font-medium">save and close it</span>{" "}
-              before Re-validate or Import. Otherwise upload can fail.
+            <div className="flex flex-wrap items-center gap-2">
+              <SoftButton onClick={downloadTemplate}>Download CSV template</SoftButton>
             </div>
-            {previewNote && (
-  <div className="rounded-xl bg-neutral-50 p-3 text-sm text-black/70">
-    {previewNote}
-  </div>
-)}
-          </>
-        )}
-
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => canImport && setConfirmOpen(true)}
-            disabled={!canImport || busy}
-            className="rounded-lg bg-black px-4 py-2 text-white disabled:opacity-50"
-          >
-            {busy ? "Working..." : "Import to DB"}
-          </button>
-
-          <button
-            onClick={() => file && validateFile(file)}
-            disabled={!file || busy}
-            className="rounded-lg border px-4 py-2 text-sm disabled:opacity-50"
-          >
-            Re-validate
-          </button>
+          </div>
         </div>
+      </section>
 
-                <div className="pt-2">
-          <button
-            type="button"
-            onClick={() => setShowAdvanced((v) => !v)}
-            className="text-sm underline underline-offset-4 text-black/70 hover:text-black"
-          >
-            {showAdvanced ? "Hide advanced options" : "Show advanced options"}
-          </button>
-
-          {showAdvanced && (
-            <div className="mt-3 rounded-xl border bg-neutral-50 p-3 space-y-2">
-              <label className="flex items-start gap-2 text-sm text-black/70">
-                <input
-                type="checkbox"
-                disabled={!validation?.ok || busy}
-                  checked={syncMissing}
-                  onChange={(e) => setSyncMissing(e.target.checked)}
-                />
-                <span>
-                  <span className="font-medium">Deactivate missing products</span>{" "}
-                  <span className="text-black/50">
-                    (Anything not included in this file will be set inactive for this brand.)
-                  </span>
-                </span>
+      <SectionCard
+        eyebrow="Step 1"
+        title="Upload and validate"
+        description="Choose a file, check the validation result, then confirm the import once invalid rows are zero."
+      >
+        <div className="space-y-5">
+          <div className="rounded-[26px] border border-dashed border-black/15 bg-[#fbf8f2] p-5">
+            <div className="flex flex-wrap items-center gap-3">
+              <label
+                htmlFor="csvFile"
+                className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-sm text-neutral-700 shadow-sm transition hover:bg-black/[0.03]"
+              >
+                📂 Upload CSV / XLSX
               </label>
 
-              <div className="text-xs text-black/50">
-                Use only when your CSV is the “source of truth” full catalogue export.
+              <input
+                id="csvFile"
+                type="file"
+                accept=".csv,.xlsx"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0] ?? null;
+                  if (f) handleFile(f);
+                }}
+              />
+
+              <div className="text-sm text-neutral-500">
+                Supported formats: CSV and XLSX
               </div>
             </div>
-          )}
-        </div>
 
-        <div className="text-sm text-black/60">
-          Upload → validate → Import button unlocks when invalid = 0.
-        </div>
-        {mode === "brand" && previewRows.length > 0 && emptyRequiredFields.length > 0 && (
-  <div className="rounded-xl bg-yellow-50 p-3 text-sm text-yellow-800">
-    <div className="font-medium">Some rows are missing required values</div>
+            {file ? (
+              <div className="mt-4 space-y-3">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[20px] border border-black/8 bg-white px-4 py-3 text-sm text-neutral-600">
+                  <span>
+                    Selected file: <span className="font-medium text-neutral-900">{file.name}</span>
+                  </span>
+                  <span className="text-black/20">•</span>
+                  <span>{(file.size / 1024).toFixed(1)} KB</span>
+                  <span className="text-black/20">•</span>
+                  <span className="uppercase">{file.name.split(".").pop()}</span>
 
-    <div className="mt-1">
-      {emptyRequiredFields.map((m) => (
-        <span
-          key={m}
-          className="mr-2 inline-flex items-center rounded-full border border-yellow-200 bg-white px-2 py-0.5 text-xs"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFile(null);
+                      setPreviewRows([]);
+                      setPreviewCols([]);
+                      setSyncMissing(false);
+                      setConfirmOpen(false);
+                      setValidation(null);
+                      setImportResult(null);
+                      setError(null);
+                      setShowAdvanced(false);
+                    }}
+                    className="ml-auto rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs text-neutral-700 hover:bg-black/[0.03]"
+                  >
+                    Clear file
+                  </button>
+                </div>
+
+                <div className="text-xs text-neutral-500">
+                  Tip: if you edited the file in Excel, save and close it before re-validating or importing.
+                </div>
+
+                {previewNote ? (
+                  <div className="rounded-[20px] border border-black/8 bg-white px-4 py-3 text-sm text-neutral-700">
+                    {previewNote}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <PrimaryButton
+              onClick={() => canImport && setConfirmOpen(true)}
+              disabled={!canImport || busy}
+            >
+              {busy ? "Working..." : "Import to DB"}
+            </PrimaryButton>
+
+            <SoftButton
+              onClick={() => file && validateFile(file)}
+              disabled={!file || busy}
+            >
+              Re-validate
+            </SoftButton>
+
+            <InfoPill tone={canImport ? "success" : "neutral"}>
+              {canImport ? "Ready to import" : "Validate file first"}
+            </InfoPill>
+          </div>
+
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowAdvanced((v) => !v)}
+              className="text-sm text-neutral-600 underline underline-offset-4 hover:text-neutral-900"
+            >
+              {showAdvanced ? "Hide advanced options" : "Show advanced options"}
+            </button>
+
+            {showAdvanced ? (
+              <div className="mt-3 rounded-[22px] border border-black/8 bg-[#fcfbf8] p-4">
+                <label className="flex items-start gap-3 text-sm text-neutral-700">
+                  <input
+                    type="checkbox"
+                    disabled={!validation?.ok || busy}
+                    checked={syncMissing}
+                    onChange={(e) => setSyncMissing(e.target.checked)}
+                  />
+                  <span>
+                    <span className="font-medium text-neutral-900">Deactivate missing products</span>{" "}
+                    <span className="text-neutral-500">
+                      Anything not included in this file will be set inactive for this brand.
+                    </span>
+                  </span>
+                </label>
+
+                <div className="mt-2 text-xs text-neutral-500">
+                  Only use this when your file is the full source-of-truth catalogue export.
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          
+
+          {mode === "brand" && previewRows.length > 0 && emptyRequiredFields.length > 0 ? (
+            <div className="rounded-[22px] border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
+              <div className="font-medium">Some rows are missing required values</div>
+
+              <div className="mt-2 flex flex-wrap gap-2">
+                {emptyRequiredFields.map((m) => (
+                  <span
+                    key={m}
+                    className="inline-flex items-center rounded-full border border-yellow-200 bg-white px-2.5 py-1 text-xs"
+                  >
+                    {m}
+                  </span>
+                ))}
+              </div>
+
+              <div className="mt-2 text-xs text-yellow-900/70">
+                Fill these fields for every row, then re-upload.
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </SectionCard>
+
+      {error ? (
+        <div className="rounded-[24px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
+
+      {previewRows.length > 0 ? (
+        <SectionCard
+          eyebrow="Step 2"
+          title={`Preview (${previewRows.length} rows)`}
+          description="Quick preview of the uploaded structure before import."
         >
-          {m}
-        </span>
-      ))}
-    </div>
-
-    <div className="mt-2 text-xs text-yellow-900/70">
-      Fill these fields for every row, then re-upload.
-    </div>
-  </div>
-)}
-                
-        
-      </div>
-
-      {error && (
-        <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</div>
-      )}
-
-      {previewRows.length > 0 && (
-        <div className="rounded-2xl border p-4">
-          <div className="font-medium mb-3">Preview (first {previewRows.length} rows)</div>
-          <div className="overflow-auto">
+          <div className="overflow-auto rounded-[22px] border border-black/8 bg-white">
             <table className="min-w-[900px] text-sm">
-              <thead className="sticky top-0 bg-white">
-                <tr className="border-b">
+              <thead className="sticky top-0 bg-[#faf8f4] text-left text-neutral-600">
+                <tr className="border-b border-black/6">
                   {previewCols.map((k) => (
-                    <th key={k} className="p-2 text-left font-semibold">{k}</th>
+                    <th key={k} className="px-4 py-3 font-medium">
+                      {k}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {previewRows.map((r, i) => (
-                  <tr key={i} className="border-b">
+                  <tr key={i} className="border-b border-black/6">
                     {previewCols.map((k) => (
-                      <td key={k} className="p-2 whitespace-nowrap">{r[k]}</td>
+                      <td key={k} className="whitespace-nowrap px-4 py-3 text-neutral-700">
+                        {r[k]}
+                      </td>
                     ))}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        </SectionCard>
+      ) : null}
 
-      {validation && (
-        <div className="rounded-2xl border p-4 space-y-3">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <div className="font-medium">Validation summary</div>
-              <div className="text-sm text-gray-600">
-                Total: {validation.summary?.total} • Valid: {validation.summary?.valid} • Invalid:{" "}
-                {validation.summary?.invalid}
+      {validation ? (
+        <SectionCard
+          eyebrow="Step 3"
+          title="Validation summary"
+          description="Review the import health and expected changes before confirming."
+          actions={
+            <InfoPill tone={canImport ? "success" : "danger"}>
+              {canImport ? "✅ Ready to import" : "❌ Fix invalid rows first"}
+            </InfoPill>
+          }
+        >
+          <div className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="rounded-[22px] border border-black/8 bg-[#fcfbf8] px-4 py-4">
+                <div className="text-xs uppercase tracking-[0.14em] text-neutral-400">Total</div>
+                <div className="mt-2 text-2xl font-semibold tracking-tight text-neutral-950">
+                  {validation.summary?.total ?? 0}
+                </div>
               </div>
-              {validation?.summary?.willCreate !== undefined && (
-  <div className="mt-2 text-sm text-black/70 space-y-1">
-    <div>
-      Expected changes:{" "}
-      <b>{validation.summary.willCreate}</b> new •{" "}
-      <b>{validation.summary.willUpdate}</b> updates
-      {typeof validation.summary.willDeactivate === "number" && (
-        <>
-          {" "}
-          • <b>{validation.summary.willDeactivate}</b> will deactivate
-        </>
-      )}
-    </div>
 
-    {/* Duplicate safety (warn-only) */}
-    {typeof validation.summary.duplicateSourceUrlsInFile === "number" &&
-      validation.summary.duplicateSourceUrlsInFile > 0 && (
-        <div className="text-xs text-yellow-900/80">
-          Duplicate URLs in file: <b>{validation.summary.duplicateSourceUrlsInFile}</b>. We will use the{" "}
-          <b>LAST occurrence</b> for each duplicate.
-          {Array.isArray(validation.summary.duplicateExamples) &&
-            validation.summary.duplicateExamples.length > 0 && (
-              <div className="mt-1">
-                Examples:{" "}
-                {validation.summary.duplicateExamples.map((u: string) => (
-                  <span
-                    key={u}
-                    className="mr-1 inline-flex items-center rounded-full border border-yellow-200 bg-white px-2 py-0.5 text-[11px]"
-                  >
-                    {u}
-                  </span>
-                ))}
+              <div className="rounded-[22px] border border-emerald-200 bg-emerald-50 px-4 py-4">
+                <div className="text-xs uppercase tracking-[0.14em] text-emerald-700/70">Valid</div>
+                <div className="mt-2 text-2xl font-semibold tracking-tight text-emerald-900">
+                  {validation.summary?.valid ?? 0}
+                </div>
               </div>
-            )}
-          {typeof validation.summary.effectiveRowsAfterDeduping === "number" && (
-            <div className="mt-1 text-xs text-yellow-900/70">
-              Effective rows after dedupe: <b>{validation.summary.effectiveRowsAfterDeduping}</b>
-            </div>
-          )}
-        </div>
-      )}
-  </div>
-)}
+
+              <div className="rounded-[22px] border border-red-200 bg-red-50 px-4 py-4">
+                <div className="text-xs uppercase tracking-[0.14em] text-red-700/70">Invalid</div>
+                <div className="mt-2 text-2xl font-semibold tracking-tight text-red-900">
+                  {validation.summary?.invalid ?? 0}
+                </div>
+              </div>
             </div>
 
-            <div className="text-sm flex items-center gap-2">
-              <span
-                className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs border ${
-                  canImport
-                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                    : "bg-red-50 text-red-700 border-red-200"
-                }`}
-              >
-                {canImport ? "✅ Ready to import" : "❌ Fix invalid rows first"}
-              </span>
-            </div>
+            {validation?.summary?.willCreate !== undefined ? (
+              <div className="rounded-[22px] border border-black/8 bg-[#fcfbf8] p-4 text-sm text-neutral-700">
+                <div>
+                  Expected changes: <b>{validation.summary.willCreate}</b> new •{" "}
+                  <b>{validation.summary.willUpdate}</b> updates
+                  {typeof validation.summary.willDeactivate === "number" ? (
+                    <>
+                      {" "}
+                      • <b>{validation.summary.willDeactivate}</b> will deactivate
+                    </>
+                  ) : null}
+                </div>
+
+                {typeof validation.summary.duplicateSourceUrlsInFile === "number" &&
+                validation.summary.duplicateSourceUrlsInFile > 0 ? (
+                  <div className="mt-3 rounded-[18px] border border-yellow-200 bg-yellow-50 p-3 text-yellow-900">
+                    <div className="font-medium">Duplicate URLs in file</div>
+                    <div className="mt-1 text-sm">
+                      <b>{validation.summary.duplicateSourceUrlsInFile}</b> duplicate source URLs found.
+                      The import will use the <b>last occurrence</b> for each duplicate.
+                    </div>
+
+                    {Array.isArray(validation.summary.duplicateExamples) &&
+                    validation.summary.duplicateExamples.length > 0 ? (
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                        {validation.summary.duplicateExamples.map((u: string) => (
+                          <span
+                            key={u}
+                            className="inline-flex items-center rounded-full border border-yellow-200 bg-white px-2.5 py-1 text-[11px]"
+                          >
+                            {u}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {typeof validation.summary.effectiveRowsAfterDeduping === "number" ? (
+                      <div className="mt-2 text-xs text-yellow-900/70">
+                        Effective rows after dedupe: <b>{validation.summary.effectiveRowsAfterDeduping}</b>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {!!validation?.warnings?.length ? (
+              <div className="rounded-[22px] border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
+                <div className="mb-2 font-medium">
+                  Warnings (first {Math.min(20, validation.warnings.length)})
+                </div>
+                <ul className="list-disc space-y-1 pl-5">
+                  {validation.warnings.slice(0, 20).map((w: any, i: number) => (
+                    <li key={i}>
+                      Row {w.row}: {w.warning}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {!!validation.rowErrors?.length ? (
+              <div className="rounded-[22px] border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                <div className="mb-2 font-medium">
+                  Errors (showing first {Math.min(20, validation.rowErrors.length)})
+                </div>
+                <ul className="list-disc space-y-1 pl-5">
+                  {validation.rowErrors.slice(0, 20).map((e: any, idx: number) => (
+                    <li key={idx}>
+                      Row {e.row}: {e.error}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        </SectionCard>
+      ) : null}
+
+            {importResult?.ok ? (
+        <div className="rounded-[28px] border border-emerald-200 bg-[linear-gradient(180deg,#f3fff7_0%,#ecfdf3_100%)] p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+          <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-emerald-700/60">
+            Import complete
           </div>
 
-          {!!validation?.warnings?.length && (
-            <div className="rounded-xl bg-yellow-50 p-3 text-sm text-yellow-800">
-              <div className="font-medium mb-1">
-                Warnings (first {Math.min(20, validation.warnings.length)})
-              </div>
-              <ul className="list-disc pl-5">
-                {validation.warnings.slice(0, 20).map((w: any, i: number) => (
-                  <li key={i}>
-                    Row {w.row}: {w.warning}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <div className="mt-2 text-lg font-semibold tracking-tight text-emerald-900">
+            ✅ Products imported successfully
+          </div>
 
-          {!!validation.rowErrors?.length && (
-            <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
-              <div className="font-medium mb-1">
-                Errors (showing first {Math.min(20, validation.rowErrors.length)})
-              </div>
-              <ul className="list-disc pl-5">
-                {validation.rowErrors.slice(0, 20).map((e: any, idx: number) => (
-                  <li key={idx}>
-                    Row {e.row}: {e.error}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
-
-      {importResult?.ok && (
-        <div className="rounded-2xl border p-4 bg-emerald-50">
-          <div className="font-medium text-emerald-900">✅ Imported to DB</div>
-          <div className="text-sm text-emerald-800 mt-1">
+          <div className="mt-2 text-sm text-emerald-800">
             Total: <b>{importResult.results?.total ?? "-"}</b> • Created:{" "}
             <b>{importResult.results?.createdProducts ?? 0}</b> • Updated:{" "}
             <b>{importResult.results?.updatedProducts ?? 0}</b>
           </div>
-        </div>
-      )}
 
-      {importResult && !importResult.ok && (
-        <div className="rounded-2xl border p-4 bg-red-50">
+          <div className="mt-4 rounded-[20px] border border-emerald-200/70 bg-white/70 p-4">
+            <div className="text-sm font-medium text-neutral-900">
+              Next step: review and edit your imported products
+            </div>
+            <div className="mt-1 text-sm text-neutral-600">
+              Head to the products tab to check titles, taxonomy, occasions, images, badges, pricing,
+              shipping, and then submit each product for review.
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <a
+                href="/brand/products"
+                className="inline-flex items-center rounded-full bg-black px-4 py-2 text-sm text-white shadow-sm transition hover:opacity-90"
+              >
+                Go to products
+              </a>
+
+              <a
+                href="/brand/products"
+                className="inline-flex items-center rounded-full border border-black/10 bg-white px-4 py-2 text-sm text-neutral-700 transition hover:bg-black/[0.03]"
+              >
+                Review imported items
+              </a>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {importResult && !importResult.ok ? (
+        <div className="rounded-[24px] border border-red-200 bg-red-50 p-4">
           <div className="font-medium text-red-900">❌ Import failed</div>
-          <div className="text-sm text-red-800 mt-1">
+          <div className="mt-1 text-sm text-red-800">
             {importResult.error ?? "Unknown error"}
           </div>
         </div>
-      )}
+      ) : null}
 
-      <div className="rounded-2xl border p-4">
-        <div className="font-medium mb-3">Recent imports</div>
+      <SectionCard
+        eyebrow="History"
+        title="Recent imports"
+        description="Track recent validation/import jobs and their outcomes."
+      >
         <AdminTable
           rows={history}
           rowKey={(h) => h.id}
@@ -598,93 +801,104 @@ const emptyRequiredFields =
             { header: "Updated", cell: (h: any) => String(h.updatedProducts ?? "-") },
           ]}
         />
-      </div>
+      </SectionCard>
 
-      {confirmOpen && validation?.summary?.willCreate !== undefined && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-lg">
-            <div className="text-lg font-semibold">Confirm import</div>
-
-            <div className="text-sm mt-2 text-black/70">
-              You are about to import <b>{validation.summary.total}</b> products:
-              <ul className="list-disc pl-5 mt-2">
-                <li><b>{validation.summary.willCreate}</b> new</li>
-                <li><b>{validation.summary.willUpdate}</b> updates</li>
-              </ul>
-
-              {typeof validation.summary.willDeactivate === "number" && validation.summary.willDeactivate > 0 && (
-  <div className="mt-3 rounded-lg bg-red-50 p-3 text-red-700">
-    <div className="font-medium">Deactivation warning</div>
-    <div className="text-sm mt-1">
-      This import will deactivate <b>{validation.summary.willDeactivate}</b> currently active products that are NOT
-      in this file.
-    </div>
-  </div>
-)}
-
-{typeof validation.summary.duplicateSourceUrlsInFile === "number" &&
-  validation.summary.duplicateSourceUrlsInFile > 0 && (
-    <div className="mt-3 rounded-lg bg-yellow-50 p-3 text-yellow-900">
-      <div className="font-medium">Duplicate URL safety</div>
-      <div className="text-sm mt-1">
-        Your file contains <b>{validation.summary.duplicateSourceUrlsInFile}</b> duplicate source URLs.
-        We will use the <b>LAST occurrence</b> for each duplicate.
-      </div>
-
-      {Array.isArray(validation.summary.duplicateExamples) && validation.summary.duplicateExamples.length > 0 && (
-        <div className="mt-2 text-xs">
-          Examples:{" "}
-          {validation.summary.duplicateExamples.map((u: string) => (
-            <span
-              key={u}
-              className="mr-1 inline-flex items-center rounded-full border border-yellow-200 bg-white px-2 py-0.5 text-[11px]"
-            >
-              {u}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {typeof validation.summary.effectiveRowsAfterDeduping === "number" && (
-        <div className="mt-2 text-xs text-yellow-900/70">
-          Effective rows after dedupe: <b>{validation.summary.effectiveRowsAfterDeduping}</b>
-        </div>
-      )}
-    </div>
-  )}
-
-              {syncMissing && (
-                <div className="mt-3 rounded-lg bg-red-50 p-3 text-red-700">
-                  <div className="font-medium">Brand sync enabled</div>
-                  <div className="text-sm mt-1">
-                    Products from this brand that are NOT in the CSV will be set to inactive.
-                  </div>
-                </div>
-              )}
+      {confirmOpen && validation?.summary?.willCreate !== undefined ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-lg overflow-hidden rounded-[28px] border border-black/8 bg-white shadow-2xl">
+            <div className="border-b border-black/6 bg-[linear-gradient(180deg,#fff_0%,#fbf8f2_100%)] px-5 py-5">
+              <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-400">
+                Confirm import
+              </div>
+              <div className="mt-2 text-lg font-semibold tracking-tight text-neutral-950">
+                Ready to import catalogue
+              </div>
+              <div className="mt-1 text-sm text-neutral-500">
+                Please review the expected changes below before continuing.
+              </div>
             </div>
 
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                onClick={() => setConfirmOpen(false)}
-                className="rounded-lg border px-4 py-2 text-sm"
-                disabled={busy}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={async () => {
-                  setConfirmOpen(false);
-                  await runImport();
-                }}
-                className="rounded-lg bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
-                disabled={busy}
-              >
-                {busy ? "Working..." : "Confirm import"}
-              </button>
+            <div className="space-y-4 p-5">
+              <div className="text-sm text-neutral-700">
+                You are about to import <b>{validation.summary.total}</b> products:
+                <ul className="mt-2 list-disc space-y-1 pl-5">
+                  <li>
+                    <b>{validation.summary.willCreate}</b> new
+                  </li>
+                  <li>
+                    <b>{validation.summary.willUpdate}</b> updates
+                  </li>
+                </ul>
+              </div>
+
+              {typeof validation.summary.willDeactivate === "number" &&
+              validation.summary.willDeactivate > 0 ? (
+                <div className="rounded-[20px] border border-red-200 bg-red-50 p-3 text-red-700">
+                  <div className="font-medium">Deactivation warning</div>
+                  <div className="mt-1 text-sm">
+                    This import will deactivate <b>{validation.summary.willDeactivate}</b> currently active products that are not in this file.
+                  </div>
+                </div>
+              ) : null}
+
+              {typeof validation.summary.duplicateSourceUrlsInFile === "number" &&
+              validation.summary.duplicateSourceUrlsInFile > 0 ? (
+                <div className="rounded-[20px] border border-yellow-200 bg-yellow-50 p-3 text-yellow-900">
+                  <div className="font-medium">Duplicate URL safety</div>
+                  <div className="mt-1 text-sm">
+                    Your file contains <b>{validation.summary.duplicateSourceUrlsInFile}</b> duplicate source URLs.
+                    The import will use the <b>last occurrence</b> for each duplicate.
+                  </div>
+
+                  {Array.isArray(validation.summary.duplicateExamples) &&
+                  validation.summary.duplicateExamples.length > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                      {validation.summary.duplicateExamples.map((u: string) => (
+                        <span
+                          key={u}
+                          className="inline-flex items-center rounded-full border border-yellow-200 bg-white px-2.5 py-1 text-[11px]"
+                        >
+                          {u}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {typeof validation.summary.effectiveRowsAfterDeduping === "number" ? (
+                    <div className="mt-2 text-xs text-yellow-900/70">
+                      Effective rows after dedupe: <b>{validation.summary.effectiveRowsAfterDeduping}</b>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {syncMissing ? (
+                <div className="rounded-[20px] border border-red-200 bg-red-50 p-3 text-red-700">
+                  <div className="font-medium">Brand sync enabled</div>
+                  <div className="mt-1 text-sm">
+                    Products from this brand that are not in the file will be set to inactive.
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <SoftButton onClick={() => setConfirmOpen(false)} disabled={busy}>
+                  Cancel
+                </SoftButton>
+                <PrimaryButton
+                  onClick={async () => {
+                    setConfirmOpen(false);
+                    await runImport();
+                  }}
+                  disabled={busy}
+                >
+                  {busy ? "Working..." : "Confirm import"}
+                </PrimaryButton>
+              </div>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </main>
   );
 }

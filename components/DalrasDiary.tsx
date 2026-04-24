@@ -1,51 +1,65 @@
 import Image from "next/image";
 import Link from "next/link";
-import { SectionTitle } from "./SectionTitle";
-import type { DemoDiaryPost } from "../data/demo";
 
-export function DalrasDiary({ posts = [] }: { posts?: DemoDiaryPost[] }) {
+export type DiaryCardItem = {
+  id: string;
+  title: string;
+  excerpt?: string | null;
+  imageUrl?: string | null;
+  href: string;
+};
+
+export function DalrasDiary({ posts = [] }: { posts?: DiaryCardItem[] }) {
+  const post = posts[0];
+
+  if (!post) return null;
+
   return (
-    <section className="bg-[#eee]">
-      <div className="mx-auto w-full max-w-[1800px] px-8 py-10">
-        <div className="text-center mb-10">
-          <SectionTitle>The Veilora Club Diary</SectionTitle>
-          <p className="mt-0.5 font-display text-[28px] tracking-[0.02em] text-black/70">
-            Editorial notes on modest style, global brands, and timeless silhouettes.
-          </p>
-        </div>
+  <section className="bg-background">
+    <div className="mx-auto w-full max-w-[1800px] px-8 pb-14 pt-4">
+      <Link href={post.href} className="group block">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-14">
+          <div className="order-2 flex items-center lg:order-1 lg:col-span-5">
+  <div className="text-center lg:text-left">
+    <h2 className="font-display text-4xl leading-[0.98] tracking-tight text-black sm:text-5xl xl:text-6xl">
+      {post.title}
+    </h2>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-          {posts.slice(0, 3).map((p) => (
-            <Link
-              key={p.id}
-              href={p.href}
-              className="group bg-white/60 border border-black/10 overflow-hidden"
-            >
-              <div className="relative aspect-[4/3] bg-black/5">
+    <p className="mt-4 text-sm uppercase tracking-[0.18em] text-black/60">
+      Modesty Takes the Spotlight in a New Era of Style
+    </p>
+  </div>
+</div>
+
+          <div className="order-1 lg:order-2 lg:col-span-7">
+            <div className="relative aspect-[16/10] overflow-hidden bg-black/5">
+              {post.imageUrl ? (
                 <Image
-                  src={p.imageUrl}
-                  alt={p.title}
+                  src={post.imageUrl}
+                  alt={post.title}
                   fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                  className="object-cover transition-transform duration-700 group-hover:scale-[1.02]"
                 />
-              </div>
+              ) : null}
+            </div>
 
-              <div className="p-5">
-                <div className="font-display text-lg text-black">{p.title}</div>
-                {p.excerpt && (
-                  <div className="mt-2 text-sm text-black/70">{p.excerpt}</div>
-                )}
-                <div className="mt-4 text-xs tracking-widest text-black/70">
-                  READ MORE →
-                </div>
+            <div className="mt-6 max-w-2xl">
+              {post.excerpt ? (
+                <p className="text-base leading-7 text-black/75 sm:text-lg">
+                  {post.excerpt}
+                </p>
+              ) : null}
+
+              <div className="mt-5">
+                <span className="text-sm underline underline-offset-4">
+                  Read the article
+                </span>
               </div>
-            </Link>
-          ))}
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
-  );
+      </Link>
+    </div>
+  </section>
+);
 }
-
-
-     

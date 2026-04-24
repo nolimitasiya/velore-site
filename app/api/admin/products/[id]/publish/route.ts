@@ -21,12 +21,19 @@ export async function POST(
 
     const existing = await prisma.product.findUnique({
       where: { id },
-      select: { id: true, status: true },
-    });
+      select: { id: true, status: true, affiliateUrl: true },
+});
 
     if (!existing) {
       return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
     }
+
+    if (published && !existing.affiliateUrl?.trim()) {
+  return NextResponse.json(
+    { ok: false, error: "Add an affiliate link before publishing." },
+    { status: 400 }
+  );
+}
 
     if (published && existing.status !== ProductStatus.APPROVED) {
       return NextResponse.json(

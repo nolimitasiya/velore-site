@@ -102,6 +102,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     const stock = toInt(body.stock);
     const note = toStr(body.note);
     const productType = body.productType === undefined ? undefined : body.productType;
+    const categoryId = body.categoryId === undefined ? undefined : toStr(body.categoryId);
     const materialIds = Array.isArray(body.materialIds) ? body.materialIds : undefined;
     const occasionIds = Array.isArray(body.occasionIds) ? body.occasionIds : undefined;
     const colourIds = Array.isArray(body.colourIds) ? body.colourIds : undefined;
@@ -140,6 +141,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
           ...(stock !== null || body.stock === "" ? { stock } : {}),
           ...(note !== null || body.note === "" ? { note } : {}),
           ...(productType !== undefined ? { productType } : {}),
+          ...(categoryId !== undefined ? { categoryId } : {}),
           ...(badges !== undefined ? { badges } : {}),
           ...(tags !== undefined ? { tags } : {}),
           ...(worldwideShipping !== undefined ? { worldwideShipping } : {}),

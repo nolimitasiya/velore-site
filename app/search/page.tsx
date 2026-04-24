@@ -7,7 +7,7 @@ import SiteShell from "@/components/SiteShell";
 import ContinentFilters from "@/components/ContinentFilters";
 import { ProductGrid, type GridProduct } from "@/components/ProductGrid";
 import { prisma } from "@/lib/prisma";
-import { ProductType } from "@prisma/client";
+import { AffiliateStatus, BrandAccountStatus, ProductType } from "@prisma/client";
 import { sortSizes, formatSizeLabel } from "@/lib/sizing/order";
 import { parseStorefrontFilters } from "@/lib/storefront/parseFilters";
 import { getAvailableStyles } from "@/lib/storefront/getAvailableStyles";
@@ -77,20 +77,21 @@ export default async function SearchPage({
       : [{ publishedAt: "desc" as const }];
 
   const brandsRaw = await prisma.brand.findMany({
-    where: {
-      products: {
-        some: {
-          status: "APPROVED",
-          isActive: true,
-          publishedAt: { not: null },
-        },
+  where: {
+    accountStatus: BrandAccountStatus.ACTIVE,
+    affiliateStatus: AffiliateStatus.ACTIVE,
+    products: {
+      some: {
+        status: "APPROVED",
+        isActive: true,
+        publishedAt: { not: null },
       },
     },
-    orderBy: { name: "asc" },
-    select: { slug: true, name: true, baseCountryCode: true },
-    take: 1000,
-  });
-
+  },
+  orderBy: { name: "asc" },
+  select: { slug: true, name: true, baseCountryCode: true },
+  take: 1000,
+});
   const brandOptions: Opt[] = brandsRaw.map((b) => ({
     value: b.slug,
     label: b.name,

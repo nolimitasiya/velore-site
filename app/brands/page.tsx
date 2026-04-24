@@ -6,7 +6,6 @@ import { prisma } from "@/lib/prisma";
 import SiteShell from "@/components/SiteShell";
 import countries from "world-countries";
 import BrandFilters from "@/components/BrandFilters";
-import type { Region } from "@prisma/client";
 
 function regionLabel(value: string | null) {
   return value ? value.replaceAll("_", " ") : null;
@@ -90,10 +89,7 @@ export default async function BrandsPage({
 
     prisma.brand.findMany({
       where: {
-        OR: [
-          { baseCountryCode: { not: null } },
-          { baseRegion: { not: null } },
-        ],
+        OR: [{ baseCountryCode: { not: null } }, { baseRegion: { not: null } }],
       },
       select: {
         baseCountryCode: true,
@@ -115,88 +111,96 @@ export default async function BrandsPage({
     .sort((a, b) => a.label.localeCompare(b.label));
 
   const regionValues = Array.from(
-  new Set(availableMeta.map((b) => b.baseRegion).filter(Boolean))
-);
+    new Set(availableMeta.map((b) => b.baseRegion).filter(Boolean))
+  );
 
-const regionOptions = regionValues
-  .map((r) => {
-    const value = String(r);
-    return {
-      value,
-      label: regionLabel(value) || value.replaceAll("_", " "),
-    };
-  })
-  .sort((a, b) => a.label.localeCompare(b.label));
+  const regionOptions = regionValues
+    .map((r) => {
+      const value = String(r);
+      return {
+        value,
+        label: regionLabel(value) || value.replaceAll("_", " "),
+      };
+    })
+    .sort((a, b) => a.label.localeCompare(b.label));
 
   return (
     <SiteShell>
-      <main className="mx-auto w-full max-w-[1800px] px-8 py-10">
-        <div className="mb-8">
-          <h1 className="text-3xl font-semibold">Shop by Brands</h1>
-          <p className="mt-2 text-sm text-black/60">
-            Discover global modest fashion brands on Veilora Club.
-          </p>
-        </div>
+      <main className="min-h-screen w-full bg-white">
+        <div className="mx-auto w-full max-w-[1800px] px-8 py-10 space-y-8">
+          <header className="text-center">
+            <h1 className="font-display text-4xl md:text-5xl tracking-[0.12em]">
+              Shop by Brands
+            </h1>
+            <p className="mt-3 text-sm md:text-base text-black/60">
+              Discover global modest fashion brands.
+            </p>
+          </header>
 
-        <div className="mb-8 flex justify-end">
-          <BrandFilters
-            regions={regionOptions}
-            countries={countryOptions}
-          />
-        </div>
+          <div className="flex justify-center">
+            <BrandFilters
+              regions={regionOptions}
+              countries={countryOptions}
+            />
+          </div>
 
-        {brands.length === 0 ? (
-          <div className="text-sm text-black/60">No brands found for this selection.</div>
-        ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {brands.map((b) => (
-              <Link
-                key={b.id}
-                href={`/brands/${b.slug}`}
-                className="group block overflow-hidden rounded-[24px]"
-              >
-                <div className="relative h-[160px] overflow-hidden rounded-[24px] bg-[#d8d0c5]">
-                  <div
-  className="absolute inset-0 bg-cover transition-transform duration-500 group-hover:scale-[1.03]"
-  style={
-    b.coverImageUrl
-      ? {
-          backgroundImage: `url("${b.coverImageUrl}")`,
-          backgroundSize: "cover",
-          backgroundPosition: `${b.coverImageFocalX ?? 50}% ${b.coverImageFocalY ?? 50}%`,
-        }
-      : undefined
-  }
-/>
+          {brands.length === 0 ? (
+            <div className="rounded-2xl border border-black/10 bg-white p-10 text-center text-black/60">
+              No brands found for this selection.
+            </div>
+          ) : (
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {brands.map((b) => (
+                <Link
+                  key={b.id}
+                  href={`/brands/${b.slug}`}
+                  className="group block overflow-hidden rounded-[24px]"
+                >
+                  <div className="relative h-[190px] overflow-hidden rounded-[24px] bg-[#d8d0c5]">
+                    <div
+                      className="absolute inset-0 bg-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                      style={
+                        b.coverImageUrl
+                          ? {
+                              backgroundImage: `url("${b.coverImageUrl}")`,
+                              backgroundSize: "cover",
+                              backgroundPosition: `${b.coverImageFocalX ?? 50}% ${
+                                b.coverImageFocalY ?? 50
+                              }%`,
+                            }
+                          : undefined
+                      }
+                    />
 
-                  {!b.coverImageUrl && (
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#c8bbab] via-[#d8d0c5] to-[#b7aa98]" />
-                  )}
+                    {!b.coverImageUrl && (
+                      <div className="absolute inset-0 bg-gradient-to-br from-[#c8bbab] via-[#d8d0c5] to-[#b7aa98]" />
+                    )}
 
-                  <div className="absolute inset-0 bg-black/30" />
+                    <div className="absolute inset-0 bg-black/30" />
 
-                  <div className="absolute inset-0 flex items-center justify-center px-5 text-center">
-                    <div>
-                      <div className="text-xl font-semibold tracking-[0.14em] text-white md:text-2xl">
-                        {b.name}
-                      </div>
+                    <div className="absolute inset-0 flex items-center justify-center px-5 text-center">
+                      <div>
+                        <div className="text-xl font-semibold tracking-[0.14em] text-white md:text-2xl">
+                          {b.name}
+                        </div>
 
-                      <div className="mt-3 text-[11px] uppercase tracking-[0.18em] text-white/85">
-                        {[regionLabel(b.baseRegion), b.baseCountryCode, b.baseCity]
-                          .filter(Boolean)
-                          .join(" • ")}
-                      </div>
+                        <div className="mt-3 text-[11px] uppercase tracking-[0.18em] text-white/85">
+                          {[regionLabel(b.baseRegion), b.baseCountryCode, b.baseCity]
+                            .filter(Boolean)
+                            .join(" • ")}
+                        </div>
 
-                      <div className="mt-2 text-xs text-white/90">
-                        {b._count.products} product{b._count.products === 1 ? "" : "s"}
+                        <div className="mt-2 text-xs text-white/90">
+                          {b._count.products} product{b._count.products === 1 ? "" : "s"}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       </main>
     </SiteShell>
   );

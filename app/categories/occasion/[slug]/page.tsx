@@ -5,6 +5,7 @@ export const fetchCache = "force-no-store";
 import { notFound } from "next/navigation";
 import SiteShell from "@/components/SiteShell";
 import ContinentFilters from "@/components/ContinentFilters";
+import StorefrontPagination from "@/components/StorefrontPagination";
 import { ProductGrid, type GridProduct } from "@/components/ProductGrid";
 import { prisma } from "@/lib/prisma";
 import { ProductType } from "@prisma/client";
@@ -13,12 +14,13 @@ import { parseStorefrontFilters } from "@/lib/storefront/parseFilters";
 import { getAvailableStyles } from "@/lib/storefront/getAvailableStyles";
 import { buildStorefrontWhere } from "@/lib/storefront/buildStorefrontWhere";
 import { countryNameFromIso2 } from "@/lib/geo/countries";
+import { getStorefrontPaginationState } from "@/lib/storefront/pagination";
 
 type Opt = { value: string; label: string };
 
-const ALLOWED = new Set(["wedding", "eid", "formal"]);
-
 function titleCaseLabel(s: string) {
+  if (s === "COATS_JACKETS") return "Coats & Jackets";
+
   return s
     .toLowerCase()
     .replaceAll("_", " ")
@@ -36,9 +38,7 @@ export default async function OccasionSlugPage({
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { slug } = await params;
-  const key = slug.toLowerCase();
-
-  if (!ALLOWED.has(key)) return notFound();
+  const key = String(slug).trim().toLowerCase();
 
   const occasion = await prisma.occasion.findUnique({
     where: { slug: key },
@@ -50,6 +50,9 @@ export default async function OccasionSlugPage({
   const sp = (await searchParams) ?? {};
   const filters = parseStorefrontFilters(sp);
   const { types, sort } = filters;
+
+  const pagination = getStorefrontPaginationState(sp);
+  const { currentPage, isExpandedPageOne, take } = pagination;
 
   const orderBy =
     sort === "price_asc"
@@ -67,9 +70,7 @@ export default async function OccasionSlugPage({
           publishedAt: { not: null },
           productOccasions: {
             some: {
-              occasion: {
-                slug: key,
-              },
+              occasionId: occasion.id,
             },
           },
         },
@@ -127,13 +128,24 @@ export default async function OccasionSlugPage({
 
   const where = buildStorefrontWhere({
     filters,
-    occasionSlug: key,
+    occasionSlug: occasion.slug,
   });
+
+  const totalCount = await prisma.product.count({ where });
+
+  let skip = 0;
+
+  if (currentPage === 1) {
+    skip = 0;
+  } else {
+    skip = 48 + (currentPage - 2) * 24;
+  }
 
   const products = await prisma.product.findMany({
     where,
     orderBy,
-    take: 120,
+    skip,
+    take,
     select: {
       id: true,
       title: true,
@@ -141,7 +153,11 @@ export default async function OccasionSlugPage({
       currency: true,
       badges: true,
       brand: { select: { name: true } },
-      images: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true } },
+      images: {
+        orderBy: { sortOrder: "asc" },
+        take: 1,
+        select: { url: true },
+      },
     },
   });
 
@@ -153,7 +169,7 @@ export default async function OccasionSlugPage({
     price: p.price ? p.price.toString() : null,
     currency: String(p.currency),
     buyUrl: `/out/${p.id}`,
-    badges: (p.badges ?? []) as any,
+    badges: (p.badges ?? []) as string[],
   }));
 
   return (
@@ -164,7 +180,6 @@ export default async function OccasionSlugPage({
             <h1 className="font-display text-4xl md:text-5xl tracking-[0.12em]">
               {occasion.name}
             </h1>
-            
           </header>
 
           <ContinentFilters
@@ -181,7 +196,16 @@ export default async function OccasionSlugPage({
               No items match your filters.
             </div>
           ) : (
-            <ProductGrid products={mapped} />
+            <section id="products">
+              <ProductGrid products={mapped} />
+              <StorefrontPagination
+                pathname={`/categories/occasion/${occasion.slug}`}
+                searchParams={sp}
+                totalItems={totalCount}
+                currentPage={currentPage}
+                isExpandedPageOne={isExpandedPageOne}
+              />
+            </section>
           )}
         </div>
       </main>

@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 
-const COOKIE_KEY = "dalra_cookie_consent";
+const COOKIE_KEY = "vc_cookie_consent";
 const PREFS_HANDLED_KEY = "vc_prefs_modal_handled";
 const NEWSLETTER_HANDLED_KEY = "vc_newsletter_modal_handled";
 
@@ -66,8 +66,9 @@ export default function CookieBanner() {
 
             <p className="mt-2 text-sm leading-6 text-black/65">
               Veilora Club uses essential cookies to keep the website working
-              smoothly. You can also choose whether to allow optional cookies to
-              help us improve the experience.
+              properly. With your consent, we may also use cookies and similar
+              technologies to understand browsing behaviour, improve the
+              platform, and measure product interest and performance.
             </p>
           </div>
 

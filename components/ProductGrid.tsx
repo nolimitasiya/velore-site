@@ -6,15 +6,21 @@ export type GridProduct = {
   title: string;
   imageUrl: string | null;
   brandName?: string | null;
-
   price: string | null;
   currency: string;
-
-  // keep optional for backwards compatibility, but we won't rely on it anymore
   priceLabel?: string | null;
-
   buyUrl: string | null;
   badges?: string[];
+
+  analytics?: {
+    sourcePage?: "HOME" | "SEARCH" | "BRAND";
+    sectionId?: string | null;
+    sectionKey?: string | null;
+    position?: number | null;
+    pageNumber?: number | null;
+    isExpandedPageOne?: boolean | null;
+    contextType?: string | null;
+  };
 };
 
 function BadgePill({ children }: { children: React.ReactNode }) {
@@ -25,11 +31,37 @@ function BadgePill({ children }: { children: React.ReactNode }) {
   );
 }
 
+function buildTrackedUrl(product: GridProduct, fallbackIndex: number) {
+  const params = new URLSearchParams();
+
+  const sourcePage = product.analytics?.sourcePage ?? "SEARCH";
+  const sectionId = product.analytics?.sectionId ?? null;
+  const sectionKey = product.analytics?.sectionKey ?? "grid";
+  const position = product.analytics?.position ?? fallbackIndex + 1;
+  const pageNumber = product.analytics?.pageNumber ?? 1;
+  const isExpandedPageOne = product.analytics?.isExpandedPageOne ?? false;
+  const contextType = product.analytics?.contextType ?? "GRID";
+
+  params.set("src", sourcePage);
+  params.set("skey", sectionKey);
+  params.set("pos", String(position));
+  params.set("page", String(pageNumber));
+  params.set("expanded", isExpandedPageOne ? "1" : "0");
+  params.set("ctx", contextType);
+
+  if (sectionId) {
+    params.set("sid", sectionId);
+  }
+
+  return `/out/${product.id}?${params.toString()}`;
+}
+
 export function ProductGrid({ products }: { products: GridProduct[] }) {
   return (
     <div className="grid gap-5 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4">
-      {products.map((p) => {
-        const href = p.buyUrl?.trim() || null;
+
+      {products.map((p, index) => {
+        const href = buildTrackedUrl(p, index);
 
         return (
           <div
@@ -63,12 +95,11 @@ export function ProductGrid({ products }: { products: GridProduct[] }) {
                 </div>
               )}
 
-              {!!p.badges?.length && (
-                <div className="absolute left-3 top-3 flex flex-col gap-2">
-                  {p.badges.includes("sale") && <BadgePill>SALE</BadgePill>}
-                  {p.badges.includes("next_day") && <BadgePill>NEXT DAY</BadgePill>}
-                </div>
-              )}
+              {p.badges?.includes("sale") ? (
+  <div className="absolute left-3 top-3 flex flex-col gap-2">
+    <BadgePill>SALE</BadgePill>
+  </div>
+) : null}
             </div>
 
             <div className="p-4">

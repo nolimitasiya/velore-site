@@ -34,22 +34,56 @@ function toStr(v: any) {
   return s.length ? s : "";
 }
 
+function SectionCard({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={[
+        "rounded-3xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]",
+        className,
+      ].join(" ")}
+    >
+      {children}
+    </div>
+  );
+}
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">
+      {children}
+    </label>
+  );
+}
+
+function statusPill(status: "Active" | "Expired" | "Used/Revoked") {
+  if (status === "Active") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  }
+  if (status === "Expired") {
+    return "border-amber-200 bg-amber-50 text-amber-800";
+  }
+  return "border-black/10 bg-neutral-100 text-neutral-700";
+}
+
 export default function AdminBrandInvitesPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // form
   const [companyName, setCompanyName] = useState("");
   const [companySlug, setCompanySlug] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"owner" | "editor" | "viewer">("owner");
 
-  // ✅ location
   const [countryCode, setCountryCode] = useState("GB");
   const [cityChoice, setCityChoice] = useState("Other");
   const [cityOther, setCityOther] = useState("");
 
-  // results
   const [onboardingUrl, setOnboardingUrl] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
 
@@ -75,6 +109,27 @@ export default function AdminBrandInvitesPage() {
     if (cityChoice === "Other") return toStr(cityOther);
     return toStr(cityChoice);
   }, [cityChoice, cityOther]);
+
+  const inviteStats = useMemo(() => {
+    const now = Date.now();
+
+    const active = invites.filter(
+      (row) => !row.usedAt && new Date(row.expiresAt).getTime() >= now
+    ).length;
+
+    const expired = invites.filter(
+      (row) => !row.usedAt && new Date(row.expiresAt).getTime() < now
+    ).length;
+
+    const usedOrRevoked = invites.filter((row) => Boolean(row.usedAt)).length;
+
+    return {
+      total: invites.length,
+      active,
+      expired,
+      usedOrRevoked,
+    };
+  }, [invites]);
 
   function onChangeCountry(next: string) {
     const cc = String(next || "").toUpperCase();
@@ -113,12 +168,9 @@ export default function AdminBrandInvitesPage() {
 
     const payload = {
       companyName: toStr(companyName),
-      // ✅ slug optional — server can auto-generate if blank
       companySlug: toStr(companySlug),
       email: toStr(email).toLowerCase(),
       role,
-
-      // ✅ location sent to server
       countryCode: String(countryCode || "").toUpperCase(),
       city: resolvedCity || null,
     };
@@ -175,7 +227,6 @@ export default function AdminBrandInvitesPage() {
     setOnboardingUrl(null);
     setExpiresAt(null);
 
-    // Resend by generating a fresh invite (same effect)
     const r = await fetch("/api/admin/brand-invites/create", {
       method: "POST",
       headers: {
@@ -187,8 +238,6 @@ export default function AdminBrandInvitesPage() {
         companySlug: row.brand.slug,
         email: row.email,
         role,
-
-        // keep currently selected location (or you can ignore)
         countryCode: String(countryCode || "").toUpperCase(),
         city: resolvedCity || null,
       }),
@@ -218,182 +267,276 @@ export default function AdminBrandInvitesPage() {
   }, [companyName, companySlug]);
 
   return (
-    <main className="max-w-5xl mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Brand Invites</h1>
-      </div>
+    <main className="min-h-screen bg-neutral-50/70">
+      <div className="mx-auto max-w-[1400px] space-y-6 p-6 md:p-8">
+        <section className="rounded-[28px] border border-black/10 bg-white px-6 py-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)] md:px-8">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+            <div className="space-y-2">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
+                Admin onboarding
+              </div>
+              <h1 className="text-3xl font-semibold tracking-tight text-black md:text-4xl">
+                Brand invites
+              </h1>
+              <p className="max-w-3xl text-sm leading-6 text-neutral-500">
+                Create invite links for brands, prefill their onboarding setup, and manage
+                recent invitations from one clean control panel.
+              </p>
+            </div>
 
-      <div className="rounded-2xl border p-4 space-y-3">
-        <div className="grid gap-2 sm:grid-cols-2">
-          <input
-            className="rounded-lg border p-2 text-sm"
-            placeholder="Company name (e.g. Batul London)"
-            value={companyName}
-            onChange={(e) => setCompanyName(e.target.value)}
-          />
-
-          <div className="space-y-1">
-            <input
-              className="rounded-lg border p-2 text-sm w-full"
-              placeholder="Company slug (optional, e.g. batul-london)"
-              value={companySlug}
-              onChange={(e) => setCompanySlug(e.target.value)}
-            />
-            <div className="text-xs text-black/60">
-              Slug preview: <span className="font-medium">{slugPreview || "—"}</span>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-2xl border border-black/10 bg-neutral-50 px-4 py-3">
+                <div className="text-xs text-neutral-500">Total</div>
+                <div className="mt-1 text-xl font-semibold text-black">{inviteStats.total}</div>
+              </div>
+              <div className="rounded-2xl border border-black/10 bg-neutral-50 px-4 py-3">
+                <div className="text-xs text-neutral-500">Active</div>
+                <div className="mt-1 text-xl font-semibold text-black">{inviteStats.active}</div>
+              </div>
+              <div className="rounded-2xl border border-black/10 bg-neutral-50 px-4 py-3">
+                <div className="text-xs text-neutral-500">Expired</div>
+                <div className="mt-1 text-xl font-semibold text-black">{inviteStats.expired}</div>
+              </div>
+              <div className="rounded-2xl border border-black/10 bg-neutral-50 px-4 py-3">
+                <div className="text-xs text-neutral-500">Used / revoked</div>
+                <div className="mt-1 text-xl font-semibold text-black">
+                  {inviteStats.usedOrRevoked}
+                </div>
+              </div>
             </div>
           </div>
+        </section>
 
-          <input
-            className="rounded-lg border p-2 text-sm sm:col-span-2"
-            placeholder="Invite email (brand owner)"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-
-          {/* ✅ Country */}
-          <select
-            className="rounded-lg border p-2 text-sm bg-white"
-            value={countryCode}
-            onChange={(e) => onChangeCountry(e.target.value)}
-            aria-label="Country"
-          >
-            {countryOptions.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.name} ({c.code})
-              </option>
-            ))}
-          </select>
-
-          {/* ✅ City */}
-          <div className="space-y-2">
-            <select
-              className="rounded-lg border p-2 text-sm bg-white w-full"
-              value={cityChoice}
-              onChange={(e) => setCityChoice(e.target.value)}
-              aria-label="City"
-            >
-              {cityDropdownOptions.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-
-            {cityChoice === "Other" && (
-              <input
-                className="rounded-lg border p-2 text-sm w-full"
-                placeholder="Type city"
-                value={cityOther}
-                onChange={(e) => setCityOther(e.target.value)}
-              />
-            )}
-          </div>
-
-          <select
-            className="rounded-lg border p-2 text-sm bg-white"
-            value={role}
-            onChange={(e) => setRole(e.target.value as any)}
-            aria-label="Role"
-          >
-            <option value="owner">Owner</option>
-            <option value="editor">Editor</option>
-            <option value="viewer">Viewer</option>
-          </select>
-
-          <button
-            className="rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-50"
-            disabled={busy || !toStr(companyName) || !toStr(email) || !toStr(resolvedCity)}
-            onClick={createInvite}
-          >
-            {busy ? "Generating..." : "Generate invite link"}
-          </button>
-        </div>
-
-        {error && <div className="text-sm text-red-700">{error}</div>}
-
-        {onboardingUrl && (
-          <div className="rounded-xl border p-3 space-y-2">
-            <div className="text-sm font-medium">Onboarding link</div>
-            <div className="text-xs break-all text-black/70">{onboardingUrl}</div>
-            {expiresAt && (
-              <div className="text-xs text-black/60">
-                Expires: {new Date(expiresAt).toLocaleString()}
+        <SectionCard className="p-5 md:p-6">
+          <div className="space-y-5">
+            <div>
+              <div className="text-lg font-semibold text-black">Create invite</div>
+              <div className="mt-1 text-sm text-neutral-500">
+                Generate a new onboarding link for a brand owner, editor, or viewer.
               </div>
-            )}
-            <div className="flex gap-2">
-              <button className="rounded-lg border px-3 py-1 text-xs" onClick={() => copy(onboardingUrl)}>
-                Copy link
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div>
+                <FieldLabel>Company name</FieldLabel>
+                <input
+                  className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-neutral-400 focus:border-black/20 focus:ring-4 focus:ring-black/5"
+                  placeholder="Company name (e.g. Batul London)"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <FieldLabel>Company slug</FieldLabel>
+                <input
+                  className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-neutral-400 focus:border-black/20 focus:ring-4 focus:ring-black/5"
+                  placeholder="Company slug (optional, e.g. batul-london)"
+                  value={companySlug}
+                  onChange={(e) => setCompanySlug(e.target.value)}
+                />
+                <div className="mt-2 text-xs text-neutral-500">
+                  Slug preview:{" "}
+                  <span className="font-medium text-black">{slugPreview || "—"}</span>
+                </div>
+              </div>
+
+              <div className="lg:col-span-2">
+                <FieldLabel>Invite email</FieldLabel>
+                <input
+                  className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-neutral-400 focus:border-black/20 focus:ring-4 focus:ring-black/5"
+                  placeholder="Invite email (brand owner)"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <FieldLabel>Country</FieldLabel>
+                <select
+                  className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-black/20 focus:ring-4 focus:ring-black/5"
+                  value={countryCode}
+                  onChange={(e) => onChangeCountry(e.target.value)}
+                  aria-label="Country"
+                >
+                  {countryOptions.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.name} ({c.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <FieldLabel>Role</FieldLabel>
+                <select
+                  className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-black/20 focus:ring-4 focus:ring-black/5"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as "owner" | "editor" | "viewer")}
+                  aria-label="Role"
+                >
+                  <option value="owner">Owner</option>
+                  <option value="editor">Editor</option>
+                  <option value="viewer">Viewer</option>
+                </select>
+              </div>
+
+              <div>
+                <FieldLabel>City</FieldLabel>
+                <select
+                  className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-black/20 focus:ring-4 focus:ring-black/5"
+                  value={cityChoice}
+                  onChange={(e) => setCityChoice(e.target.value)}
+                  aria-label="City"
+                >
+                  {cityDropdownOptions.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <FieldLabel>Custom city</FieldLabel>
+                <input
+                  className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-neutral-400 focus:border-black/20 focus:ring-4 focus:ring-black/5 disabled:bg-neutral-50 disabled:text-neutral-400"
+                  placeholder="Type city"
+                  value={cityOther}
+                  onChange={(e) => setCityOther(e.target.value)}
+                  disabled={cityChoice !== "Other"}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                className="inline-flex items-center justify-center rounded-2xl bg-black px-4 py-3 text-sm font-medium text-white transition hover:bg-black/90 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={busy || !toStr(companyName) || !toStr(email) || !toStr(resolvedCity)}
+                onClick={createInvite}
+              >
+                {busy ? "Generating..." : "Generate invite link"}
               </button>
             </div>
+
+            {error ? (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
+            ) : null}
+
+            {onboardingUrl ? (
+              <div className="rounded-3xl border border-emerald-200 bg-emerald-50/70 p-4 space-y-3">
+                <div>
+                  <div className="text-sm font-semibold text-emerald-900">Onboarding link ready</div>
+                  <div className="mt-1 text-xs text-emerald-800/80">
+                    Share this link with the brand so they can complete onboarding.
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-xs break-all text-neutral-700">
+                  {onboardingUrl}
+                </div>
+
+                {expiresAt ? (
+                  <div className="text-xs text-neutral-600">
+                    Expires: {new Date(expiresAt).toLocaleString()}
+                  </div>
+                ) : null}
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    className="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition hover:bg-black/[0.03]"
+                    onClick={() => copy(onboardingUrl)}
+                  >
+                    Copy link
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
-        )}
-      </div>
+        </SectionCard>
 
-      <div className="rounded-2xl border p-4 space-y-3">
-        <h2 className="text-lg font-semibold">Recent invites</h2>
+        <SectionCard className="overflow-hidden">
+          <div className="border-b border-black/10 px-5 py-4">
+            <div className="text-lg font-semibold text-black">Recent invites</div>
+            <div className="mt-1 text-sm text-neutral-500">
+              Review active, expired, and used invite links and regenerate them when needed.
+            </div>
+          </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="text-left text-black/60">
-              <tr>
-                <th className="py-2 pr-4">Company</th>
-                <th className="py-2 pr-4">Email</th>
-                <th className="py-2 pr-4">Status</th>
-                <th className="py-2 pr-4">Expires</th>
-                <th className="py-2 pr-4">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invites.map((row) => {
-                const expired = new Date(row.expiresAt).getTime() < Date.now();
-                const status = row.usedAt ? "Used/Revoked" : expired ? "Expired" : "Active";
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-neutral-50 text-left text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">
+                <tr>
+                  <th className="px-4 py-3">Company</th>
+                  <th className="px-4 py-3">Email</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Expires</th>
+                  <th className="px-4 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invites.map((row) => {
+                  const expired = new Date(row.expiresAt).getTime() < Date.now();
+                  const status = row.usedAt ? "Used/Revoked" : expired ? "Expired" : "Active";
 
-                return (
-                  <tr key={row.id} className="border-t">
-                    <td className="py-2 pr-4">
-                      <div className="font-medium">{row.brand.name}</div>
-                      <div className="text-xs text-black/60">{row.brand.slug}</div>
-                    </td>
-                    <td className="py-2 pr-4">{row.email}</td>
-                    <td className="py-2 pr-4">{status}</td>
-                    <td className="py-2 pr-4">{new Date(row.expiresAt).toLocaleString()}</td>
-                    <td className="py-2 pr-4">
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          className="rounded-lg border px-3 py-1 text-xs disabled:opacity-50"
-                          disabled={busy}
-                          onClick={() => resendInvite(row)}
+                  return (
+                    <tr key={row.id} className="border-t border-black/6 align-top">
+                      <td className="px-4 py-4">
+                        <div className="font-medium text-black">{row.brand.name}</div>
+                        <div className="mt-1 text-xs text-neutral-500">{row.brand.slug}</div>
+                      </td>
+                      <td className="px-4 py-4 text-neutral-700">{row.email}</td>
+                      <td className="px-4 py-4">
+                        <span
+                          className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-medium ${statusPill(
+                            status
+                          )}`}
                         >
-                          Resend
-                        </button>
-                        <button
-                          className="rounded-lg border px-3 py-1 text-xs disabled:opacity-50"
-                          disabled={busy || Boolean(row.usedAt)}
-                          onClick={() => revokeInvite(row.id)}
-                        >
-                          Revoke
-                        </button>
-                      </div>
+                          {status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-neutral-700">
+                        {new Date(row.expiresAt).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            className="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition hover:bg-black/[0.03] disabled:cursor-not-allowed disabled:opacity-50"
+                            disabled={busy}
+                            onClick={() => resendInvite(row)}
+                          >
+                            Resend
+                          </button>
+                          <button
+                            className="inline-flex items-center justify-center rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            disabled={busy || Boolean(row.usedAt)}
+                            onClick={() => revokeInvite(row.id)}
+                          >
+                            Revoke
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+
+                {invites.length === 0 && (
+                  <tr>
+                    <td className="px-4 py-8 text-sm text-neutral-500" colSpan={5}>
+                      No invites yet.
                     </td>
                   </tr>
-                );
-              })}
+                )}
+              </tbody>
+            </table>
+          </div>
 
-              {invites.length === 0 && (
-                <tr>
-                  <td className="py-3 text-black/60" colSpan={5}>
-                    No invites yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="text-xs text-black/60">
-          Tip: “Resend” generates a fresh onboarding link and you can paste it into your email.
-        </div>
+          <div className="border-t border-black/10 px-5 py-4 text-xs text-neutral-500">
+            Tip: “Resend” generates a fresh onboarding link that you can paste directly into your email.
+          </div>
+        </SectionCard>
       </div>
     </main>
   );

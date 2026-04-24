@@ -1,4 +1,3 @@
-// C:\Users\Asiya\projects\dalra\app\brand\(authed)\products\[id]\ProductEditClient.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState, useRef } from "react";
@@ -6,6 +5,115 @@ import countries from "world-countries";
 import { BRAND_CURRENCY_OPTIONS } from "@/lib/currency/codes";
 import { PRODUCT_TYPES } from "@/lib/taxonomy/productTypes";
 
+function SectionCard({
+  eyebrow,
+  title,
+  description,
+  actions,
+  children,
+}: {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-[28px] border border-black/8 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+      <div className="border-b border-black/6 bg-[linear-gradient(180deg,#fff_0%,#fbf8f2_100%)] px-5 py-5 md:px-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="max-w-2xl">
+            {eyebrow ? (
+              <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-400">
+                {eyebrow}
+              </div>
+            ) : null}
+            <h2 className="mt-2 text-xl font-semibold tracking-tight text-neutral-950">
+              {title}
+            </h2>
+            {description ? (
+              <p className="mt-1 text-sm text-neutral-500">{description}</p>
+            ) : null}
+          </div>
+
+          {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+        </div>
+      </div>
+
+      <div className="p-5 md:p-6">{children}</div>
+    </section>
+  );
+}
+
+function SoftButton({
+  children,
+  onClick,
+  disabled,
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="rounded-full border border-black/10 bg-white px-3.5 py-1.5 text-xs text-neutral-700 transition hover:bg-black/[0.03] disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {children}
+    </button>
+  );
+}
+
+function PrimaryButton({
+  children,
+  onClick,
+  disabled,
+  className = "",
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={[
+        "rounded-full bg-black px-4 py-2 text-sm text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50",
+        className,
+      ].join(" ")}
+    >
+      {children}
+    </button>
+  );
+}
+
+function FieldLabel({
+  children,
+  hint,
+}: {
+  children: React.ReactNode;
+  hint?: string;
+}) {
+  return (
+    <div className="space-y-1">
+      <div className="text-sm font-medium text-neutral-900">{children}</div>
+      {hint ? <div className="text-xs text-neutral-500">{hint}</div> : null}
+    </div>
+  );
+}
+
+function InputShell({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <div className="rounded-2xl border border-black/8 bg-[#fcfbf8] p-1.5">{children}</div>;
+}
 
 function RequestTaxonomyModal({
   open,
@@ -47,13 +155,13 @@ function RequestTaxonomyModal({
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-  type,
-  name,
-  reason: reason.trim() || null,
-  ...((type === "MATERIAL" || type === "STYLE")
-  ? { productTypes: contextProductType ? [contextProductType] : [] }
-  : {}),
-}),
+          type,
+          name,
+          reason: reason.trim() || null,
+          ...((type === "MATERIAL" || type === "STYLE")
+            ? { productTypes: contextProductType ? [contextProductType] : [] }
+            : {}),
+        }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.ok) {
@@ -62,68 +170,96 @@ function RequestTaxonomyModal({
       }
       setOkMsg("Request submitted ✅ (pending review)");
       onSubmitted();
-      setTimeout(() => onClose(), 600);
+      setTimeout(() => onClose(), 700);
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-xl">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-base font-semibold">Request new taxonomy</div>
-            <div className="text-xs text-black/60">Submit an item you think is missing.</div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]">
+      <div className="w-full max-w-lg overflow-hidden rounded-[28px] border border-black/8 bg-white shadow-2xl">
+        <div className="border-b border-black/6 bg-[linear-gradient(180deg,#fff_0%,#fbf8f2_100%)] px-5 py-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-400">
+                Taxonomy request
+              </div>
+              <div className="mt-2 text-lg font-semibold tracking-tight text-neutral-950">
+                Request new taxonomy
+              </div>
+              <div className="mt-1 text-sm text-neutral-500">
+                Submit a missing taxonomy item for admin review.
+              </div>
+            </div>
+
+            <button
+              onClick={onClose}
+              className="rounded-full border border-black/10 bg-white px-3 py-1 text-sm text-neutral-600 hover:bg-black/[0.03]"
+            >
+              ✕
+            </button>
           </div>
-          <button onClick={onClose} className="text-sm text-black/60 hover:text-black">
-            ✕
-          </button>
         </div>
 
-        <div className="mt-4 space-y-3">
-          <label className="space-y-1 block">
-            <div className="text-sm font-medium">Type</div>
-            <select
-              className="w-full rounded-lg border px-3 py-2 text-sm"
-              value={type}
-              onChange={(e) => setType(e.target.value as any)}
-            >
-              <option value="MATERIAL">Material</option>
-              <option value="COLOUR">Colour</option>
-              <option value="SIZE">Size</option>
-              <option value="STYLE">Style</option>
-            </select>
+        <div className="space-y-4 p-5">
+          <label className="block space-y-2">
+            <FieldLabel>Type</FieldLabel>
+            <InputShell>
+              <select
+                className="w-full rounded-xl border-0 bg-transparent px-3 py-2.5 text-sm outline-none"
+                value={type}
+                onChange={(e) => setType(e.target.value as any)}
+              >
+                <option value="MATERIAL">Material</option>
+                <option value="COLOUR">Colour</option>
+                <option value="SIZE">Size</option>
+                <option value="STYLE">Style</option>
+              </select>
+            </InputShell>
           </label>
 
-          <label className="space-y-1 block">
-            <div className="text-sm font-medium">Name</div>
-            <input
-              className="w-full rounded-lg border px-3 py-2 text-sm"
-              placeholder="e.g. Crinkle chiffon"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
+          <label className="block space-y-2">
+            <FieldLabel>Name</FieldLabel>
+            <InputShell>
+              <input
+                className="w-full rounded-xl border-0 bg-transparent px-3 py-2.5 text-sm outline-none"
+                placeholder="e.g. Crinkle chiffon"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </InputShell>
           </label>
 
-          <label className="space-y-1 block">
-            <div className="text-sm font-medium">Reason (optional)</div>
-            <input
-              className="w-full rounded-lg border px-3 py-2 text-sm"
-              placeholder="e.g. Common in hijabs"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-            />
+          <label className="block space-y-2">
+            <FieldLabel hint="Optional context for admin review">Reason</FieldLabel>
+            <InputShell>
+              <input
+                className="w-full rounded-xl border-0 bg-transparent px-3 py-2.5 text-sm outline-none"
+                placeholder="e.g. Common in hijabs"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              />
+            </InputShell>
           </label>
 
-          {err && <div className="rounded-xl bg-red-50 p-2 text-sm text-red-700">{err}</div>}
-          {okMsg && <div className="rounded-xl bg-emerald-50 p-2 text-sm text-emerald-800">{okMsg}</div>}
+          {err ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {err}
+            </div>
+          ) : null}
+
+          {okMsg ? (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+              {okMsg}
+            </div>
+          ) : null}
 
           <div className="flex gap-2 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-lg border px-4 py-2 text-sm hover:bg-black/5"
+              className="flex-1 rounded-full border border-black/10 bg-white px-4 py-2.5 text-sm hover:bg-black/[0.03]"
               disabled={busy}
             >
               Cancel
@@ -131,7 +267,7 @@ function RequestTaxonomyModal({
             <button
               type="button"
               onClick={submit}
-              className="flex-1 rounded-lg bg-black px-4 py-2 text-sm text-white hover:opacity-90 disabled:opacity-60"
+              className="flex-1 rounded-full bg-black px-4 py-2.5 text-sm text-white hover:opacity-90 disabled:opacity-60"
               disabled={busy || name.trim().length < 2}
             >
               {busy ? "Submitting..." : "Submit request"}
@@ -158,6 +294,7 @@ type Product = {
   stock: number | null;
   note: string | null;
   productType: string | null;
+  categoryId: string | null;
   status: Status;
   worldwideShipping: boolean;
   shippingCountries: { countryCode: string }[];
@@ -165,14 +302,12 @@ type Product = {
   images: { url: string; sortOrder: number }[];
   publishedAt: string | null;
 
-  // relations coming from GET
   productMaterials?: { material: TaxItem }[];
   productOccasions?: { occasion: TaxItem }[];
   productColours?: { colour: TaxItem }[];
   productSizes?: { size: TaxItem }[];
   productStyles?: { style: TaxItem }[];
 };
-
 
 type BrandTaxRequest = {
   id: string;
@@ -185,10 +320,18 @@ type BrandTaxRequest = {
   reviewNote: string | null;
 };
 
-const BADGES = [
-  "sale",
-  "next_day",
-] as const;
+const BADGES = ["sale"] as const;
+
+const ACCESSORY_COLOUR_SLUGS = [
+  "gold",
+  "silver",
+  "rose-gold",
+  "platinum",
+  "pearl",
+  "black",
+];
+
+
 
 function Chip({
   active,
@@ -204,8 +347,10 @@ function Chip({
       type="button"
       onClick={onClick}
       className={[
-        "rounded-full border px-3 py-1 text-xs transition",
-        active ? "bg-black text-white border-black" : "bg-white text-black border-black/10 hover:bg-black/5",
+        "rounded-full border px-3.5 py-1.5 text-xs transition",
+        active
+          ? "border-black bg-black text-white shadow-sm"
+          : "border-black/10 bg-white text-neutral-700 hover:bg-black/[0.03]",
       ].join(" ")}
     >
       {children}
@@ -235,6 +380,7 @@ function snapshotForDirtyCheck(
     stock: prod.stock ?? null,
     note: prod.note ?? null,
     productType: prod.productType ?? null,
+    categoryId: prod.categoryId ?? null,
     worldwideShipping: !!prod.worldwideShipping,
     shippingCountries: (prod.shippingCountries ?? []).map((x) => x.countryCode).sort(),
     badges: Array.isArray(prod.badges) ? [...prod.badges].sort() : [],
@@ -256,37 +402,37 @@ async function fetchTaxonomy(path: string): Promise<TaxItem[]> {
   return Array.isArray(j.items) ? j.items : [];
 }
 
+function filterAccessoryColours(items: TaxItem[]) {
+  return items.filter((item) => ACCESSORY_COLOUR_SLUGS.includes(item.slug));
+}
+
 export default function ProductEditClient({ id }: { id: string }) {
   const [p, setP] = useState<Product | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  
-const [myReqs, setMyReqs] = useState<BrandTaxRequest[]>([]);
-const [showMyReqs, setShowMyReqs] = useState(false); // collapsed by default
-const isExpanded = showMyReqs;
-const ariaExpanded = isExpanded ? "true" : "false";
-const ariaLabel = isExpanded
-  ? "Collapse taxonomy requests"
-  : "Expand taxonomy requests";
 
-  // taxonomy options
-   const [materials, setMaterials] = useState<TaxItem[]>([]);
+  const [myReqs, setMyReqs] = useState<BrandTaxRequest[]>([]);
+  const [showMyReqs, setShowMyReqs] = useState(false);
+  const isExpanded = showMyReqs;
+  const ariaExpanded = isExpanded ? "true" : "false";
+  const ariaLabel = isExpanded ? "Collapse taxonomy requests" : "Expand taxonomy requests";
+
+  const [materials, setMaterials] = useState<TaxItem[]>([]);
   const [occasions, setOccasions] = useState<TaxItem[]>([]);
   const [colours, setColours] = useState<TaxItem[]>([]);
   const [sizes, setSizes] = useState<TaxItem[]>([]);
   const [styles, setStyles] = useState<TaxItem[]>([]);
+  const [accessoryCategories, setAccessoryCategories] = useState<TaxItem[]>([]);
 
   const [reqOpen, setReqOpen] = useState(false);
   const [reqDefaultType, setReqDefaultType] = useState<"MATERIAL" | "COLOUR" | "SIZE" | "STYLE">("MATERIAL");
 
-  // selected ids
   const [selectedMaterialIds, setSelectedMaterialIds] = useState<string[]>([]);
   const [selectedOccasionIds, setSelectedOccasionIds] = useState<string[]>([]);
   const [selectedColourIds, setSelectedColourIds] = useState<string[]>([]);
   const [selectedSizeIds, setSelectedSizeIds] = useState<string[]>([]);
   const [selectedStyleIds, setSelectedStyleIds] = useState<string[]>([]);
 
-  // ✅ “saved state” snapshot + tiny “Saved ✓” feedback
   const savedRef = useRef<string>("");
   const [justSaved, setJustSaved] = useState(false);
 
@@ -297,10 +443,10 @@ const ariaLabel = isExpanded
       .sort((a, b) => a.name.localeCompare(b.name));
   }, []);
 
-    const dirty = useMemo(() => {
+  const dirty = useMemo(() => {
     if (!p) return false;
     return (
-            snapshotForDirtyCheck(
+      snapshotForDirtyCheck(
         p,
         selectedMaterialIds,
         selectedOccasionIds,
@@ -309,7 +455,7 @@ const ariaLabel = isExpanded
         selectedStyleIds
       ) !== savedRef.current
     );
-    }, [p, selectedMaterialIds, selectedOccasionIds, selectedColourIds, selectedSizeIds, selectedStyleIds]);
+  }, [p, selectedMaterialIds, selectedOccasionIds, selectedColourIds, selectedSizeIds, selectedStyleIds]);
 
   const buyUrl = useMemo(() => {
     if (!p) return "";
@@ -324,7 +470,6 @@ const ariaLabel = isExpanded
   async function loadAll() {
     setError(null);
 
-    // 1) load product
     const r = await fetch(`/api/brand/products/${id}`, { cache: "no-store" });
     const j = await r.json().catch(() => ({}));
     if (!r.ok || !j.ok) {
@@ -333,7 +478,6 @@ const ariaLabel = isExpanded
     }
 
     const prod = j.product as any;
-
     const shippingCountries = (prod.shippingCountries ?? []).map((x: any) => x.countryCode);
 
     const nextP: Product = {
@@ -347,10 +491,13 @@ const ariaLabel = isExpanded
       stock: prod.stock ?? null,
       note: prod.note ?? null,
       productType: prod.productType ?? null,
+      categoryId: prod.category?.id ?? null,
       status: prod.status,
       worldwideShipping: Boolean(prod.worldwideShipping),
       shippingCountries: shippingCountries.map((cc: string) => ({ countryCode: cc })),
-      badges: Array.isArray(prod.badges) ? prod.badges : [],
+      badges: Array.isArray(prod.badges)
+  ? prod.badges.filter((b: string) => b !== "next_day")
+  : [],
       images: Array.isArray(prod.images) ? prod.images : [],
       publishedAt: prod.publishedAt ?? null,
       productMaterials: Array.isArray(prod.productMaterials) ? prod.productMaterials : [],
@@ -361,17 +508,14 @@ const ariaLabel = isExpanded
     };
 
     setP(nextP);
-    // 3) load my taxonomy requests (brand history)
-try {
-  const rr = await fetch("/api/brand/taxonomy/requests?status=ALL", { cache: "no-store" });
-  const rj = await rr.json().catch(() => ({}));
-  if (rr.ok && rj.ok) setMyReqs(Array.isArray(rj.items) ? rj.items : []);
-} catch {
-  // silent – don’t block editing if this fails
-}
 
-    // hydrate selected ids from relations
-      const matIds = uniqStr(
+    try {
+      const rr = await fetch("/api/brand/taxonomy/requests?status=ALL", { cache: "no-store" });
+      const rj = await rr.json().catch(() => ({}));
+      if (rr.ok && rj.ok) setMyReqs(Array.isArray(rj.items) ? rj.items : []);
+    } catch {}
+
+    const matIds = uniqStr(
       (nextP.productMaterials ?? [])
         .map((x: { material: TaxItem }) => x.material?.id)
         .filter(Boolean) as string[]
@@ -407,74 +551,88 @@ try {
     setSelectedSizeIds(sizIds);
     setSelectedStyleIds(styIds);
 
-    // 2) load taxonomy options (in parallel)
     try {
-                const [m, o, c, s, st] = await Promise.all([
+            const [m, o, c, s, st, accessoryCats] = await Promise.all([
         nextP.productType
-          ? fetchTaxonomy(
-              `/api/brand/taxonomy/materials?productType=${encodeURIComponent(String(nextP.productType))}`
-            )
+          ? fetchTaxonomy(`/api/brand/taxonomy/materials?productType=${encodeURIComponent(String(nextP.productType))}`)
           : Promise.resolve([]),
         fetchTaxonomy("/api/brand/taxonomy/occasions"),
         fetchTaxonomy("/api/brand/taxonomy/colours"),
-        fetchTaxonomy("/api/brand/taxonomy/sizes"),
+        nextP.productType === "ACCESSORIES"
+  ? Promise.resolve([])
+  : fetchTaxonomy("/api/brand/taxonomy/sizes"),
         nextP.productType
-          ? fetchTaxonomy(
-              `/api/brand/taxonomy/styles?productType=${encodeURIComponent(String(nextP.productType))}`
-            )
+          ? fetchTaxonomy(`/api/brand/taxonomy/styles?productType=${encodeURIComponent(String(nextP.productType))}`)
+          : Promise.resolve([]),
+        nextP.productType === "ACCESSORIES"
+          ? fetchTaxonomy("/api/brand/taxonomy/categories?parent=accessories")
           : Promise.resolve([]),
       ]);
 
       setMaterials(m);
-      setOccasions(o);
-      setColours(c);
-      setSizes(s);
-      setStyles(st);
+setOccasions(o);
+setColours(
+  nextP.productType === "ACCESSORIES" ? filterAccessoryColours(c) : c);
+setSizes(s);
+setStyles(st);
+setAccessoryCategories(accessoryCats);
     } catch (e: any) {
-      // Don't block editing if taxonomy list fails, but show an error
       setError((prev) => prev ?? e?.message ?? "Failed to load taxonomy");
     }
 
-    // ✅ after load, treat as “saved”
     savedRef.current = snapshotForDirtyCheck(nextP, matIds, occIds, colIds, sizIds, styIds);
     setJustSaved(false);
   }
 
+  useEffect(() => {
+    loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   useEffect(() => {
-  loadAll();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [id]);
+    if (!p?.productType) {
+  setMaterials([]);
+  setStyles([]);
+  setColours([]);
+  setAccessoryCategories([]);
+  setSelectedMaterialIds([]);
+  setSelectedStyleIds([]);
+  setSelectedColourIds([]);
+  return;
+}
 
-  useEffect(() => {
-  if (!p?.productType) {
-    setMaterials([]);
-    setStyles([]);
-    setSelectedMaterialIds([]);
-    setSelectedStyleIds([]);
-    return;
-  }
+    (async () => {
+      try {
+        const pt = p.productType;
+        if (!pt) {
+  setMaterials([]);
+  setStyles([]);
+  setColours([]);
+  setAccessoryCategories([]);
+  setSelectedMaterialIds([]);
+  setSelectedStyleIds([]);
+  setSelectedColourIds([]);
+  return;
+}
 
-  (async () => {
-    try {
-      const pt = p.productType;
-      if (!pt) {
-        setMaterials([]);
-        setStyles([]);
-        setSelectedMaterialIds([]);
-        setSelectedStyleIds([]);
-        return;
-      }
+          const [m, st, c, accessoryCats] = await Promise.all([
+  fetchTaxonomy(`/api/brand/taxonomy/materials?productType=${encodeURIComponent(pt)}`),
+  fetchTaxonomy(`/api/brand/taxonomy/styles?productType=${encodeURIComponent(pt)}`),
+  fetchTaxonomy("/api/brand/taxonomy/colours"),
+  pt === "ACCESSORIES"
+    ? fetchTaxonomy("/api/brand/taxonomy/categories?parent=accessories")
+    : Promise.resolve([]),
+]);
 
-      const [m, st] = await Promise.all([
-        fetchTaxonomy(`/api/brand/taxonomy/materials?productType=${encodeURIComponent(pt)}`),
-        fetchTaxonomy(`/api/brand/taxonomy/styles?productType=${encodeURIComponent(pt)}`),
-      ]);
+const nextColours =
+  pt === "ACCESSORIES" ? filterAccessoryColours(c) : c;
 
-      setMaterials(m);
-      setStyles(st);
+setMaterials(m);
+setStyles(st);
+setColours(nextColours);
+setAccessoryCategories(accessoryCats);
 
-      setSelectedMaterialIds((prev) =>
+setSelectedMaterialIds((prev) =>
   prev.filter((id) => m.some((x: TaxItem) => x.id === id))
 );
 
@@ -482,15 +640,21 @@ setSelectedStyleIds((prev) =>
   prev.filter((id) => st.some((x: TaxItem) => x.id === id))
 );
 
-    } catch (e: any) {
-      setError((prev) => prev ?? e?.message ?? "Failed to load materials/styles");
-      setMaterials([]);
-      setStyles([]);
-    }
-  })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [p?.productType]);
+setSelectedColourIds((prev) =>
+  prev.filter((id) => nextColours.some((x: TaxItem) => x.id === id))
+);
 
+if (pt === "ACCESSORIES") {
+  setSelectedSizeIds([]);
+}
+      } catch (e: any) {
+        setError((prev) => prev ?? e?.message ?? "Failed to load materials/styles");
+        setMaterials([]);
+        setStyles([]);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p?.productType]);
 
   function toggleBadge(b: string) {
     if (!p) return;
@@ -509,6 +673,8 @@ setSelectedStyleIds((prev) =>
 
   function formatProductTypeLabel(value: string) {
   if (value === "COATS_JACKETS") return "Coats & Jackets";
+  if (value === "HOODIE_SWEATSHIRT") return "Hoodie & Sweatshirt";
+  if (value === "T_SHIRT") return "T-Shirt";
 
   return value
     .toLowerCase()
@@ -518,6 +684,7 @@ setSelectedStyleIds((prev) =>
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 }
+
   async function saveDraft() {
     if (!p) return;
     setSaving(true);
@@ -533,12 +700,11 @@ setSelectedStyleIds((prev) =>
         stock: p.stock,
         note: p.note,
         productType: p.productType,
+        categoryId: p.categoryId,
         badges: p.badges,
         worldwideShipping: p.worldwideShipping,
         shippingCountries: p.shippingCountries.map((x) => x.countryCode),
         images: p.images.map((x) => x.url),
-
-        // ✅ new multi-select relations
         materialIds: selectedMaterialIds,
         occasionIds: selectedOccasionIds,
         colourIds: selectedColourIds,
@@ -567,260 +733,286 @@ setSelectedStyleIds((prev) =>
     }
   }
 
-  if (!p) return <div className="text-sm text-black/60">{error ?? "Loading..."}</div>;
+  if (!p) {
+    return (
+      <div className="rounded-[24px] border border-black/8 bg-white px-5 py-5 text-sm text-black/60 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+        {error ?? "Loading..."}
+      </div>
+    );
+  }
 
-     // summary counts
-const pendingCount = myReqs.filter((r) => r.status === "PENDING").length;
-const approvedCount = myReqs.filter((r) => r.status === "APPROVED").length;
-const rejectedCount = myReqs.filter((r) => r.status === "REJECTED").length;
-
-const expanded: boolean = showMyReqs === true;
+  const pendingCount = myReqs.filter((r) => r.status === "PENDING").length;
+  const approvedCount = myReqs.filter((r) => r.status === "APPROVED").length;
+  const rejectedCount = myReqs.filter((r) => r.status === "REJECTED").length;
 
   return (
-    <div className="space-y-6">
-      {error && <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+    <div className="space-y-8 bg-[#fcfbf8] p-6 md:p-8">
+      {error ? (
+        <div className="rounded-[24px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
+
       <RequestTaxonomyModal
-  open={reqOpen}
-  onClose={() => setReqOpen(false)}
-  defaultType={reqDefaultType}
-  onSubmitted={loadAll} // ✅
-  contextProductType={p?.productType ?? null}
-/>
+        open={reqOpen}
+        onClose={() => setReqOpen(false)}
+        defaultType={reqDefaultType}
+        onSubmitted={loadAll}
+        contextProductType={p?.productType ?? null}
+      />
 
-      <div className="rounded-2xl border p-4 flex flex-wrap items-center gap-2">
-        <span className="text-xs rounded-full border px-3 py-1 bg-black/5 border-black/10">
-          Status: {p.status.replace("_", " ")}
-        </span>
-
-        {p.publishedAt && (
-          <span className="text-xs rounded-full border px-3 py-1 bg-emerald-50 text-emerald-800 border-emerald-200">
-            Live
-          </span>
-        )}
-
-        {buyUrl && (
-          <a
-            href={buyUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="ml-auto rounded-lg border border-black/10 bg-white px-4 py-2 text-sm hover:bg-black/5"
-          >
-            Buy
-          </a>
-        )}
-
-        <button
-          onClick={saveDraft}
-          disabled={saving || !dirty}
-          className={[
-            buyUrl ? "" : "ml-auto",
-            "rounded-lg px-4 py-2 text-sm transition",
-            saving
-              ? "bg-black text-white opacity-60"
-              : dirty
-              ? "bg-black text-white hover:opacity-90"
-              : "bg-neutral-200 text-neutral-600 cursor-not-allowed",
-          ].join(" ")}
-        >
-          {saving ? "Saving..." : justSaved ? "Saved ✓" : dirty ? "Save draft" : "No changes"}
-        </button>
-        
-      </div>
-     
-
-      <div className="rounded-2xl border p-4 space-y-2">
-  <div className="flex items-center justify-between">
-    <div className="font-medium">
-      My taxonomy requests{" "}
-      <span className="text-xs text-black/50">({myReqs.length})</span>
-
-      {!showMyReqs && myReqs.length > 0 && (
-        <span className="ml-2 text-xs text-black/60">
-          • {pendingCount} pending • {approvedCount} approved • {rejectedCount} rejected
-        </span>
-      )}
-    </div>
-   <button
-  type="button"
-  onClick={() => setShowMyReqs((v) => !v)}
-  className="rounded-lg border px-2 py-1 text-xs hover:bg-black/5"
-  aria-expanded={ariaExpanded}
-  aria-controls="my-taxonomy-requests"
-  aria-label={ariaLabel}
->
-  {isExpanded ? "−" : "+"}
-</button>
-  </div>
-
-  <div id="my-taxonomy-requests" hidden={!showMyReqs} className="space-y-2">
-    {!myReqs.length ? (
-      <div className="text-xs text-black/60">No requests yet.</div>
-    ) : (
-      <>
-        {myReqs.slice(0, 12).map((r) => (
-          <div key={r.id} className="rounded-xl border p-3 text-sm">
-            <div className="flex items-center justify-between">
-              <div className="font-medium">
-                {r.type}: {r.name}
+      <section className="overflow-hidden rounded-[28px] border border-black/8 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+        <div className="border-b border-black/6 bg-[linear-gradient(180deg,#fff_0%,#fbf8f2_100%)] px-5 py-5 md:px-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-2xl">
+              <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-400">
+                Product editor
               </div>
-              <span className="text-xs rounded-full border px-2 py-1">{r.status}</span>
+              <h1 className="mt-2 text-2xl font-semibold tracking-tight text-neutral-950">
+                Edit product
+              </h1>
+              <p className="mt-1 text-sm text-neutral-500">
+                Update your product details, taxonomy, badges, and shipping information before submission.
+              </p>
+
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-black/10 bg-black/5 px-3 py-1 text-xs text-neutral-700">
+                  Status: {p.status.replace("_", " ")}
+                </span>
+
+                {p.publishedAt ? (
+                  <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs text-emerald-800">
+                    Live
+                  </span>
+                ) : null}
+              </div>
             </div>
 
-            {r.reason && <div className="text-xs text-black/60 mt-1">Reason: {r.reason}</div>}
+            <div className="flex flex-wrap items-center gap-2">
+              {buyUrl ? (
+                <a
+                  href={buyUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-full border border-black/10 bg-white px-4 py-2 text-sm text-neutral-700 shadow-sm transition hover:bg-black/[0.03]"
+                >
+                  View live product
+                </a>
+              ) : null}
 
-            {r.status !== "PENDING" && (
-              <div className="text-xs mt-2">
-                {r.reviewNote ? (
-                  <div className="rounded-lg bg-black/5 p-2">
-                    <span className="font-medium">Admin note:</span> {r.reviewNote}
-                  </div>
-                ) : (
-                  <div className="text-black/50">No admin note provided.</div>
-                )}
-              </div>
-            )}
+              <button
+                onClick={saveDraft}
+                disabled={saving || !dirty}
+                className={[
+                  "rounded-full px-4 py-2 text-sm transition shadow-sm",
+                  saving
+                    ? "bg-black text-white opacity-60"
+                    : dirty
+                    ? "bg-black text-white hover:opacity-90"
+                    : "cursor-not-allowed bg-neutral-200 text-neutral-600",
+                ].join(" ")}
+              >
+                {saving ? "Saving..." : justSaved ? "Saved ✓" : dirty ? "Save draft" : "No changes"}
+              </button>
+            </div>
           </div>
-        ))}
-
-        {myReqs.length > 12 && (
-          <div className="text-xs text-black/50">Showing 12 of {myReqs.length}.</div>
-        )}
-      </>
-    )}
-  </div>
-
-  {!showMyReqs && (
-    <div className="text-xs text-black/60">
-      {myReqs.length ? "Collapsed — click + to view." : "No requests yet — submit one with “request new”."}
-    </div>
-  )}
-</div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="space-y-1">
-          <div className="text-sm font-medium">Title</div>
-          <input
-            className="w-full rounded-lg border px-3 py-2 text-sm"
-            value={p.title}
-            onChange={(e) => setP({ ...p, title: e.target.value })}
-          />
-        </label>
-
-        <label className="space-y-1">
-          <div className="text-sm font-medium">Slug</div>
-          <input
-            className="w-full rounded-lg border px-3 py-2 text-sm"
-            value={p.slug}
-            onChange={(e) => setP({ ...p, slug: e.target.value })}
-          />
-        </label>
-
-        <label className="space-y-1 md:col-span-2">
-          <div className="text-sm font-medium">Source URL</div>
-          <input
-            className="w-full rounded-lg border px-3 py-2 text-sm"
-            value={p.sourceUrl}
-            onChange={(e) => setP({ ...p, sourceUrl: e.target.value })}
-          />
-        </label>
-
-       {/* <label className="space-y-1 md:col-span-2">
-          <div className="text-sm font-medium">Affiliate URL (Buy Now)</div>
-          <input
-            className="w-full rounded-lg border px-3 py-2 text-sm"
-            value={p.affiliateUrl ?? ""}
-            onChange={(e) => setP({ ...p, affiliateUrl: e.target.value || null })}
-          />
-        </label> */}
-      </div>
-
-      {/* ✅ Price + Currency */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="space-y-1">
-          <div className="text-sm font-medium">Price</div>
-          <input
-            className="w-full rounded-lg border px-3 py-2 text-sm"
-            inputMode="decimal"
-            placeholder="e.g. 89.99"
-            value={p.price ?? ""}
-            onChange={(e) => {
-              const v = e.target.value;
-              setP({ ...p, price: v === "" ? null : v });
-            }}
-          />
-        </label>
-
-        <label className="space-y-1">
-          <div className="text-sm font-medium">Currency</div>
-          <select
-  className="w-full rounded-lg border px-3 py-2 text-sm"
-  value={(p.currency || "GBP").toUpperCase()}
-  onChange={(e) => setP({ ...p, currency: e.target.value.toUpperCase() })}
->
-  {BRAND_CURRENCY_OPTIONS.map((c) => (
-    <option key={c.code} value={c.code}>
-      {c.label}
-    </option>
-  ))}
-</select>
-
-
-        </label>
-      </div>
-
-      {/* ✅ Product type (chips, single-select) */}
-      <div className="rounded-2xl border p-4 space-y-3">
-        <div className="font-medium">Product type</div>
-
-        <div className="flex flex-wrap gap-2">
-  {PRODUCT_TYPES.map((t) => (
-    <Chip key={t} active={p.productType === t} onClick={() => setP({ ...p, productType: t })}>
-      {formatProductTypeLabel(t)}
-    </Chip>
-  ))}
-
-  <Chip active={p.productType === null} onClick={() => setP({ ...p, productType: null })}>
-    clear
-  </Chip>
-</div>
-
-        <div className="text-xs text-black/60">
-          Current: <span className="font-medium">{p.productType ?? "—"}</span>
         </div>
-      </div>
+      </section>
 
-      {/* ✅ Materials (multi-select chips) */}
-      <div className="rounded-2xl border p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="font-medium">Materials</div>
-          <button
-            type="button"
-            className="text-xs text-black/60 hover:text-black"
-            onClick={() => setSelectedMaterialIds([])}
-          >
-            clear
-          </button>
-          <button
-  type="button"
-  className="text-xs text-black/60 hover:text-black"
+      
+
+      <SectionCard
+        eyebrow="Core details"
+        title="Product information"
+        description="Set the essential details shoppers and admin reviewers rely on."
+      >
+        <div className="grid gap-5 md:grid-cols-2">
+          <label className="space-y-2">
+            <FieldLabel>Title</FieldLabel>
+            <InputShell>
+              <input
+                className="w-full rounded-xl border-0 bg-transparent px-3 py-2.5 text-sm outline-none"
+                value={p.title}
+                onChange={(e) => setP({ ...p, title: e.target.value })}
+              />
+            </InputShell>
+          </label>
+
+          <label className="space-y-2">
+            <FieldLabel>Slug</FieldLabel>
+            <InputShell>
+              <input
+                className="w-full rounded-xl border-0 bg-transparent px-3 py-2.5 text-sm outline-none"
+                value={p.slug}
+                onChange={(e) => setP({ ...p, slug: e.target.value })}
+              />
+            </InputShell>
+          </label>
+
+          <label className="space-y-2 md:col-span-2">
+            <FieldLabel>Source URL</FieldLabel>
+            <InputShell>
+              <input
+                className="w-full rounded-xl border-0 bg-transparent px-3 py-2.5 text-sm outline-none"
+                value={p.sourceUrl}
+                onChange={(e) => setP({ ...p, sourceUrl: e.target.value })}
+              />
+            </InputShell>
+          </label>
+        </div>
+
+        <div className="mt-5 grid gap-5 md:grid-cols-2">
+          <label className="space-y-2">
+            <FieldLabel>Price</FieldLabel>
+            <InputShell>
+              <input
+                className="w-full rounded-xl border-0 bg-transparent px-3 py-2.5 text-sm outline-none"
+                inputMode="decimal"
+                placeholder="e.g. 89.99"
+                value={p.price ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setP({ ...p, price: v === "" ? null : v });
+                }}
+              />
+            </InputShell>
+          </label>
+
+          <label className="space-y-2">
+            <FieldLabel>Currency</FieldLabel>
+            <InputShell>
+              <select
+                className="w-full rounded-xl border-0 bg-transparent px-3 py-2.5 text-sm outline-none"
+                value={(p.currency || "GBP").toUpperCase()}
+                onChange={(e) => setP({ ...p, currency: e.target.value.toUpperCase() })}
+              >
+                {BRAND_CURRENCY_OPTIONS.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </InputShell>
+          </label>
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        eyebrow="Classification"
+        title="Product type"
+        description="Choose the product type first. This controls which materials and styles become available."
+      >
+        <div className="flex flex-wrap gap-2">
+          {PRODUCT_TYPES.map((t) => (
+            <Chip
+  key={t}
+  active={p.productType === t}
   onClick={() => {
-  if (!p?.productType) return; // already enforced in UI
-  setReqDefaultType("MATERIAL");
-  setReqOpen(true);
+  setP({
+    ...p,
+    productType: t,
+    categoryId: t === "ACCESSORIES" ? p.categoryId : null,
+  });
+
+  if (t === "ACCESSORIES") {
+    setSelectedMaterialIds([]);
+    setSelectedSizeIds([]);
+  }
 }}
 >
-  request new
-</button>
+              {formatProductTypeLabel(t)}
+            </Chip>
+          ))}
+
+          <Chip active={p.productType === null} onClick={() => setP({ ...p, productType: null, categoryId: null })}>
+            Clear
+          </Chip>
         </div>
 
+        <div className="mt-4 text-sm text-neutral-500">
+          Current: <span className="font-medium text-neutral-900">{p.productType ?? "—"}</span>
+        </div>
+      </SectionCard>
+
+      
+
+            {p.productType === "ACCESSORIES" && (
+        <SectionCard
+          eyebrow="Classification"
+          title="Accessory category"
+          description="Select the accessory type that best matches this product."
+          actions={
+            <SoftButton onClick={() => setP({ ...p, categoryId: null })}>
+              Clear
+            </SoftButton>
+          }
+        >
+          {!accessoryCategories.length ? (
+            <div className="rounded-[22px] border border-black/8 bg-[#fcfbf8] px-4 py-4 text-sm text-neutral-500">
+              No accessory categories available yet.
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {accessoryCategories.map((cat) => (
+                <Chip
+                  key={cat.id}
+                  active={p.categoryId === cat.id}
+                  onClick={() => setP({ ...p, categoryId: cat.id })}
+                >
+                  {cat.name}
+                </Chip>
+              ))}
+
+              <Chip
+                active={p.categoryId === null}
+                onClick={() => setP({ ...p, categoryId: null })}
+              >
+                Clear
+              </Chip>
+            </div>
+          )}
+
+          <div className="mt-4 text-sm text-neutral-500">
+            Current:{" "}
+            <span className="font-medium text-neutral-900">
+              {accessoryCategories.find((cat) => cat.id === p.categoryId)?.name ?? "—"}
+            </span>
+          </div>
+        </SectionCard>
+      )}
+
+
+
+      {p.productType !== "ACCESSORIES" && (
+      <SectionCard
+        eyebrow="Taxonomy"
+        title="Materials"
+        description="Select one or more materials relevant to this product."
+        actions={
+          <>
+            <SoftButton onClick={() => setSelectedMaterialIds([])}>Clear</SoftButton>
+            <SoftButton
+              onClick={() => {
+                if (!p?.productType) return;
+                setReqDefaultType("MATERIAL");
+                setReqOpen(true);
+              }}
+              disabled={!p?.productType}
+            >
+              Request new
+            </SoftButton>
+          </>
+        }
+      >
         {!p.productType ? (
-  <div className="text-xs text-black/50">
-    Select a <span className="font-medium">product type</span> first to choose materials.
-  </div>
-) : !materials.length ? (
-  <div className="text-xs text-black/50">No materials for this product type yet.</div>
-) : null}
-        {p.productType && materials.length > 0 && (
+          <div className="rounded-[22px] border border-black/8 bg-[#fcfbf8] px-4 py-4 text-sm text-neutral-500">
+            Select a <span className="font-medium text-neutral-900">product type</span> first to choose materials.
+          </div>
+        ) : !materials.length ? (
+          <div className="rounded-[22px] border border-black/8 bg-[#fcfbf8] px-4 py-4 text-sm text-neutral-500">
+            No materials for this product type yet.
+          </div>
+        ) : (
           <div className="flex flex-wrap gap-2">
             {materials.map((m) => (
               <Chip
@@ -833,22 +1025,15 @@ const expanded: boolean = showMyReqs === true;
             ))}
           </div>
         )}
-      </div>
+      </SectionCard>
+      )}
 
-
-            {/* ✅ Occasions (multi-select chips) */}
-      <div className="rounded-2xl border p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="font-medium">Occasions</div>
-          <button
-            type="button"
-            className="text-xs text-black/60 hover:text-black"
-            onClick={() => setSelectedOccasionIds([])}
-          >
-            clear
-          </button>
-        </div>
-
+      <SectionCard
+        eyebrow="Taxonomy"
+        title="Occasions"
+        description="Add the occasions this product is suitable for."
+        actions={<SoftButton onClick={() => setSelectedOccasionIds([])}>Clear</SoftButton>}
+      >
         <div className="flex flex-wrap gap-2">
           {occasions.map((o) => (
             <Chip
@@ -859,48 +1044,44 @@ const expanded: boolean = showMyReqs === true;
               {o.name}
             </Chip>
           ))}
-          {!occasions.length && (
-            <div className="text-xs text-black/50">No occasions yet.</div>
-          )}
+
+          {!occasions.length ? (
+            <div className="rounded-[22px] border border-black/8 bg-[#fcfbf8] px-4 py-4 text-sm text-neutral-500">
+              No occasions yet.
+            </div>
+          ) : null}
         </div>
-      </div>
+      </SectionCard>
 
-
-
-
-      {/* ✅ Styles (multi-select chips) */}
-      <div className="rounded-2xl border p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="font-medium">Styles</div>
-          <button
-            type="button"
-            className="text-xs text-black/60 hover:text-black"
-            onClick={() => setSelectedStyleIds([])}
-          >
-            clear
-          </button>
-          <button
-            type="button"
-            className="text-xs text-black/60 hover:text-black"
-            onClick={() => {
-              if (!p?.productType) return;
-              setReqDefaultType("STYLE");
-              setReqOpen(true);
-            }}
-          >
-            request new
-          </button>
-        </div>
-
+      <SectionCard
+        eyebrow="Taxonomy"
+        title="Styles"
+        description="Styles are filtered by product type so the list stays relevant."
+        actions={
+          <>
+            <SoftButton onClick={() => setSelectedStyleIds([])}>Clear</SoftButton>
+            <SoftButton
+              onClick={() => {
+                if (!p?.productType) return;
+                setReqDefaultType("STYLE");
+                setReqOpen(true);
+              }}
+              disabled={!p?.productType}
+            >
+              Request new
+            </SoftButton>
+          </>
+        }
+      >
         {!p.productType ? (
-          <div className="text-xs text-black/50">
-            Select a <span className="font-medium">product type</span> first to choose styles.
+          <div className="rounded-[22px] border border-black/8 bg-[#fcfbf8] px-4 py-4 text-sm text-neutral-500">
+            Select a <span className="font-medium text-neutral-900">product type</span> first to choose styles.
           </div>
         ) : !styles.length ? (
-          <div className="text-xs text-black/50">No styles for this product type yet.</div>
-        ) : null}
-
-        {p.productType && styles.length > 0 && (
+          <div className="rounded-[22px] border border-black/8 bg-[#fcfbf8] px-4 py-4 text-sm text-neutral-500">
+            No styles for this product type yet.
+          </div>
+        ) : (
           <div className="flex flex-wrap gap-2">
             {styles.map((s) => (
               <Chip
@@ -913,36 +1094,26 @@ const expanded: boolean = showMyReqs === true;
             ))}
           </div>
         )}
-      </div>
+      </SectionCard>
 
-
-
-
-
-
-      {/* ✅ Colours (multi-select chips) */}
-      <div className="rounded-2xl border p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="font-medium">Colours</div>
-          <button
-            type="button"
-            className="text-xs text-black/60 hover:text-black"
-            onClick={() => setSelectedColourIds([])}
-          >
-            clear
-          </button>
-          <button
-  type="button"
-  className="text-xs text-black/60 hover:text-black"
-  onClick={() => {
-    setReqDefaultType("COLOUR");
-    setReqOpen(true);
-  }}
->
-  request new
-</button>
-        </div>
-
+      <SectionCard
+        eyebrow="Taxonomy"
+        title="Colours"
+        description="Choose all colours visible on the product."
+        actions={
+          <>
+            <SoftButton onClick={() => setSelectedColourIds([])}>Clear</SoftButton>
+            <SoftButton
+              onClick={() => {
+                setReqDefaultType("COLOUR");
+                setReqOpen(true);
+              }}
+            >
+              Request new
+            </SoftButton>
+          </>
+        }
+      >
         <div className="flex flex-wrap gap-2">
           {colours.map((c) => (
             <Chip
@@ -953,52 +1124,59 @@ const expanded: boolean = showMyReqs === true;
               {c.name}
             </Chip>
           ))}
-          {!colours.length && <div className="text-xs text-black/50">No colours yet (seed them first).</div>}
         </div>
+
+        {!colours.length ? (
+          <div className="mt-3 rounded-[22px] border border-black/8 bg-[#fcfbf8] px-4 py-4 text-sm text-neutral-500">
+            No colours yet (seed them first).
+          </div>
+        ) : null}
+      </SectionCard>
+
+      {p.productType !== "ACCESSORIES" && (
+  <SectionCard
+    eyebrow="Taxonomy"
+    title="Sizes"
+    description="Select all sizes available for the product."
+    actions={
+      <>
+        <SoftButton onClick={() => setSelectedSizeIds([])}>Clear</SoftButton>
+        <SoftButton
+          onClick={() => {
+            setReqDefaultType("SIZE");
+            setReqOpen(true);
+          }}
+        >
+          Request new
+        </SoftButton>
+      </>
+    }
+  >
+    <div className="flex flex-wrap gap-2">
+      {sizes.map((s) => (
+        <Chip
+          key={s.id}
+          active={selectedSizeIds.includes(s.id)}
+          onClick={() => toggleSelected(setSelectedSizeIds, selectedSizeIds, s.id)}
+        >
+          {s.name}
+        </Chip>
+      ))}
+    </div>
+
+    {!sizes.length ? (
+      <div className="mt-3 rounded-[22px] border border-black/8 bg-[#fcfbf8] px-4 py-4 text-sm text-neutral-500">
+        No sizes yet (seed them first).
       </div>
+    ) : null}
+  </SectionCard>
+)}
 
-      {/* ✅ Sizes (multi-select chips) */}
-      <div className="rounded-2xl border p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="font-medium">Sizes</div>
-          <button
-            type="button"
-            className="text-xs text-black/60 hover:text-black"
-            onClick={() => setSelectedSizeIds([])}
-          >
-            clear
-          </button>
-          <button
-  type="button"
-  className="text-xs text-black/60 hover:text-black"
-  onClick={() => {
-    setReqDefaultType("SIZE");
-    setReqOpen(true);
-  }}
->
-  request new
-</button>
-        </div>
-
-        
-
-        <div className="flex flex-wrap gap-2">
-          {sizes.map((s) => (
-            <Chip
-              key={s.id}
-              active={selectedSizeIds.includes(s.id)}
-              onClick={() => toggleSelected(setSelectedSizeIds, selectedSizeIds, s.id)}
-            >
-              {s.name}
-            </Chip>
-          ))}
-          {!sizes.length && <div className="text-xs text-black/50">No sizes yet (seed them first).</div>}
-        </div>
-      </div>
-
-      {/* Badges chips */}
-      <div className="rounded-2xl border p-4 space-y-3">
-        <div className="font-medium">Badges</div>
+      <SectionCard
+        eyebrow="Merchandising"
+        title="Badges"
+        description="Add lightweight merchandising signals for shoppers."
+      >
         <div className="flex flex-wrap gap-2">
           {BADGES.map((b) => {
             const active = p.badges.includes(b);
@@ -1007,22 +1185,34 @@ const expanded: boolean = showMyReqs === true;
                 key={b}
                 type="button"
                 onClick={() => toggleBadge(b)}
-                className={`rounded-full border px-3 py-1 text-xs ${
-                  active ? "bg-black text-white border-black" : "border-black/10 hover:bg-black/5"
-                }`}
+                className={[
+                  "rounded-full border px-3.5 py-1.5 text-xs transition",
+                  active
+                    ? "border-black bg-black text-white shadow-sm"
+                    : "border-black/10 bg-white text-neutral-700 hover:bg-black/[0.03]",
+                ].join(" ")}
               >
                 {b}
               </button>
             );
           })}
         </div>
-      </div>
+      </SectionCard>
 
-      {/* Shipping */}
-      <div className="rounded-2xl border p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="font-medium">Shipping</div>
-          <label className="text-sm flex items-center gap-2">
+      <SectionCard
+        eyebrow="Logistics"
+        title="Shipping"
+        description="Mark whether the product ships worldwide or select supported countries."
+      >
+        <div className="flex items-center justify-between gap-4 rounded-[22px] border border-black/8 bg-[#fcfbf8] px-4 py-4">
+          <div>
+            <div className="font-medium text-neutral-900">Worldwide shipping</div>
+            <div className="mt-1 text-sm text-neutral-500">
+              Turn this on if the product can be shipped globally.
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm text-neutral-700">
             <input
               type="checkbox"
               checked={p.worldwideShipping}
@@ -1032,29 +1222,114 @@ const expanded: boolean = showMyReqs === true;
           </label>
         </div>
 
-        {!p.worldwideShipping && (
-          <div className="space-y-2">
-            <div className="text-sm text-black/70">Select countries (ISO-2). Leave empty if unknown.</div>
+        {!p.worldwideShipping ? (
+          <div className="mt-4 space-y-3">
+            <div className="text-sm text-neutral-500">Select countries (ISO-2). Leave empty if unknown.</div>
 
-            <div className="max-h-72 overflow-auto rounded-xl border p-2">
+            <div className="max-h-80 overflow-auto rounded-[22px] border border-black/8 bg-[#fcfbf8] p-3">
               {countryOptions.map((c) => {
                 const checked = p.shippingCountries.some((x) => x.countryCode === c.code);
                 return (
-                  <label key={c.code} className="flex items-center gap-2 py-1 text-sm">
+                  <label
+                    key={c.code}
+                    className="flex items-center gap-3 rounded-xl px-2 py-2 text-sm transition hover:bg-white"
+                  >
                     <input
                       type="checkbox"
                       checked={checked}
                       onChange={(e) => setShippingCountry(c.code, e.target.checked)}
                     />
-                    <span className="w-10 text-black/60">{c.code}</span>
-                    <span>{c.name}</span>
+                    <span className="w-10 text-neutral-400">{c.code}</span>
+                    <span className="text-neutral-800">{c.name}</span>
                   </label>
                 );
               })}
             </div>
           </div>
-        )}
-      </div>
+        ) : null}
+      </SectionCard>
+
+      <SectionCard
+        eyebrow="Requests"
+        title="My taxonomy requests"
+        description="Track the status of your requested materials, styles, colours, and sizes."
+        actions={
+          <button
+            type="button"
+            onClick={() => setShowMyReqs((v) => !v)}
+            className="rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs text-neutral-700 hover:bg-black/[0.03]"
+            aria-expanded={ariaExpanded}
+            aria-controls="my-taxonomy-requests"
+            aria-label={ariaLabel}
+          >
+            {isExpanded ? "Collapse" : "Expand"}
+          </button>
+        }
+      >
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-[22px] border border-black/8 bg-[#fcfbf8] px-4 py-4">
+            <div className="text-xs uppercase tracking-[0.14em] text-neutral-400">Pending</div>
+            <div className="mt-2 text-2xl font-semibold tracking-tight">{pendingCount}</div>
+          </div>
+          <div className="rounded-[22px] border border-black/8 bg-[#fcfbf8] px-4 py-4">
+            <div className="text-xs uppercase tracking-[0.14em] text-neutral-400">Approved</div>
+            <div className="mt-2 text-2xl font-semibold tracking-tight">{approvedCount}</div>
+          </div>
+          <div className="rounded-[22px] border border-black/8 bg-[#fcfbf8] px-4 py-4">
+            <div className="text-xs uppercase tracking-[0.14em] text-neutral-400">Rejected</div>
+            <div className="mt-2 text-2xl font-semibold tracking-tight">{rejectedCount}</div>
+          </div>
+        </div>
+
+        <div id="my-taxonomy-requests" hidden={!showMyReqs} className="mt-5 space-y-3">
+          {!myReqs.length ? (
+            <div className="rounded-[22px] border border-black/8 bg-[#fcfbf8] px-4 py-4 text-sm text-neutral-500">
+              No requests yet.
+            </div>
+          ) : (
+            <>
+              {myReqs.slice(0, 12).map((r) => (
+                <div key={r.id} className="rounded-[22px] border border-black/8 bg-[#fcfbf8] p-4 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="font-medium text-neutral-900">
+                      {r.type}: {r.name}
+                    </div>
+                    <span className="rounded-full border border-black/10 bg-white px-3 py-1 text-xs text-neutral-700">
+                      {r.status}
+                    </span>
+                  </div>
+
+                  {r.reason ? (
+                    <div className="mt-2 text-xs text-neutral-500">Reason: {r.reason}</div>
+                  ) : null}
+
+                  {r.status !== "PENDING" ? (
+                    <div className="mt-3 text-xs">
+                      {r.reviewNote ? (
+                        <div className="rounded-2xl border border-black/8 bg-white p-3 text-neutral-700">
+                          <span className="font-medium">Admin note:</span> {r.reviewNote}
+                        </div>
+                      ) : (
+                        <div className="text-neutral-400">No admin note provided.</div>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+
+              {myReqs.length > 12 ? (
+                <div className="text-xs text-neutral-400">Showing 12 of {myReqs.length}.</div>
+              ) : null}
+            </>
+          )}
+        </div>
+
+        {!showMyReqs ? (
+          <div className="mt-4 text-xs text-neutral-500">
+            {myReqs.length ? "Collapsed — expand to review details." : "No requests yet — submit one from a taxonomy section below."}
+          </div>
+        ) : null}
+      </SectionCard>
     </div>
   );
 }

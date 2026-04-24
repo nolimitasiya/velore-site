@@ -10,4 +10,9 @@ export const PRODUCT_TYPES = [
   "KHIMAR",
   "JILBAB",
   "COATS_JACKETS",
+  "HOODIE_SWEATSHIRT",
+  "PANTS",
+  "BLAZER",
+  "T_SHIRT",
+  "ACCESSORIES",
 ] as const;

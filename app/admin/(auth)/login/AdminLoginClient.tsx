@@ -12,7 +12,7 @@ export default function AdminLoginClient() {
   const [busy, setBusy] = useState(false);
 
   const sp = useSearchParams();
-  const next = sp.get("next") || "/admin/import";
+  const next = sp.get("next") || "/admin/analytics";
 
   async function onLogin(e: React.FormEvent) {
     e.preventDefault();

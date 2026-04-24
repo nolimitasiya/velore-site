@@ -1,5 +1,10 @@
 import { veiloraEmailTemplate } from "../base/veiloraBase";
 
+function capitalizeFirstLetter(name?: string) {
+  if (!name) return "";
+  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+}
+
 export function brandInvitedZoomEmail(params: {
   firstName?: string;
   brandName?: string;
@@ -7,7 +12,9 @@ export function brandInvitedZoomEmail(params: {
 }) {
   const subject = "Let’s book a quick call ✨ Veilora Club";
 
-  const nameLine = params.firstName ? `Hi ${params.firstName},` : "Hi there,";
+  const formattedName = capitalizeFirstLetter(params.firstName);
+
+const nameLine = formattedName ? `Hi ${formattedName},` : "Hi there,";
 
   const html = veiloraEmailTemplate({
     preheader: "We’d love to learn more about your brand — let’s schedule a quick call.",
@@ -21,13 +28,17 @@ export function brandInvitedZoomEmail(params: {
       <p style="margin:0 0 12px 0;">
         We’d love to invite you to a short Zoom call to learn more about your brand, your best-sellers, and how we can work together.
       </p>
+<div style="color:#ffffff;">
+  <p style="margin:0 0 10px 0;">
+    <strong>On the call, we’ll cover:</strong>
+  </p>
 
-      <p style="margin:0 0 10px 0;"><strong>On the call, we’ll cover:</strong></p>
-      <ul style="margin:0 0 12px 18px; padding:0;">
-        <li style="margin:0 0 6px 0;">Your products and positioning</li>
-        <li style="margin:0 0 6px 0;">How listing & visibility works on Veilora Club</li>
-        <li style="margin:0;">Next steps if we move forward</li>
-      </ul>
+  <ul style="margin:0 0 12px 18px; padding:0;">
+    <li style="margin:0 0 6px 0;">Your products and positioning</li>
+    <li style="margin:0 0 6px 0;">How listing & visibility works on Veilora Club</li>
+    <li style="margin:0;">Next steps if we move forward</li>
+  </ul>
+</div>
 
       <p style="margin:0;">
         ${params.schedulerUrl ? "Use the button below to choose a time that works for you:" : "Reply to this email with a few times that work for you, and we’ll confirm."}

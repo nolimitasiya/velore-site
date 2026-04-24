@@ -6,6 +6,9 @@ import { useEffect, useState } from "react";
 import CountrySelect from "@/components/admin/CountrySelect";
 import CountryMultiSelect from "@/components/admin/CountryMultiSelect";
 import { COUNTRY_OPTIONS } from "@/lib/geo/countries";
+import StorefrontHeroEditor from "./StorefrontHeroEditor";
+import StyleFeedEditor from "./StyleFeedEditor";
+
 
 type StorefrontSectionType = "DEFAULT" | "COUNTRY" | "CAMPAIGN";
 
@@ -396,6 +399,9 @@ async function searchBrands(sectionId: string, query: string) {
           {error}
         </div>
       )}
+
+      <StorefrontHeroEditor />
+      <StyleFeedEditor />
 
 
       <section className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">

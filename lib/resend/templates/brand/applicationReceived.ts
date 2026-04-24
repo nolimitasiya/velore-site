@@ -34,3 +34,4 @@ export function brandApplicationReceivedEmail(params: { firstName: string }) {
 
   return { subject, html };
 }
+ 

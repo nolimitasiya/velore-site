@@ -6,26 +6,45 @@ export function buildTrackedProductUrl(args: {
   const source = String(args.sourceUrl || "").trim();
   if (!source) return null;
 
-  // Start from product page
-  const dest = new URL(source);
-
   const base = String(args.affiliateBaseUrl || "").trim();
-  if (!base) return dest.toString(); // no tracking yet, just product page
+  if (!base) return source;
 
-  // Parse brand tracking template
-  const baseUrl = new URL(base);
+  // Pattern 1:
+  // Template-style affiliate URL with destination placeholder
+  // Example:
+  // https://affiliate.example/track?url={url}
+  if (base.includes("{url}")) {
+    return base.replaceAll("{url}", encodeURIComponent(source));
+  }
 
-  // Safety: only copy params if same host (prevents mistakes / open redirect style issues)
-  if (baseUrl.host && dest.host && baseUrl.host !== dest.host) {
-    // still return product URL, but don’t copy params from a different domain
+  let dest: URL;
+  let baseUrl: URL;
+
+  try {
+    dest = new URL(source);
+    baseUrl = new URL(base);
+  } catch {
+    return source;
+  }
+
+  // Pattern 2:
+  // Same-host tracking params copied onto the product URL
+  // Example:
+  // base:   https://merchant.com/?ref=veilora
+  // source: https://merchant.com/products/item-1
+  if (baseUrl.host === dest.host) {
+    baseUrl.searchParams.forEach((value, key) => {
+      if (!dest.searchParams.has(key)) {
+        dest.searchParams.set(key, value);
+      }
+    });
+
     return dest.toString();
   }
 
-  // Copy all tracking query params from base into product URL
-  baseUrl.searchParams.forEach((value, key) => {
-    // Don’t overwrite if product already has that param
-    if (!dest.searchParams.has(key)) dest.searchParams.set(key, value);
-  });
-
-  return dest.toString();
+  // Pattern 3:
+  // Different host but no {url} placeholder
+  // We do NOT guess, because different affiliate systems format these differently.
+  // Safer fallback: raw source URL.
+  return source;
 }

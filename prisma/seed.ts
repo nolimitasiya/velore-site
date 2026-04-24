@@ -265,6 +265,35 @@ async function seedStorefrontSections() {
 
   console.log(`✅ Seeded ${sections.length} storefront sections`);
 }
+async function upsertCategoryWithParent(slug: string, name: string, parentSlug?: string) {
+  let parentId: string | undefined;
+
+  if (parentSlug) {
+    const parent = await prisma.category.findUnique({
+      where: { slug: parentSlug },
+      select: { id: true },
+    });
+
+    if (!parent) {
+      throw new Error(`Parent category not found: ${parentSlug}`);
+    }
+
+    parentId = parent.id;
+  }
+
+  await prisma.category.upsert({
+    where: { slug },
+    update: {
+      name,
+      parentId: parentId ?? null,
+    },
+    create: {
+      slug,
+      name,
+      parentId: parentId ?? null,
+    },
+  });
+}
 
 async function main() {
   // ---------------------------
@@ -290,14 +319,17 @@ async function main() {
   // ---------------------------
   // 2) Core taxonomy
   // ---------------------------
-  await upsertBySlug("category", [
+    await upsertBySlug("category", [
     "clothing",
     "abaya",
     "modest_dresses",
     "coats",
     "jackets",
+    "blazers",
+    "hoodies_sweatshirts",
     "knitwear",
     "tops",
+    "t_shirts",
     "skirts",
     "trousers",
     "co_ords",
@@ -310,11 +342,18 @@ async function main() {
     "shoes",
   ]);
 
+    await upsertCategoryWithParent("rings", "Rings", "accessories");
+  await upsertCategoryWithParent("bracelets", "Bracelets", "accessories");
+  await upsertCategoryWithParent("necklaces", "Necklaces", "accessories");
+  await upsertCategoryWithParent("earrings", "Earrings", "accessories");
+  await upsertCategoryWithParent("watches", "Watches", "accessories");
+
   await upsertBySlug("occasion", [
   "everyday",
   "workwear",
   "wedding_guest",
   "wedding",
+  "graduation",
   "eid",
   "ramadan",
   "party",
@@ -340,7 +379,7 @@ async function main() {
     "Elastane",
   ];
 
-  const MATERIAL_ALLOWED: Record<string, string[]> = {
+    const MATERIAL_ALLOWED: Record<string, string[]> = {
     HIJAB: ["Chiffon", "Jersey", "Modal", "Viscose", "Cotton", "Silk"],
     ABAYA: ["Cotton", "Viscose", "Modal", "Silk", "Polyester", "Linen", "Wool", "Elastane"],
     DRESS: ["Cotton", "Viscose", "Modal", "Silk", "Linen", "Polyester", "Elastane"],
@@ -352,6 +391,11 @@ async function main() {
     KHIMAR: ["Chiffon", "Jersey", "Modal", "Cotton"],
     JILBAB: ["Cotton", "Viscose", "Modal", "Polyester"],
     COATS_JACKETS: ["Wool", "Polyester", "Cotton"],
+    HOODIE_SWEATSHIRT: ["Cotton", "Viscose", "Modal", "Polyester", "Elastane"],
+    PANTS: ["Cotton", "Viscose", "Modal", "Linen", "Polyester", "Elastane"],
+    BLAZER: ["Polyester", "Viscose", "Cotton", "Linen", "Wool", "Elastane"],
+    T_SHIRT: ["Cotton", "Viscose", "Modal", "Polyester", "Elastane"],
+    ACCESSORIES: ["Cotton", "Chiffon", "Jersey", "Modal", "Viscose", "Silk", "Polyester", "Nylon"],
   };
 
   const COLOURS = [
@@ -378,6 +422,9 @@ async function main() {
   "Yellow",
   "Orange",
   "Gold",
+  "Silver",
+  "Rose Gold",
+  "Platinum",
   "Nude",
   "Multicolour",
 ];
@@ -515,6 +562,51 @@ async function main() {
     "Layered",
     "Wool",
   ],
+    HOODIE_SWEATSHIRT: [
+    "Oversized",
+    "Casual",
+    "Minimalist",
+    "Knitted",
+    "Loungewear",
+    "Layered",
+  ],
+
+  PANTS: [
+    "Wide Leg",
+    "Straight Leg",
+    "Tailored",
+    "Casual",
+    "Formal",
+    "Minimalist",
+    "Linen",
+    "Lightweight",
+  ],
+
+  BLAZER: [
+    "Tailored",
+    "Structured",
+    "Oversized",
+    "Formal",
+    "Minimalist",
+    "Layered",
+  ],
+
+  T_SHIRT: [
+    "Oversized",
+    "Casual",
+    "Minimalist",
+    "Lightweight",
+    
+  ],
+
+  ACCESSORIES: [
+  "Minimalist",
+  "Classic",
+  "Statement",
+  "Everyday",
+  "Elegant",
+  "Layered",
+],
 };
 
   const STYLES = Array.from(new Set(Object.values(STYLE_ALLOWED_PRODUCT_TYPES).flat()));

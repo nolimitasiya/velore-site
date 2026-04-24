@@ -3,14 +3,19 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import type { DemoContinent } from "../data/demo";
+
+type ContinentCard = {
+  slug: string;
+  name: string;
+  imageUrl: string;
+};
 
 export function SloganAndContinents({
   slogan,
   continents,
 }: {
   slogan: string;
-  continents: DemoContinent[];
+  continents: ContinentCard[];
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -32,15 +37,15 @@ export function SloganAndContinents({
   }
 
   return (
-    <section className="bg-[#eee]">
+    <section className="bg-background">
       <div className="w-full px-6 pb-10">
 
 
       {/* Slogan */}
-<div className="text-center mb-10">
-  <div className="mt-2 font-display text-[28px] md:text-[26px] tracking-[0.02em] text-black/80 text-center">
+<div className="text-center mt-16 mb-12">
+  <p className="text-2xl md:text-3xl italic font-serif text-center text-foreground/100">
   {slogan}
-</div>
+</p>
 </div>
 
 
@@ -60,21 +65,21 @@ export function SloganAndContinents({
           >
             {continents.map((c) => (
               <Link
-                key={c.key}
-                href={`/continent/${c.key}`}
+                key={c.slug}
+                href={`/continent/${c.slug}`}
                 className="group relative shrink-0 w-[260px] sm:w-[300px] lg:w-[340px]"
               >
                 <div className="relative aspect-[3/4] overflow-hidden rounded-3xl bg-black/5">
                   <Image
                     src={c.imageUrl}
-                    alt={c.label}
+                    alt={c.name}
                     fill
                     className="object-cover transition-transform duration-300 group-hover:scale-[1.04]"
                   />
                   <div className="absolute inset-0 bg-black/25" />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <span className="font-display text-white text-xl sm:text-2xl font-semibold tracking-wide drop-shadow">
-                      {c.label}
+                      {c.name}
                     </span>
                   </div>
                 </div>

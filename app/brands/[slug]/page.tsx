@@ -5,8 +5,9 @@ import { prisma } from "@/lib/prisma";
 import SiteShell from "@/components/SiteShell";
 import { ProductRow, type StorefrontProduct } from "@/components/ProductRow";
 import StorefrontFilters from "@/components/StorefrontFilters";
-import { Prisma } from "@prisma/client";
+import { Prisma, BrandAccountStatus, AffiliateStatus } from "@prisma/client";
 import { buildTrackedOutboundUrl } from "@/lib/affiliate/tracking";
+
 
 function regionLabel(value: string | null) {
   return value ? value.replaceAll("_", " ") : null;
@@ -56,8 +57,9 @@ export default async function BrandPage({
   const sort = firstParam(sp, "sort") || "new";
   const min = firstParam(sp, "min");
   const max = firstParam(sp, "max");
-  const sale = ["1", "true", "yes", "on"].includes(firstParam(sp, "sale").toLowerCase());
-  const nextDay = ["1", "true", "yes", "on"].includes(firstParam(sp, "next_day").toLowerCase());
+  const sale = ["1", "true", "yes", "on"].includes(
+    firstParam(sp, "sale").toLowerCase()
+  );
 
   const brand = await prisma.brand.findUnique({
     where: { slug },
@@ -71,6 +73,8 @@ export default async function BrandPage({
       baseCity: true,
       baseCountryCode: true,
       baseRegion: true,
+      accountStatus: true,
+      affiliateStatus: true,
     },
   });
 
@@ -84,11 +88,31 @@ export default async function BrandPage({
     );
   }
 
+  // Public brand pages should only show operational + affiliate-active brands
+  if (
+    brand.accountStatus !== BrandAccountStatus.ACTIVE ||
+    brand.affiliateStatus !== AffiliateStatus.ACTIVE
+  ) {
+    return (
+      <SiteShell>
+        <div className="mx-auto w-full max-w-[1800px] px-8 py-12 text-sm text-black/60">
+          This brand is not currently available for shopping.
+        </div>
+      </SiteShell>
+    );
+  }
+
   const where: Prisma.ProductWhereInput = {
     brandId: brand.id,
     status: "APPROVED",
     isActive: true,
     publishedAt: { not: null },
+    brand: {
+      is: {
+        accountStatus: BrandAccountStatus.ACTIVE,
+        affiliateStatus: AffiliateStatus.ACTIVE,
+      },
+    },
   };
 
   if (types.length) {
@@ -141,12 +165,6 @@ export default async function BrandPage({
     };
   }
 
-  if (nextDay) {
-    where.badges = sale
-      ? { hasEvery: ["sale", "next_day"] }
-      : { has: "next_day" };
-  }
-
   const orderBy: Prisma.ProductOrderByWithRelationInput =
     sort === "price_asc"
       ? { price: "asc" }
@@ -155,34 +173,33 @@ export default async function BrandPage({
       : { publishedAt: "desc" };
 
   const productsDb = await prisma.product.findMany({
-  where,
-  orderBy,
-  take: 48,
-  select: {
-    id: true,
-    title: true,
-    price: true,
-    currency: true,
-    images: {
-      orderBy: { sortOrder: "asc" },
-      take: 1,
-      select: { url: true },
+    where,
+    orderBy,
+    take: 48,
+    select: {
+      id: true,
+      title: true,
+      price: true,
+      currency: true,
+      images: {
+        orderBy: { sortOrder: "asc" },
+        take: 1,
+        select: { url: true },
+      },
     },
-  },
-});
+  });
 
   const products: StorefrontProduct[] = productsDb.map((p, index) => ({
-  id: p.id,
-  title: p.title,
-  imageUrl: p.images?.[0]?.url ?? null,
-  price: p.price ? p.price.toString() : null,
-  currency: p.currency,
-  buyUrl: buildTrackedOutboundUrl(p.id, {
-    sourcePage: "BRAND",
-    position: index + 1,
-  }),
-}));
-  
+    id: p.id,
+    title: p.title,
+    imageUrl: p.images?.[0]?.url ?? null,
+    price: p.price ? p.price.toString() : null,
+    currency: p.currency,
+    buyUrl: buildTrackedOutboundUrl(p.id, {
+      sourcePage: "BRAND",
+      position: index + 1,
+    }),
+  }));
 
   const location = [brand.baseCity, brand.baseCountryCode, regionLabel(brand.baseRegion)]
     .filter(Boolean)
@@ -194,17 +211,17 @@ export default async function BrandPage({
         <section className="overflow-hidden rounded-[32px]">
           <div className="relative h-[340px] md:h-[500px] bg-[#d8d0c5]">
             <div
-  className="absolute inset-0 bg-cover"
-  style={
-    brand.coverImageUrl
-      ? {
-          backgroundImage: `url("${brand.coverImageUrl}")`,
-          backgroundSize: "cover",
-          backgroundPosition: `${brand.coverImageFocalX ?? 50}% ${brand.coverImageFocalY ?? 50}%`,
-        }
-      : undefined
-  }
-/>
+              className="absolute inset-0 bg-cover"
+              style={
+                brand.coverImageUrl
+                  ? {
+                      backgroundImage: `url("${brand.coverImageUrl}")`,
+                      backgroundSize: "cover",
+                      backgroundPosition: `${brand.coverImageFocalX ?? 50}% ${brand.coverImageFocalY ?? 50}%`,
+                    }
+                  : undefined
+              }
+            />
 
             {!brand.coverImageUrl && (
               <div className="absolute inset-0 bg-gradient-to-br from-[#c8bbab] via-[#d8d0c5] to-[#b7aa98]" />

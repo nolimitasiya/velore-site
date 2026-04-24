@@ -1,22 +1,32 @@
-// C:\Users\Asiya\projects\dalra\app\categories\clothing\page.tsx
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
 import SiteShell from "@/components/SiteShell";
 import ContinentFilters from "@/components/ContinentFilters";
+import StorefrontPagination from "@/components/StorefrontPagination";
 import { ProductGrid, type GridProduct } from "@/components/ProductGrid";
 import { prisma } from "@/lib/prisma";
-import { Badge, ProductType } from "@prisma/client";
+import {
+  AffiliateStatus,
+  BrandAccountStatus,
+  ProductType,
+} from "@prisma/client";
 import { sortSizes, formatSizeLabel } from "@/lib/sizing/order";
 import { parseStorefrontFilters } from "@/lib/storefront/parseFilters";
 import { getAvailableStyles } from "@/lib/storefront/getAvailableStyles";
 import { buildStorefrontWhere } from "@/lib/storefront/buildStorefrontWhere";
 import { countryNameFromIso2 } from "@/lib/geo/countries";
+import { getMerchPageOneProducts } from "@/lib/storefront/getMerchPageOneProducts";
+import { getStorefrontPaginationState } from "@/lib/storefront/pagination";
 
 type Opt = { value: string; label: string };
 
 function titleCaseLabel(s: string) {
+  if (s === "COATS_JACKETS") return "Coats & Jackets";
+  if (s === "HOODIE_SWEATSHIRT") return "Hoodie & Sweatshirt";
+  if (s === "T_SHIRT") return "T-Shirt";
+
   return s
     .toLowerCase()
     .replaceAll("_", " ")
@@ -24,23 +34,6 @@ function titleCaseLabel(s: string) {
     .filter(Boolean)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
-}
-
-function qp(v: string | string[] | undefined): string {
-  if (Array.isArray(v)) return v[0] ?? "";
-  return typeof v === "string" ? v : "";
-}
-
-function toNum(v: unknown): number | null {
-  if (v == null) return null;
-  const s = String(v).trim();
-  if (!s) return null;
-  const n = Number(s);
-  return Number.isFinite(n) ? n : null;
-}
-
-function isProductType(v: string): v is ProductType {
-  return (Object.values(ProductType) as string[]).includes(v);
 }
 
 const CLOTHING_CATEGORY_SLUGS = [
@@ -58,8 +51,23 @@ const CLOTHING_CATEGORY_SLUGS = [
   "khimar",
   "swimwear_modest",
   "hijabs",
-  "accessories",
-  "shoes",
+];
+const CLOTHING_PRODUCT_TYPES: ProductType[] = [
+  ProductType.ABAYA,
+  ProductType.DRESS,
+  ProductType.SKIRT,
+  ProductType.TOP,
+  ProductType.HIJAB,
+  ProductType.ACTIVEWEAR,
+  ProductType.SETS,
+  ProductType.MATERNITY,
+  ProductType.KHIMAR,
+  ProductType.JILBAB,
+  ProductType.COATS_JACKETS,
+  ProductType.HOODIE_SWEATSHIRT,
+  ProductType.PANTS,
+  ProductType.BLAZER,
+  ProductType.T_SHIRT,
 ];
 
 export default async function ClothingPage({
@@ -72,10 +80,24 @@ export default async function ClothingPage({
   const filters = parseStorefrontFilters(sp);
   const { types, sort } = filters;
 
-    const pageTitle =
-    types.length === 1
-      ? titleCaseLabel(types[0])
-      : "Clothing";
+  const hasActiveFilters =
+    filters.brands.length > 0 ||
+    filters.countries.length > 0 ||
+    filters.types.length > 0 ||
+    filters.styles.length > 0 ||
+    filters.colors.length > 0 ||
+    filters.sizes.length > 0 ||
+    filters.min != null ||
+    filters.max != null ||
+    filters.saleOn;
+
+  const shouldUseMerchPageOne = !hasActiveFilters && sort === "new";
+
+  const pagination = getStorefrontPaginationState(sp);
+  const { currentPage, isExpandedPageOne, pageOneVisibleCount, take } =
+    pagination;
+
+  const pageTitle = types.length === 1 ? titleCaseLabel(types[0]) : "Clothing";
 
   const orderBy =
     sort === "price_asc"
@@ -92,15 +114,22 @@ export default async function ClothingPage({
 
   const brandsRaw = await prisma.brand.findMany({
     where: {
+      accountStatus: BrandAccountStatus.ACTIVE,
+      affiliateStatus: AffiliateStatus.ACTIVE,
       products: {
         some: {
           status: "APPROVED",
           isActive: true,
           publishedAt: { not: null },
           OR: [
-            ...(clothingCatIds.length ? [{ categoryId: { in: clothingCatIds } }] : []),
-            { categoryId: null, productType: { not: null } },
-          ],
+  ...(clothingCatIds.length
+    ? [{ categoryId: { in: clothingCatIds } }]
+    : []),
+  {
+    categoryId: null,
+    productType: { in: CLOTHING_PRODUCT_TYPES },
+  },
+],
         },
       },
     },
@@ -114,7 +143,7 @@ export default async function ClothingPage({
     label: b.name,
   }));
 
-    const countryOptions: Opt[] = Array.from(
+  const countryOptions: Opt[] = Array.from(
     new Set(brandsRaw.map((b) => b.baseCountryCode).filter(Boolean))
   )
     .sort()
@@ -123,7 +152,7 @@ export default async function ClothingPage({
       label: countryNameFromIso2(String(cc)),
     }));
 
-  const typeOptions: Opt[] = Object.values(ProductType).map((t) => ({
+    const typeOptions: Opt[] = CLOTHING_PRODUCT_TYPES.map((t) => ({
     value: t,
     label: titleCaseLabel(t),
   }));
@@ -147,54 +176,113 @@ export default async function ClothingPage({
     take: 500,
   });
 
-  const sizeOptions = sizesRaw
-    .sort(sortSizes)
-    .map((s) => ({
-      value: s.slug,
-      label: formatSizeLabel(s.name),
-    }));
-
-  const where = buildStorefrontWhere({
-    filters,
-    categoryIds: clothingCatIds,
-  });
-
-
-  const products = await prisma.product.findMany({
-    where,
-    orderBy,
-    take: 120,
-    select: {
-      id: true,
-      title: true,
-      price: true,
-      currency: true,
-      badges: true,
-      brand: { select: { name: true } },
-      images: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true } },
-    },
-  });
-
-  const mapped: GridProduct[] = products.map((p) => ({
-    id: p.id,
-    title: p.title,
-    brandName: p.brand?.name ?? null,
-    imageUrl: p.images?.[0]?.url ?? null,
-    price: p.price ? p.price.toString() : null,
-    currency: String(p.currency),
-    buyUrl: `/out/${p.id}`,
-    badges: (p.badges ?? []) as any,
+  const sizeOptions = sizesRaw.sort(sortSizes).map((s) => ({
+    value: s.slug,
+    label: formatSizeLabel(s.name),
   }));
+
+  const where = {
+  ...buildStorefrontWhere({
+    filters,
+  }),
+  AND: [
+    {
+      OR: [
+        ...(clothingCatIds.length
+          ? [{ categoryId: { in: clothingCatIds } }]
+          : []),
+        {
+          categoryId: null,
+          productType: { in: CLOTHING_PRODUCT_TYPES },
+        },
+      ],
+    },
+  ],
+};
+
+  const totalCount = await prisma.product.count({ where });
+
+  let mapped: GridProduct[] = [];
+
+  if (shouldUseMerchPageOne && currentPage === 1) {
+    mapped = await getMerchPageOneProducts("CLOTHING", pageOneVisibleCount);
+  } else {
+    let whereForPage = where;
+    let skip = 0;
+
+    if (shouldUseMerchPageOne && currentPage >= 2) {
+      const protectedPageOneProducts = await getMerchPageOneProducts(
+        "CLOTHING",
+        48
+      );
+
+      const protectedIds = protectedPageOneProducts.map((p) => p.id);
+
+      whereForPage = {
+        ...where,
+        id: { notIn: protectedIds },
+      };
+
+      skip = (currentPage - 2) * 24;
+    } else if (currentPage === 1) {
+      skip = 0;
+    } else {
+      skip = 48 + (currentPage - 2) * 24;
+    }
+
+    const products = await prisma.product.findMany({
+      where: whereForPage,
+      orderBy,
+      skip,
+      take,
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        currency: true,
+        badges: true,
+        brand: { select: { name: true } },
+        images: {
+          orderBy: { sortOrder: "asc" },
+          take: 1,
+          select: { url: true },
+        },
+      },
+    });
+
+    mapped = products.map((p, index) => ({
+  id: p.id,
+  title: p.title,
+  brandName: p.brand?.name ?? null,
+  imageUrl: p.images?.[0]?.url ?? null,
+  price: p.price ? p.price.toString() : null,
+  currency: String(p.currency),
+  buyUrl: `/out/${p.id}`,
+  badges: (p.badges ?? []) as any,
+  analytics: {
+    sourcePage: "SEARCH" as const,
+    sectionKey: "clothing_grid",
+    position: index + 1,
+    pageNumber: currentPage,
+    isExpandedPageOne: currentPage === 1 ? isExpandedPageOne : false,
+    contextType:
+      shouldUseMerchPageOne && currentPage >= 2 ? "GRID_AFTER_MERCH" : "GRID",
+  },
+}));
+  }
 
   return (
     <SiteShell>
       <main className="min-h-screen w-full bg-white">
-        <div className="mx-auto w-full max-w-[1800px] px-8 py-10 space-y-8">
+        <div className="mx-auto w-full max-w-[1800px] space-y-8 px-8 py-10">
           <header className="text-center">
-  <h1 className="font-display text-4xl md:text-5xl tracking-[0.12em]">
-    {pageTitle}
-  </h1>
-</header>
+            <h1 className="font-display text-4xl tracking-[0.12em] md:text-5xl">
+              {pageTitle}
+            </h1>
+            <p className="mt-3 text-sm md:text-base text-black/60">
+              Discover clothing designed for you.
+            </p>
+          </header>
 
           <ContinentFilters
             brands={brandOptions}
@@ -210,7 +298,17 @@ export default async function ClothingPage({
               No items match your filters.
             </div>
           ) : (
-            <ProductGrid products={mapped} />
+            
+            <section id="products">
+              <ProductGrid products={mapped} />
+              <StorefrontPagination
+                pathname="/categories/clothing"
+                searchParams={sp}
+                totalItems={totalCount}
+                currentPage={currentPage}
+                isExpandedPageOne={isExpandedPageOne}
+              />
+              </section>
           )}
         </div>
       </main>

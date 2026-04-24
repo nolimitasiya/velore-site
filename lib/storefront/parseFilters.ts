@@ -13,7 +13,6 @@ export type StorefrontFilters = {
   max: number | null;
   sort: string;
   saleOn: boolean;
-  nextDayOn: boolean;
 };
 
 function values(spValue: string | string[] | undefined): string[] {
@@ -73,7 +72,6 @@ export function parseStorefrontFilters(sp: RawSearchParams): StorefrontFilters {
   const sort = first(sp.sort) || "new";
 
   const saleOn = truthy(first(sp.sale));
-  const nextDayOn = truthy(first(sp.next_day));
 
   return {
     brands,
@@ -86,6 +84,5 @@ export function parseStorefrontFilters(sp: RawSearchParams): StorefrontFilters {
     max,
     sort,
     saleOn,
-    nextDayOn,
   };
 }

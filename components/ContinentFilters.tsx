@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState} from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 
@@ -51,7 +51,6 @@ type Draft = {
   max: string;
   sort: string;
   sale: string;
-  next_day: string;
 };
 
 function qpAll(sp: URLSearchParams, key: string) {
@@ -91,14 +90,8 @@ function summaryLabel(opts: Opt[] | undefined, values: string[], maxVisible = 3)
   return `${labels.slice(0, maxVisible).join(", ")} +${labels.length - maxVisible} more`;
 }
 
-function offersLabel(sale: string, nextDay: string) {
-  const hasSale = !!sale;
-  const hasNextDay = !!nextDay;
-
-  if (hasSale && hasNextDay) return "Sale, Next Day Delivery";
-  if (hasSale) return "Sale";
-  if (hasNextDay) return "Next Day Delivery";
-  return "All";
+function offersLabel(sale: string) {
+  return sale ? "Sale" : "All";
 }
 
 function priceLabel(min: string, max: string) {
@@ -145,7 +138,7 @@ export default function ContinentFilters({
 
   const [liveStyles, setLiveStyles] = useState<Opt[]>(styles);
   const [stylesLoading, setStylesLoading] = useState(false);
-  const lastTypesRef = useRef<string[]>([]);
+  const [stylesReady, setStylesReady] = useState(false);
 
 const [previewCount, setPreviewCount] = useState<number | null>(null);
 const [countLoading, setCountLoading] = useState(false);
@@ -164,67 +157,79 @@ const [countLoading, setCountLoading] = useState(false);
     max: sp.get("max") ?? "",
     sort: sp.get("sort") ?? "new",
     sale: truthyParam(sp.get("sale") ?? "") ? "1" : "",
-    next_day: truthyParam(sp.get("next_day") ?? "") ? "1" : "",
   }));
 
-  useEffect(() => {
+ useEffect(() => {
+  // Only sync from props when drawer is CLOSED
+  if (!open) {
     setLiveStyles(styles);
-  }, [styles]);
+  }
+}, [styles, open]);
 
  useEffect(() => {
   if (!open) return;
 
-  const selectedTypes = unique(draft.types.map((v) => v.toUpperCase()));
+  const controller = new AbortController();
 
-  // prevent unnecessary refetch
-  const same =
-    selectedTypes.length === lastTypesRef.current.length &&
-    selectedTypes.every((v, i) => v === lastTypesRef.current[i]);
+  async function loadStyles() {
+    const selectedTypes = unique(draft.types.map((v) => v.toUpperCase()));
 
-  if (same) return;
+    setStylesReady(false);
+    setStylesLoading(true);
 
-  lastTypesRef.current = selectedTypes;
-    const controller = new AbortController();
-
-    async function loadStyles() {
-      try {
-        setStylesLoading(true);
-
-        const qs = new URLSearchParams();
-        for (const t of selectedTypes) {
-          qs.append("type", t);
-        }
-
-        const res = await fetch(`/api/storefront/filters?${qs.toString()}`, {
-          cache: "no-store",
-          signal: controller.signal,
-        });
-
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok || !json?.ok) return;
-
-        const nextStyles = Array.isArray(json.styles) ? json.styles : [];
-        setLiveStyles(nextStyles);
-
-        if (draft.styles.length) {
-          const allowed = new Set(nextStyles.map((s: Opt) => s.value));
-          const filteredSelected = draft.styles.filter((s) => allowed.has(s));
-          if (filteredSelected.length !== draft.styles.length) {
-            setDraft((d) => ({ ...d, styles: filteredSelected }));
-          }
-        }
-      } catch (err: any) {
-        if (err?.name !== "AbortError") {
-          setLiveStyles(styles);
-        }
-      } finally {
-        setStylesLoading(false);
-      }
+    if (!selectedTypes.length) {
+      setLiveStyles(styles);
+      setDraft((d) => ({ ...d, styles: [] }));
+      setStylesReady(true);
+      setStylesLoading(false);
+      return;
     }
 
-    loadStyles();
-    return () => controller.abort();
-  }, [open, draft.types, styles, draft.styles]);
+    try {
+      const qs = new URLSearchParams();
+      for (const t of selectedTypes) {
+        qs.append("type", t);
+      }
+
+      const res = await fetch(`/api/storefront/filters?${qs.toString()}`, {
+        cache: "no-store",
+        signal: controller.signal,
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json?.ok) {
+        setLiveStyles([]);
+        setStylesReady(true);
+        return;
+      }
+
+      const nextStyles = Array.isArray(json.styles) ? json.styles : [];
+      setLiveStyles(nextStyles);
+
+      setDraft((d) => {
+        if (!d.styles.length) return d;
+
+        const allowed = new Set(nextStyles.map((s: Opt) => s.value));
+        const filteredSelected = d.styles.filter((s) => allowed.has(s));
+
+        if (filteredSelected.length === d.styles.length) return d;
+        return { ...d, styles: filteredSelected };
+      });
+
+      setStylesReady(true);
+    } catch (err: any) {
+      if (err?.name !== "AbortError") {
+        setLiveStyles(styles);
+        setStylesReady(true);
+      }
+    } finally {
+      setStylesLoading(false);
+    }
+  }
+
+  loadStyles();
+  return () => controller.abort();
+}, [open, draft.types, styles]);
 
   useEffect(() => {
   if (!open) return;
@@ -249,7 +254,6 @@ const [countLoading, setCountLoading] = useState(false);
       if (draft.max.trim()) qs.set("max", draft.max.trim());
       if (draft.sort.trim()) qs.set("sort", draft.sort.trim());
       if (draft.sale.trim()) qs.set("sale", draft.sale.trim());
-      if (draft.next_day.trim()) qs.set("next_day", draft.next_day.trim());
 
       const res = await fetch(`/api/storefront/count?${qs.toString()}`, {
         cache: "no-store",
@@ -285,7 +289,7 @@ const [countLoading, setCountLoading] = useState(false);
   draft.max,
   draft.sort,
   draft.sale,
-  draft.next_day,
+ 
 ]);
 
   function syncDraftFromUrl() {
@@ -302,7 +306,6 @@ const [countLoading, setCountLoading] = useState(false);
       max: sp.get("max") ?? "",
       sort: sp.get("sort") ?? "new",
       sale: truthyParam(sp.get("sale") ?? "") ? "1" : "",
-      next_day: truthyParam(sp.get("next_day") ?? "") ? "1" : "",
     });
   }
 
@@ -349,7 +352,7 @@ const [countLoading, setCountLoading] = useState(false);
     setOrDelete("max", draft.max);
     setOrDelete("sort", draft.sort);
     setOrDelete("sale", draft.sale);
-    setOrDelete("next_day", draft.next_day);
+    
 
     // ✅ Search page UX:
     // only clear q if the selected product type actually changed
@@ -374,7 +377,7 @@ const [countLoading, setCountLoading] = useState(false);
       max: "",
       sort: "new",
       sale: "",
-      next_day: "",
+     
     });
   }
 
@@ -388,9 +391,6 @@ const [countLoading, setCountLoading] = useState(false);
     } else if (key === "sale") {
       next.delete("sale");
       setDraft((d) => ({ ...d, sale: "" }));
-    } else if (key === "next_day") {
-      next.delete("next_day");
-      setDraft((d) => ({ ...d, next_day: "" }));
     } else if (key.startsWith("type:")) {
       const slug = key.slice("type:".length);
       const updated = draft.types.filter((x) => x !== slug);
@@ -430,8 +430,8 @@ const [countLoading, setCountLoading] = useState(false);
   function clearAllAndApply() {
     const next = new URLSearchParams(sp.toString());
     ["type", "style", "brand", "country", "color", "size", "min", "max", "sale", "next_day"].forEach((k) =>
-      next.delete(k)
-    );
+  next.delete(k)
+);
     next.set("sort", "new");
     const qs = next.toString();
     router.push(qs ? `${pathname}?${qs}` : pathname);
@@ -472,7 +472,6 @@ const [countLoading, setCountLoading] = useState(false);
 
     if (draft.min || draft.max) out.push({ key: "price", label: priceLabel(draft.min, draft.max) });
     if (draft.sale) out.push({ key: "sale", label: "Sale" });
-    if (draft.next_day) out.push({ key: "next_day", label: "Next Day Delivery" });
 
     return out;
   }, [draft, brands, types, liveStyles, colors, sizes]);
@@ -612,10 +611,10 @@ const activeFilterCount = chips.length;
   />
 
   <FilterRow
-    label="Offers"
-    valueLabel={offersLabel(draft.sale, draft.next_day)}
-    onClick={() => setPanel("offers")}
-  />
+  label="Offers"
+  valueLabel={offersLabel(draft.sale)}
+  onClick={() => setPanel("offers")}
+/>
 </div>
               )}
 
@@ -638,11 +637,15 @@ const activeFilterCount = chips.length;
                 <div>
                   
 
-                  {!stylesLoading && liveStyles.length === 0 && (
-                    <div className="px-5 py-4 text-sm text-black/50">
-                      No styles available for these product types.
-                    </div>
-                  )}
+                  {stylesLoading ? (
+  <div className="px-5 py-4 text-sm text-black/50">
+    Loading styles…
+  </div>
+) : stylesReady && draft.types.length > 0 && liveStyles.length === 0 ? (
+  <div className="px-5 py-4 text-sm text-black/50">
+    No styles available for this product type.
+  </div>
+) : null}
 
                   <ChoiceListMulti
                     options={liveStyles}
@@ -695,13 +698,11 @@ const activeFilterCount = chips.length;
               )}
 
               {panel === "offers" && (
-                <OffersPanel
-                  saleOn={!!draft.sale}
-                  nextDayOn={!!draft.next_day}
-                  onToggleSale={() => setDraft((d) => ({ ...d, sale: d.sale ? "" : "1" }))}
-                  onToggleNextDay={() => setDraft((d) => ({ ...d, next_day: d.next_day ? "" : "1" }))}
-                />
-              )}
+  <OffersPanel
+    saleOn={!!draft.sale}
+    onToggleSale={() => setDraft((d) => ({ ...d, sale: d.sale ? "" : "1" }))}
+  />
+)}
 
               {panel === "price" && (
                 <PricePanel
@@ -820,38 +821,24 @@ function ChoiceListMulti({
 
 function OffersPanel({
   saleOn,
-  nextDayOn,
   onToggleSale,
-  onToggleNextDay,
 }: {
   saleOn: boolean;
-  nextDayOn: boolean;
   onToggleSale: () => void;
-  onToggleNextDay: () => void;
 }) {
   return (
     <div className="space-y-3 p-5">
-      <div className="text-sm text-black/60">Choose offers and delivery options.</div>
+      <div className="text-sm text-black/60">Choose available offers.</div>
 
       <button
-  onClick={onToggleSale}
-  className="w-full rounded-none"
->
-  <div className="flex items-center justify-between">
-    <div className="text-sm font-medium">Sale</div>
-    <div className="text-sm">{saleOn ? "✓" : ""}</div>
-  </div>
-</button>
-
-<button
-  onClick={onToggleNextDay}
-  className="w-full rounded-none"
->
-  <div className="flex items-center justify-between">
-    <div className="text-sm font-medium">Next Day Delivery</div>
-    <div className="text-sm">{nextDayOn ? "✓" : ""}</div>
-  </div>
-</button>
+        onClick={onToggleSale}
+        className="w-full rounded-none"
+      >
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-medium">Sale</div>
+          <div className="text-sm">{saleOn ? "✓" : ""}</div>
+        </div>
+      </button>
     </div>
   );
 }

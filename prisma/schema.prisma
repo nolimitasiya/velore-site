@@ -71,6 +71,7 @@ model Brand {
   name             String
   slug             String   @unique
   websiteUrl       String?
+  instagramHandle  String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   adminNotes       String?
@@ -223,6 +224,9 @@ model Product {
   submittedAt DateTime?
   reviewNote  String?
 
+  diaryPosts           DiaryPostProduct[]
+  collectionMerchItems CollectionMerchItem[]
+
   @@unique([brandId, sourceUrl], name: "brandId_sourceUrl")
   @@index([brandId, slug])
   @@index([categoryId])
@@ -366,11 +370,13 @@ model AffiliateClick {
   shopperCountryCode  String? @db.Char(2)
   shopperCurrencyCode String? @db.Char(3)
 
-  // NEW: analytics context
-  sourcePage ClickSourcePage?
-  sectionId  String? @db.Uuid
-  sectionKey String?
-  position   Int?
+  sourcePage        ClickSourcePage?
+  sectionId         String?          @db.Uuid
+  sectionKey        String?
+  position          Int?
+  pageNumber        Int?
+  isExpandedPageOne Boolean?
+  contextType       String?
 
   product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   brand   Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
@@ -380,11 +386,11 @@ model AffiliateClick {
   @@index([countryCode, clickedAt])
   @@index([shopperCountryCode, clickedAt])
   @@index([shopperCurrencyCode, clickedAt])
-
-  // NEW
   @@index([sourcePage, clickedAt])
   @@index([sectionId, clickedAt])
   @@index([sectionKey, clickedAt])
+  @@index([pageNumber, clickedAt])
+  @@index([contextType, clickedAt])
 }
 
 model AffiliateEarning {
@@ -437,6 +443,11 @@ enum ProductType {
   KHIMAR
   JILBAB
   COATS_JACKETS
+  HOODIE_SWEATSHIRT
+  PANTS
+  BLAZER
+  T_SHIRT
+  ACCESSORIES
 }
 
 model WaitlistSubscriber {
@@ -678,6 +689,32 @@ model FeatureBooking {
   @@index([status, createdAt])
 }
 
+model HomepageStyleFeedItem {
+  id String @id @default(cuid())
+
+  title           String?
+  instagramHandle String?
+
+  imageUrl    String
+  imagePath   String?
+  imageAlt    String?
+  imageWidth  Int?
+  imageHeight Int?
+
+  imageFocalX Float @default(50)
+  imageFocalY Float @default(50)
+
+  postUrl   String?
+  caption   String?
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
 model StyleFeedPost {
   id      String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   brandId String? @db.Uuid
@@ -690,6 +727,9 @@ model StyleFeedPost {
 
   isPinned Boolean @default(false)
   isActive Boolean @default(true)
+
+  showOnHomepage Boolean @default(false)
+  homepageOrder  Int?
 
   brand Brand? @relation(fields: [brandId], references: [id], onDelete: SetNull)
 
@@ -841,5 +881,194 @@ enum StorefrontSectionType {
   CAMPAIGN
 }
 
+enum NavigationPromoKey {
+  CLOTHING
+  ACCESSORIES
+  OCCASION
+  NEW_IN
+  SHOP_BY_BRANDS
+  EDITORIAL
+  SALE
+}
 
+model NavigationPromo {
+  id        String             @id @default(cuid())
+  key       NavigationPromoKey @unique
+  title     String
+  kicker    String?
+  blurb     String?
+  imageUrl  String?
+  ctaLabel  String?
+  ctaHref   String?
+  isActive  Boolean            @default(true)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+}
 
+enum DiaryStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model DiaryPost {
+  id                  String      @id @default(cuid())
+  title               String
+  slug                String      @unique
+  excerpt             String?
+  contentJson         Json?
+  contentHtml         String?     @db.Text
+  coverImageUrl       String?
+  coverImageAlt       String?
+  status              DiaryStatus @default(DRAFT)
+  publishedAt         DateTime?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  editorName          String?
+  shopSectionEyebrow  String?
+  shopSectionTitle    String?
+  shopSectionSubtitle String?
+
+  readCount Int @default(0)
+
+  images          DiaryImage[]
+  reads           DiaryRead[]
+  relatedProducts DiaryPostProduct[]
+
+  @@index([status, publishedAt])
+  @@index([slug])
+}
+
+model DiaryImage {
+  id          String   @id @default(cuid())
+  diaryPostId String
+  imageUrl    String
+  altText     String?
+  caption     String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  diaryPost DiaryPost @relation(fields: [diaryPostId], references: [id], onDelete: Cascade)
+
+  @@index([diaryPostId, sortOrder])
+}
+
+model DiaryRead {
+  id          String   @id @default(cuid())
+  diaryPostId String
+  readAt      DateTime @default(now())
+
+  // optional analytics context
+  countryCode         String?
+  shopperCountryCode  String?
+  shopperCurrencyCode String?
+  sourcePage          String?
+  sectionKey          String?
+  userAgent           String?
+  ipHash              String?
+
+  diaryPost DiaryPost @relation(fields: [diaryPostId], references: [id], onDelete: Cascade)
+
+  @@index([diaryPostId, readAt])
+  @@index([readAt])
+  @@index([shopperCountryCode])
+}
+
+model StorefrontHero {
+  id              String   @id @default(cuid())
+  title           String?
+  subtitle        String?
+  desktopImageUrl String
+  mobileImageUrl  String?
+  ctaLabel        String?
+  ctaHref         String?
+  overlayOpacity  Int      @default(20)
+  focalX          Float    @default(50)
+  focalY          Float    @default(50)
+  textAlign       String   @default("LEFT")
+  textX           Float    @default(20)
+  textY           Float    @default(62)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Continent {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug      String   @unique
+  name      String
+  region    Region   @unique
+  imageUrl  String
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+model DiaryPostProduct {
+  diaryPostId String
+  productId   String   @db.Uuid
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  diaryPost DiaryPost @relation(fields: [diaryPostId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([diaryPostId, productId])
+  @@unique([diaryPostId, sortOrder])
+  @@index([diaryPostId, sortOrder])
+  @@index([productId])
+}
+
+enum MerchPageKey {
+  CLOTHING
+  SALE
+  OCCASION
+}
+
+enum MerchBucket {
+  TOP_PICKS
+  DISCOVER_MORE
+  EXPLORE_NEW
+}
+
+model CollectionMerchItem {
+  id        String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pageKey   MerchPageKey
+  bucket    MerchBucket
+  productId String       @db.Uuid
+  position  Int
+  isActive  Boolean      @default(true)
+
+  startsAt DateTime?
+  endsAt   DateTime?
+  note     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([pageKey, bucket, productId], name: "pageKey_bucket_productId")
+  @@unique([pageKey, bucket, position], name: "pageKey_bucket_position")
+  @@index([pageKey, bucket, isActive])
+  @@index([productId])
+}
+
+model ContactMessage {
+  id          String               @id @default(cuid())
+  name        String
+  email       String
+  message     String
+  status      ContactMessageStatus @default(NEW)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  respondedAt DateTime?
+}
+
+enum ContactMessageStatus {
+  NEW
+  READ
+  REPLIED
+}
