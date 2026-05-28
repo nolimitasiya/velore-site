@@ -4,7 +4,6 @@ export const PRODUCT_TYPES = [
   "SKIRT",
   "TOP",
   "HIJAB",
-  "ACTIVEWEAR",
   "SETS",
   "MATERNITY",
   "KHIMAR",

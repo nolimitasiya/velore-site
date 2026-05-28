@@ -8,7 +8,7 @@ import { brandRejectedEmail } from "@/lib/resend/templates/brand/rejected";
 
 import { brandContractSentEmail } from "@/lib/resend/templates/brand/contractSent";
 import { brandContractSignedEmail } from "@/lib/resend/templates/brand/contractSigned";
-
+import { veiloraEmailTemplate } from "@/lib/resend/templates/base/veiloraBase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
@@ -46,6 +46,8 @@ async function sendStatusEmail(args: {
   firstName?: string | null;
   schedulerUrl?: string;
   contractDownloadUrl?: string;
+  emailSubject?: string;
+  emailText?: string;
 }) {
   if (args.status === "new" || args.status === "contacted") return;
 
@@ -113,18 +115,38 @@ if (args.status === "onboarded") return;
 
 
   if (args.status === "rejected") {
-    const resend = new Resend(resendKey);
-    const { subject, html } = brandRejectedEmail();
+  const resend = new Resend(resendKey);
 
-    await resend.emails.send({
-      from: `Veilora Club <${from.includes("<") ? from : from}>`,
-      to: args.applicantEmail,
-      replyTo,
-      subject,
-      html,
-    });
-    return;
-  }
+  const customText = safe(args.emailText);
+
+  const html = veiloraEmailTemplate({
+    preheader:
+      "Thank you for your time — we’re unable to move forward right now.",
+    heading: "Thank you for your application",
+    bodyHtml: customText
+      ? customText
+          .split("\n")
+          .map(
+            (line) =>
+              `<p style="margin:0 0 12px 0;">${line || "&nbsp;"}</p>`
+          )
+          .join("")
+      : brandRejectedEmail().html,
+  });
+
+  const subject =
+    safe(args.emailSubject) || "Thank you for applying to Veilora Club";
+
+  await resend.emails.send({
+    from: `Veilora Club <${from.includes("<") ? from : from}>`,
+    to: args.applicantEmail,
+    replyTo,
+    subject,
+    html,
+  });
+
+  return;
+}
 }
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -132,6 +154,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (!id) return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
 
   const body = await req.json().catch(() => ({}));
+  const sendEmail = body.sendEmail !== false;
   const status = safe(body.status).toLowerCase() as AllowedStatus;
 
   if (!ALLOWED.includes(status)) {
@@ -202,6 +225,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   });
 
   // Emails (best-effort)
+  // Emails (best-effort)
+if (sendEmail) {
   try {
     let contractDownloadUrl: string | undefined;
 
@@ -215,10 +240,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       firstName: current.firstName,
       schedulerUrl: safe(body.schedulerUrl) || undefined,
       contractDownloadUrl,
+      emailSubject: safe(body.emailSubject) || undefined,
+      emailText: safe(body.emailText) || undefined,
     });
   } catch (e) {
     console.error("[brand-app status] email failed", e);
   }
+}
 
   return NextResponse.json({ ok: true, application: updated });
 }

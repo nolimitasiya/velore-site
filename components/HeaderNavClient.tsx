@@ -63,7 +63,7 @@ const clothingLinks: NavItem[] = [
   { label: "Hijabs", href: "/categories/clothing?type=HIJAB" },
   { label: "Khimars", href: "/categories/clothing?type=KHIMAR" },
   { label: "Jilbabs", href: "/categories/clothing?type=JILBAB" },
-  { label: "Activewear", href: "/categories/clothing?type=ACTIVEWEAR" },
+  { label: "Activewear", href: "/categories/occasion/activewear" },
   { label: "Maternity", href: "/categories/clothing?type=MATERNITY" },
 ];
 const accessoriesLinks: NavItem[] = [

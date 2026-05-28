@@ -47,6 +47,8 @@ function normalizeSourcePage(v: string | null): ClickSourcePage | null {
   if (s === "HOME") return ClickSourcePage.HOME;
   if (s === "SEARCH") return ClickSourcePage.SEARCH;
   if (s === "BRAND") return ClickSourcePage.BRAND;
+  if (s === "DIARY") return ClickSourcePage.DIARY;
+
   return null;
 }
 
@@ -134,6 +136,7 @@ export async function GET(
   // NEW
   const { searchParams } = new URL(req.url);
   const sourcePage = normalizeSourcePage(searchParams.get("src"));
+  const diaryPostId = normalizeUuidLike(searchParams.get("diaryPostId") ?? searchParams.get("dpid"));
   const sectionId = normalizeUuidLike(searchParams.get("sid"));
   const sectionKey = normalizeSectionKey(searchParams.get("skey"));
   const position = normalizePosition(searchParams.get("pos"));
@@ -162,6 +165,7 @@ export async function GET(
       pageNumber,
       isExpandedPageOne,
       contextType,
+      diaryPostId,
     },
   });
 } catch (error) {

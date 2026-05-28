@@ -301,6 +301,7 @@ type Product = {
   badges: string[];
   images: { url: string; sortOrder: number }[];
   publishedAt: string | null;
+  polyesterFree: boolean;
 
   productMaterials?: { material: TaxItem }[];
   productOccasions?: { occasion: TaxItem }[];
@@ -384,6 +385,7 @@ function snapshotForDirtyCheck(
     worldwideShipping: !!prod.worldwideShipping,
     shippingCountries: (prod.shippingCountries ?? []).map((x) => x.countryCode).sort(),
     badges: Array.isArray(prod.badges) ? [...prod.badges].sort() : [],
+    polyesterFree: !!prod.polyesterFree,
     images: Array.isArray(prod.images)
       ? [...prod.images].sort((a, b) => a.sortOrder - b.sortOrder).map((x) => x.url)
       : [],
@@ -500,6 +502,7 @@ export default function ProductEditClient({ id }: { id: string }) {
   : [],
       images: Array.isArray(prod.images) ? prod.images : [],
       publishedAt: prod.publishedAt ?? null,
+      polyesterFree: Boolean(prod.polyesterFree),
       productMaterials: Array.isArray(prod.productMaterials) ? prod.productMaterials : [],
       productOccasions: Array.isArray(prod.productOccasions) ? prod.productOccasions : [],
       productColours: Array.isArray(prod.productColours) ? prod.productColours : [],
@@ -710,6 +713,7 @@ if (pt === "ACCESSORIES") {
         colourIds: selectedColourIds,
         sizeIds: selectedSizeIds,
         styleIds: selectedStyleIds,
+        polyesterFree: p.polyesterFree,
       };
 
       const r = await fetch(`/api/brand/products/${id}`, {
@@ -1198,6 +1202,29 @@ if (pt === "ACCESSORIES") {
           })}
         </div>
       </SectionCard>
+
+      <SectionCard
+  eyebrow="Product attributes"
+  title="Polyester-free"
+  description="Toggle on if this product contains no polyester. This will appear as a filter for shoppers."
+>
+  <div className="flex items-center justify-between gap-4 rounded-[22px] border border-black/8 bg-[#fcfbf8] px-4 py-4">
+    <div>
+      <div className="font-medium text-neutral-900">Polyester-free product</div>
+      <div className="mt-1 text-sm text-neutral-500">
+        Turn this on if the product contains no polyester materials.
+      </div>
+    </div>
+    <label className="flex items-center gap-2 text-sm text-neutral-700 cursor-pointer">
+      <input
+        type="checkbox"
+        checked={p.polyesterFree}
+        onChange={(e) => setP({ ...p, polyesterFree: e.target.checked })}
+      />
+      Polyester-free
+    </label>
+  </div>
+</SectionCard>
 
       <SectionCard
         eyebrow="Logistics"

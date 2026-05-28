@@ -24,7 +24,6 @@ const OCCASION_PRODUCT_TYPES: ProductType[] = [
   ProductType.SKIRT,
   ProductType.TOP,
   ProductType.HIJAB,
-  ProductType.ACTIVEWEAR,
   ProductType.SETS,
   ProductType.MATERNITY,
   ProductType.KHIMAR,
@@ -84,23 +83,38 @@ export default async function OccasionPage({
       : [{ publishedAt: "desc" as const }];
 
   const brandsRaw = await prisma.brand.findMany({
-    where: {
-      products: {
-  some: {
-    status: "APPROVED",
-    isActive: true,
-    publishedAt: { not: null },
-    productOccasions: {
-      some: {},
+  where: {
+    products: {
+      some: {
+        status: "APPROVED",
+        isActive: true,
+        publishedAt: { not: null },
+
+        AND: [
+          {
+            productOccasions: {
+              some: {},
+            },
+          },
+          {
+            productOccasions: {
+              none: {
+                occasion: {
+                  slug: "activewear",
+                },
+              },
+            },
+          },
+        ],
+
+        productType: { in: OCCASION_PRODUCT_TYPES },
+      },
     },
-    productType: { in: OCCASION_PRODUCT_TYPES },
   },
-},
-    },
-    orderBy: { name: "asc" },
-    select: { slug: true, name: true, baseCountryCode: true },
-    take: 1000,
-  });
+  orderBy: { name: "asc" },
+  select: { slug: true, name: true, baseCountryCode: true },
+  take: 1000,
+});
 
   const brandOptions: Opt[] = brandsRaw.map((b) => ({
     value: b.slug,
@@ -149,9 +163,22 @@ export default async function OccasionPage({
   ...buildStorefrontWhere({
     filters,
   }),
-  productOccasions: {
-    some: {},
-  },
+  AND: [
+    {
+      productOccasions: {
+        some: {},
+      },
+    },
+    {
+      productOccasions: {
+        none: {
+          occasion: {
+            slug: "activewear",
+          },
+        },
+      },
+    },
+  ],
   productType: filters.types.length
     ? { in: filters.types }
     : { in: OCCASION_PRODUCT_TYPES },
@@ -194,11 +221,12 @@ export default async function OccasionPage({
       take,
       select: {
         id: true,
+        slug: true, // ← ADDED
         title: true,
         price: true,
         currency: true,
         badges: true,
-        brand: { select: { name: true } },
+        brand: { select: { name: true, slug: true } }, // ← slug ADDED
         images: {
           orderBy: { sortOrder: "asc" },
           take: 1,
@@ -211,6 +239,8 @@ export default async function OccasionPage({
   id: p.id,
   title: p.title,
   brandName: p.brand?.name ?? null,
+  brandSlug: p.brand?.slug ?? null, // ← ADDED
+  productSlug: p.slug ?? null,       // ← ADDED
   imageUrl: p.images?.[0]?.url ?? null,
   price: p.price ? p.price.toString() : null,
   currency: String(p.currency),

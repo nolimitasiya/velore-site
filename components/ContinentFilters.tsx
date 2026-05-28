@@ -51,6 +51,7 @@ type Draft = {
   max: string;
   sort: string;
   sale: string;
+  polyesterFree: boolean;
 };
 
 function qpAll(sp: URLSearchParams, key: string) {
@@ -157,6 +158,7 @@ const [countLoading, setCountLoading] = useState(false);
     max: sp.get("max") ?? "",
     sort: sp.get("sort") ?? "new",
     sale: truthyParam(sp.get("sale") ?? "") ? "1" : "",
+    polyesterFree: truthyParam(sp.get("polyester_free") ?? ""),
   }));
 
  useEffect(() => {
@@ -306,6 +308,7 @@ const [countLoading, setCountLoading] = useState(false);
       max: sp.get("max") ?? "",
       sort: sp.get("sort") ?? "new",
       sale: truthyParam(sp.get("sale") ?? "") ? "1" : "",
+      polyesterFree: truthyParam(sp.get("polyester_free") ?? ""),
     });
   }
 
@@ -352,6 +355,9 @@ const [countLoading, setCountLoading] = useState(false);
     setOrDelete("max", draft.max);
     setOrDelete("sort", draft.sort);
     setOrDelete("sale", draft.sale);
+
+    if (draft.polyesterFree) next.set("polyester_free", "1");
+else next.delete("polyester_free");
     
 
     // ✅ Search page UX:
@@ -377,6 +383,7 @@ const [countLoading, setCountLoading] = useState(false);
       max: "",
       sort: "new",
       sale: "",
+      polyesterFree: false,
      
     });
   }
@@ -391,6 +398,9 @@ const [countLoading, setCountLoading] = useState(false);
     } else if (key === "sale") {
       next.delete("sale");
       setDraft((d) => ({ ...d, sale: "" }));
+    } else if (key === "polyester_free") {
+  next.delete("polyester_free");
+  setDraft((d) => ({ ...d, polyesterFree: false }));
     } else if (key.startsWith("type:")) {
       const slug = key.slice("type:".length);
       const updated = draft.types.filter((x) => x !== slug);
@@ -429,7 +439,7 @@ const [countLoading, setCountLoading] = useState(false);
 
   function clearAllAndApply() {
     const next = new URLSearchParams(sp.toString());
-    ["type", "style", "brand", "country", "color", "size", "min", "max", "sale", "next_day"].forEach((k) =>
+    ["type", "style", "brand", "country", "color", "size", "min", "max", "sale", "next_day", "polyester_free",].forEach((k) =>
   next.delete(k)
 );
     next.set("sort", "new");
@@ -472,6 +482,7 @@ const [countLoading, setCountLoading] = useState(false);
 
     if (draft.min || draft.max) out.push({ key: "price", label: priceLabel(draft.min, draft.max) });
     if (draft.sale) out.push({ key: "sale", label: "Sale" });
+    if (draft.polyesterFree) out.push({ key: "polyester_free", label: "Polyester-free" });
 
     return out;
   }, [draft, brands, types, liveStyles, colors, sizes]);
@@ -614,6 +625,12 @@ const activeFilterCount = chips.length;
   label="Offers"
   valueLabel={offersLabel(draft.sale)}
   onClick={() => setPanel("offers")}
+/>
+
+<FilterRow
+  label="Polyester-free"
+  valueLabel={draft.polyesterFree ? "On" : "All"}
+  onClick={() => setDraft((d) => ({ ...d, polyesterFree: !d.polyesterFree }))}
 />
 </div>
               )}

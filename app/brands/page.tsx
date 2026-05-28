@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import SiteShell from "@/components/SiteShell";
 import countries from "world-countries";
 import BrandFilters from "@/components/BrandFilters";
+import BrandProfileTrackingLink from "@/components/analytics/BrandProfileTrackingLink";
 
 function regionLabel(value: string | null) {
   return value ? value.replaceAll("_", " ") : null;
@@ -149,13 +150,15 @@ export default async function BrandsPage({
               No brands found for this selection.
             </div>
           ) : (
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid gap-4 grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {brands.map((b) => (
-                <Link
-                  key={b.id}
-                  href={`/brands/${b.slug}`}
-                  className="group block overflow-hidden rounded-[24px]"
-                >
+                <BrandProfileTrackingLink
+  key={b.id}
+  href={`/brands/${b.slug}`}
+  brandName={b.name}
+  brandId={b.id}
+  className="group block overflow-hidden rounded-[24px]"
+>
                   <div className="relative h-[190px] overflow-hidden rounded-[24px] bg-[#d8d0c5]">
                     <div
                       className="absolute inset-0 bg-cover transition-transform duration-500 group-hover:scale-[1.03]"
@@ -185,9 +188,9 @@ export default async function BrandsPage({
                         </div>
 
                         <div className="mt-3 text-[11px] uppercase tracking-[0.18em] text-white/85">
-                          {[regionLabel(b.baseRegion), b.baseCountryCode, b.baseCity]
-                            .filter(Boolean)
-                            .join(" • ")}
+                          {[b.baseCity, b.baseCountryCode]
+                          .filter(Boolean)
+                          .join(" • ")}
                         </div>
 
                         <div className="mt-2 text-xs text-white/90">
@@ -196,7 +199,7 @@ export default async function BrandsPage({
                       </div>
                     </div>
                   </div>
-                </Link>
+                </BrandProfileTrackingLink>
               ))}
             </div>
           )}

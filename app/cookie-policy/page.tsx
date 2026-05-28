@@ -6,7 +6,7 @@ export default function CookiePolicyPage() {
       <section className="mx-auto w-full max-w-[1800px] px-8 py-16 md:py-24">
         <div className="mx-auto max-w-3xl text-center">
           <p className="mb-4 text-sm uppercase tracking-[0.18em] text-black/50">
-            Cookie Policy
+            Cookies Policy
           </p>
 
           <h1 className="font-heading text-2xl leading-tight md:text-5xl">
@@ -14,89 +14,190 @@ export default function CookiePolicyPage() {
           </h1>
 
           <p className="mt-6 mx-auto max-w-2xl text-base leading-8 text-black/70 md:text-lg">
-            This Cookie Policy explains how Veilora Club uses cookies and
-            similar technologies when you visit our platform.
+            Please read this policy carefully as it explains how we use cookies
+            and similar technologies on our Website.
           </p>
         </div>
 
         <div className="mt-16 mx-auto max-w-5xl space-y-10 text-black/70 leading-8">
           <div>
-            <h2 className="font-heading text-xl text-black">What are cookies?</h2>
-            <p className="mt-4">
-              Cookies are small text files stored on your device when you visit
-              a website. They help websites function properly, remember certain
-              preferences, and provide information about how visitors interact
-              with the platform.
+            <p>
+              Please read this cookie policy carefully as it contains important
+              information on who we are and how we use cookies on our Website.
+              This policy should be read together with our Privacy Policy which
+              sets out who we are, how to contact us, what data is collected, and
+              your rights in relation to your personal information.
             </p>
           </div>
 
+          {/* 1 COOKIES */}
           <div>
-            <h2 className="font-heading text-xl text-black">
-              How we use cookies
-            </h2>
+            <h2 className="font-heading text-xl text-black">1 COOKIES</h2>
             <p className="mt-4">
-              Veilora Club uses essential cookies to support core website
-              functionality and ensure the platform works as expected.
+              A cookie is a small text file which is placed onto your device
+              (e.g. your smartphone or other electronic device) when you use our
+              Website. When we use cookies on our Website, you will always be
+              informed by a pop-up within the Website.
             </p>
             <p className="mt-4">
-              With your consent, we may also use cookies and similar
-              technologies to understand browsing behaviour, improve the
-              platform, and measure product interest and performance.
+              Cookies help us to recognise you and your device and allow us to
+              store some information about your preferences or past actions,
+              including your location data.
             </p>
-          </div>
-
-          <div>
-            <h2 className="font-heading text-xl text-black">
-              Types of cookies we may use
-            </h2>
-            <ul className="mt-4 list-disc space-y-2 pl-6">
-              <li>
-                <span className="text-black">Essential cookies:</span> required
-                for the website to function properly.
-              </li>
-              <li>
-                <span className="text-black">Analytics cookies:</span> help us
-                understand how visitors use Veilora Club so we can improve the
-                experience.
-              </li>
-              <li>
-                <span className="text-black">Performance-related cookies:</span>{" "}
-                may help us understand product interest, click-through activity,
-                and general platform performance.
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <h2 className="font-heading text-xl text-black">
-              Third-party websites
-            </h2>
             <p className="mt-4">
-              Veilora Club may link to third-party retailer websites. Those
-              websites may use their own cookies and tracking technologies, which
-              are governed by their own privacy and cookie policies.
+              For example, we may monitor how many times you use our Website,
+              which parts of the Website you go to, and location data. This
+              information helps us understand how users interact with the
+              Website. Some of this data will be aggregated or statistical,
+              meaning we cannot identify you individually.
+            </p>
+            <p className="mt-4">
+              For further information on cookies generally, including how to
+              control and manage them, please visit
+              www.aboutcookies.org or www.allaboutcookies.org.
             </p>
           </div>
 
+          {/* 2 CONSENT */}
           <div>
             <h2 className="font-heading text-xl text-black">
-              Managing your preferences
+              2 CONSENT TO USE COOKIES AND CHANGING SETTINGS
             </h2>
             <p className="mt-4">
-              You can choose whether to accept optional cookies through our
-              cookie banner. You may also manage or remove cookies through your
-              browser settings at any time.
+              We will ask for your consent to place cookies or other similar
+              technologies on your device, except where they are essential for
+              us to provide you with a service that you have requested.
+            </p>
+            <p className="mt-4">
+              You can withdraw consent or manage your preferences at any time
+              using the cookie tool available on our Website. You may need to
+              refresh the Website for changes to take effect.
             </p>
           </div>
 
+          {/* 3 TABLE */}
           <div>
             <h2 className="font-heading text-xl text-black">
-              Updates to this policy
+              3 OUR USE OF COOKIES
+            </h2>
+
+            <div className="mt-6 overflow-x-auto">
+              <table className="w-full border border-black/10 text-sm">
+                <thead className="bg-black/5 text-left">
+                  <tr>
+                    <th className="p-3">Type</th>
+                    <th className="p-3">Name</th>
+                    <th className="p-3">Purpose</th>
+                    <th className="p-3">Consent</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  <tr>
+                    <td className="p-3">
+                      Strictly Necessary Cookies
+                    </td>
+                    <td className="p-3">dalra_cookie_consent</td>
+                    <td className="p-3">
+                      Stores user cookie preferences.
+                    </td>
+                    <td className="p-3">
+                      Essential – no consent required
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td className="p-3">Analytics (Google Analytics)</td>
+                    <td className="p-3">_ga</td>
+                    <td className="p-3">
+                      Tracks users and sessions for analytics.
+                    </td>
+                    <td className="p-3">
+                      Consent required
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td className="p-3">Analytics</td>
+                    <td className="p-3">_gid</td>
+                    <td className="p-3">
+                      Tracks users for a short period.
+                    </td>
+                    <td className="p-3">Consent required</td>
+                  </tr>
+
+                  <tr>
+                    <td className="p-3">Analytics</td>
+                    <td className="p-3">__gat</td>
+                    <td className="p-3">
+                      Limits request rate on high traffic sites.
+                    </td>
+                    <td className="p-3">Consent required</td>
+                  </tr>
+
+                  <tr>
+                    <td className="p-3">Affiliate / Tracking</td>
+                    <td className="p-3">
+                      utm_source, utm_medium, utm_campaign
+                    </td>
+                    <td className="p-3">
+                      Tracks traffic sources and campaigns.
+                    </td>
+                    <td className="p-3">Consent required</td>
+                  </tr>
+
+                  <tr>
+                    <td className="p-3">Affiliate / Tracking</td>
+                    <td className="p-3">vc_affiliate_id</td>
+                    <td className="p-3">
+                      Tracks referrals for commission attribution.
+                    </td>
+                    <td className="p-3">Consent required</td>
+                  </tr>
+
+                  <tr>
+                    <td className="p-3">Performance</td>
+                    <td className="p-3">vc_session</td>
+                    <td className="p-3">
+                      Maintains session state and functionality.
+                    </td>
+                    <td className="p-3">Consent required</td>
+                  </tr>
+
+                  <tr>
+                    <td className="p-3">Third-Party</td>
+                    <td className="p-3">External retailers</td>
+                    <td className="p-3">
+                      Third-party sites may set cookies when users click
+                      affiliate links.
+                    </td>
+                    <td className="p-3">Consent required</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* 4 TURN OFF */}
+          <div>
+            <h2 className="font-heading text-xl text-black">
+              4 HOW TO TURN OFF COOKIES
             </h2>
             <p className="mt-4">
-              We may update this Cookie Policy from time to time to reflect
-              changes to our platform or legal requirements. Any updates will be
-              published on this page.
+              You can change your device settings to refuse cookies. Please note
+              that doing so may affect the functionality of this Website and
+              others you use.
+            </p>
+          </div>
+
+          {/* 5 CHANGES */}
+          <div>
+            <h2 className="font-heading text-xl text-black">
+              5 CHANGES TO THIS POLICY
+            </h2>
+            <p className="mt-4">
+              This policy was published on 27/04/2026 and last updated on
+              27/04/2026. We may update this policy from time to time and will
+              notify you via the Website or by email where appropriate.
             </p>
           </div>
         </div>

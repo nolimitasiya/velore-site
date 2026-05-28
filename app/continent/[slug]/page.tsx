@@ -181,13 +181,14 @@ export default async function ContinentPage({
       take,
       select: {
         id: true,
+        slug: true,
         title: true,
         price: true,
         currency: true,
         affiliateUrl: true,
         sourceUrl: true,
         badges: true,
-        brand: { select: { name: true } },
+        brand: { select: { name: true, slug: true } },  // ← add slug: true
         images: {
           orderBy: { sortOrder: "asc" },
           take: 1,
@@ -200,6 +201,8 @@ export default async function ContinentPage({
   id: p.id,
   title: p.title,
   brandName: p.brand?.name ?? null,
+  brandSlug: p.brand?.slug ?? null,
+  productSlug: p.slug ?? null,
   imageUrl: p.images?.[0]?.url ?? null,
   price: p.price ? p.price.toString() : null,
   currency: String(p.currency),

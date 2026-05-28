@@ -7,7 +7,7 @@ import { ProductRow, type StorefrontProduct } from "@/components/ProductRow";
 import StorefrontFilters from "@/components/StorefrontFilters";
 import { Prisma, BrandAccountStatus, AffiliateStatus } from "@prisma/client";
 import { buildTrackedOutboundUrl } from "@/lib/affiliate/tracking";
-
+import { headers } from "next/headers";
 
 function regionLabel(value: string | null) {
   return value ? value.replaceAll("_", " ") : null;
@@ -102,6 +102,24 @@ export default async function BrandPage({
     );
   }
 
+  const headerList = await headers();
+
+const countryCode =
+  headerList.get("x-vercel-ip-country") ||
+  headerList.get("cf-ipcountry") ||
+  null;
+
+try {
+  await prisma.brandProfileView.create({
+    data: {
+      brandId: brand.id,
+      sourcePath: `/brands/${brand.slug}`,
+      countryCode,
+    },
+  });
+} catch (error) {
+  console.error("brandProfileView.create failed", error);
+}
   const where: Prisma.ProductWhereInput = {
     brandId: brand.id,
     status: "APPROVED",
@@ -192,6 +210,7 @@ export default async function BrandPage({
   const products: StorefrontProduct[] = productsDb.map((p, index) => ({
     id: p.id,
     title: p.title,
+    brandName: brand.name,
     imageUrl: p.images?.[0]?.url ?? null,
     price: p.price ? p.price.toString() : null,
     currency: p.currency,

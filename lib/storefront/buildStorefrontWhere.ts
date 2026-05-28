@@ -30,6 +30,7 @@ export function buildStorefrontWhere({
     min,
     max,
     saleOn,
+    polyesterFree,
   } = filters;
 
   const brandWhere =
@@ -130,6 +131,7 @@ export function buildStorefrontWhere({
       : {};
 
   const badgeWhere = saleOn ? { badges: { has: Badge.sale } } : {};
+  const polyesterFreeWhere = polyesterFree ? { polyesterFree: true } : {};
 
   return {
     status: "APPROVED",
@@ -145,5 +147,6 @@ export function buildStorefrontWhere({
     ...sizeWhere,
     ...priceWhere,
     ...badgeWhere,
+    ...polyesterFreeWhere,
   };
 }

@@ -29,13 +29,16 @@ function toStorefrontProducts(
     price: any | null;
     currency: any;
     images: { url: string }[];
-    brand: { name: string } | null;
+    brand: { name: string; slug: string } | null;
+    slug: string;
   }>
 ): StorefrontProduct[] {
   return products.map((p, index) => ({
     id: p.id,
     title: p.title,
     brandName: p.brand?.name ?? null,
+    brandSlug: p.brand?.slug ?? null,
+    productSlug: p.slug ?? null,
     imageUrl: p.images?.[0]?.url ?? null,
     price: p.price ? p.price.toString() : null,
     currency: p.currency,
@@ -100,6 +103,8 @@ export default async function LiveHome({ region, country }: LiveHomeProps) {
       id: i.product.id,
       title: i.product.title,
       brandName: i.product.brand?.name ?? null,
+      brandSlug: i.product.brand?.slug ?? null,
+      productSlug: i.product.slug ?? null,
       imageUrl: i.product.images?.[0]?.url ?? null,
       price: i.product.price ? i.product.price.toString() : null,
       currency: i.product.currency,
@@ -215,27 +220,25 @@ const styleFeedToShow =
   /* --------------------------- */
 
   return (
-    <main className="min-h-screen w-full bg-background text-foreground">
-      <Hero hero={hero} />
-      {/* <SaleTicker /> */}
+  <main className="min-h-screen w-full bg-white text-black">
+    <Hero hero={hero} />
 
-
-      <div className="pt-8">
+    <div className="mx-auto w-full max-w-[1800px] px-8 pt-14">
       <SectionTitle>{finalSection?.title ?? "Shop Trendy"}</SectionTitle>
-</div>
+    </div>
 
-<div className="mt-8">
-  <ProductRow products={trendy} />
-</div>
+    <div className="mt-8">
+      <ProductRow products={trendy} />
+    </div>
 
-      <SloganAndContinents
-  slogan="Where global brands and international style meet"
-  continents={continentsDb}
-/>
+    <SloganAndContinents
+      slogan="Where global brands and international style meet"
+      continents={continentsDb}
+    />
 
-      <StyleFeed posts={styleFeedToShow} />
-      <DalrasDiary posts={diaryCards} />
-      <BrandMosaic tiles={mosaicTiles} />
-    </main>
-  );
+    <StyleFeed posts={styleFeedToShow} />
+    <DalrasDiary posts={diaryCards} />
+    <BrandMosaic tiles={mosaicTiles} />
+  </main>
+);
 }

@@ -27,23 +27,49 @@ export default function MobileMenu() {
   const rootLinks = useMemo<LinkItem[]>(
   () => [
     { label: "New In", href: "/new-in" },
-    { label: "Clothing", href: "/categories/clothing" },
     { label: "Shop by Brands", href: "/brands" },
+    { label: "Editorial", href: "/diary" },
+    { label: "Sale", href: "/sale" },
   ],
   []
 );
 
 
   const groups = useMemo<Record<string, LinkItem[]>>(
-    () => ({
-      Occasion: [
-        { label: "Wedding", href: "/categories/occasion/wedding" },
-        { label: "Eid", href: "/categories/occasion/eid" },
-        { label: "Evening", href: "/categories/occasion/evening" },
-      ],
-    }),
-    []
-  );
+  () => ({
+    Clothing: [
+      { label: "All Clothing", href: "/categories/clothing" },
+      { label: "Abayas", href: "/categories/clothing?type=ABAYA" },
+      { label: "Dresses", href: "/categories/clothing?type=DRESS" },
+      { label: "Hijabs", href: "/categories/clothing?type=HIJAB" },
+      { label: "Tops", href: "/categories/clothing?type=TOP" },
+      { label: "Skirts", href: "/categories/clothing?type=SKIRT" },
+      { label: "Co-ords & Sets", href: "/categories/clothing?type=SETS" },
+      { label: "Khimars", href: "/categories/clothing?type=KHIMAR" },
+      { label: "Jilbabs", href: "/categories/clothing?type=JILBAB" },
+      { label: "Activewear", href: "/categories/clothing?type=ACTIVEWEAR" },
+      { label: "Coats & Jackets", href: "/categories/clothing?type=COATS_JACKETS" },
+    ],
+    Accessories: [
+      { label: "All Accessories", href: "/categories/accessories" },
+      { label: "Rings", href: "/categories/accessories?category=rings" },
+      { label: "Necklaces", href: "/categories/accessories?category=necklaces" },
+      { label: "Bracelets", href: "/categories/accessories?category=bracelets" },
+      { label: "Earrings", href: "/categories/accessories?category=earrings" },
+      { label: "Watches", href: "/categories/accessories?category=watches" },
+    ],
+    Occasion: [
+      { label: "All Occasions", href: "/categories/occasion" },
+      { label: "Wedding", href: "/categories/occasion/wedding" },
+      { label: "Eid", href: "/categories/occasion/eid" },
+      { label: "Workwear", href: "/categories/occasion/workwear" },
+      { label: "Graduation", href: "/categories/occasion/graduation" },
+      { label: "Party", href: "/categories/occasion/party" },
+      { label: "Everyday", href: "/categories/occasion/everyday" },
+    ],
+  }),
+  []
+);
 
   function closeMenu() {
     setOpen(false);
@@ -156,14 +182,14 @@ export default function MobileMenu() {
 
       {/* Slide-out menu */}
       <div
-        className={`fixed left-0 top-0 z-50 h-full w-80 transform bg-black transition-transform duration-300 ${
+        className={`fixed left-0 top-0 z-50 h-full w-[85vw] max-w-sm bg-white shadow-2xl transition-transform duration-300 ease-in-out ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
         role="dialog"
         aria-modal="true"
       >
         {/* Top bar */}
-        <div className="flex items-center justify-between border-b p-4">
+        <div className="flex items-center justify-between border-b border-black/8 p-4 bg-white">
           <div className="flex items-center gap-3">
             {!isRoot && (
               <button
@@ -175,13 +201,13 @@ export default function MobileMenu() {
               </button>
             )}
 
-            <span className="font-heading text-lg tracking-[0.02em]">{title}</span>
+            <span className="font-heading text-lg tracking-[0.02em] text-black">{title}</span>
           </div>
 
           <button
             onClick={closeMenu}
             aria-label="Close menu"
-            className="text-xl transition-colors hover:text-[var(--accent)]"
+            className="text-xl text-black/60 transition-colors hover:text-black"
           >
             ✕
           </button>
@@ -189,13 +215,13 @@ export default function MobileMenu() {
 
         {/* Search inside menu (root only) */}
         {isRoot && (
-          <div className="border-b p-4">
+          <div className="border-b border-black/8 p-4 bg-white">
             <form onSubmit={onSearchSubmit} className="flex gap-2">
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search products, brands…"
-                className="w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
+                className="w-full rounded-xl border border-black/15 bg-black/[0.03] px-3 py-2 text-sm text-black outline-none placeholder:text-black/40 focus:border-black/30"
               />
               <button
                 type="submit"
@@ -239,53 +265,62 @@ export default function MobileMenu() {
         )}
 
         {/* Content */}
-        <nav className="flex flex-col">
+        <nav className="flex flex-col bg-white flex-1">
+
+
           {/* Root screen */}
           {isRoot && (
-            <>
-              {rootLinks.map((item) => {
-                const active = isActive(item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={[
-                      rowBase,
-                      rowHover,
-                      active ? `${activeRow} ${leftAccent}` : "",
-                    ].join(" ")}
-                    onClick={closeMenu}
-                  >
-                    <span className={active ? "text-[var(--accent)]" : ""}>
-                      {item.label}
-                    </span>
-                    <span
-                      className={[
-                        "text-black/30 transition-colors duration-200",
-                        active ? "text-[var(--accent)]" : "group-hover:text-black/50",
-                      ].join(" ")}
-                    >
-                      ›
-                    </span>
-                  </Link>
-                );
-              })}
+  <>
+    {/* New In */}
+    <Link href="/new-in" onClick={closeMenu}
+      className="flex items-center justify-between px-5 py-4 border-b border-black/6 hover:bg-black/[0.02] transition-colors">
+      <span className={isActive("/new-in") ? "font-medium text-black" : "text-black"}>New In</span>
+      <span className="text-black/30">›</span>
+    </Link>
 
-              {/* Group entry buttons */}
-              {Object.entries(groups).map(([groupTitle, items]) => (
-                <button
-                  key={groupTitle}
-                  onClick={() => setScreen({ type: "group", title: groupTitle, items })}
-                  className={[rowBase, rowHover].join(" ")}
-                >
-                  <span>{groupTitle}</span>
-                  <span className="text-black/30 transition-colors group-hover:text-black/50">
-                    ›
-                  </span>
-                </button>
-              ))}
-            </>
-          )}
+    {/* Clothing group */}
+    <button onClick={() => setScreen({ type: "group", title: "Clothing", items: groups["Clothing"] })}
+      className="flex items-center justify-between px-5 py-4 border-b border-black/6 hover:bg-black/[0.02] transition-colors w-full">
+      <span className="text-black">Clothing</span>
+      <span className="text-black/30">›</span>
+    </button>
+
+    {/* Accessories group */}
+    <button onClick={() => setScreen({ type: "group", title: "Accessories", items: groups["Accessories"] })}
+      className="flex items-center justify-between px-5 py-4 border-b border-black/6 hover:bg-black/[0.02] transition-colors w-full">
+      <span className="text-black">Accessories</span>
+      <span className="text-black/30">›</span>
+    </button>
+
+    {/* Occasion group */}
+    <button onClick={() => setScreen({ type: "group", title: "Occasion", items: groups["Occasion"] })}
+      className="flex items-center justify-between px-5 py-4 border-b border-black/6 hover:bg-black/[0.02] transition-colors w-full">
+      <span className="text-black">Occasion</span>
+      <span className="text-black/30">›</span>
+    </button>
+
+    {/* Shop by Brands */}
+    <Link href="/brands" onClick={closeMenu}
+      className="flex items-center justify-between px-5 py-4 border-b border-black/6 hover:bg-black/[0.02] transition-colors">
+      <span className={isActive("/brands") ? "font-medium text-black" : "text-black"}>Shop by Brands</span>
+      <span className="text-black/30">›</span>
+    </Link>
+
+    {/* Editorial */}
+    <Link href="/diary" onClick={closeMenu}
+      className="flex items-center justify-between px-5 py-4 border-b border-black/6 hover:bg-black/[0.02] transition-colors">
+      <span className={isActive("/diary") ? "font-medium text-black" : "text-black"}>Editorial</span>
+      <span className="text-black/30">›</span>
+    </Link>
+
+    {/* Sale */}
+    <Link href="/sale" onClick={closeMenu}
+      className="flex items-center justify-between px-5 py-4 border-b border-black/6 hover:bg-black/[0.02] transition-colors">
+      <span className="text-[#7B2D3E]">Sale</span>
+      <span className="text-[#7B2D3E]/40">›</span>
+    </Link>
+  </>
+)}
 
           {/* Nested group screen */}
           {!isRoot &&
@@ -302,7 +337,8 @@ export default function MobileMenu() {
                   ].join(" ")}
                   onClick={closeMenu}
                 >
-                  <span className={active ? "text-[var(--accent)]" : ""}>
+                  <span className={active ? "font-medium text-black" : "text-black"}>
+
                     {item.label}
                   </span>
                   <span

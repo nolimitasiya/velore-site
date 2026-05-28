@@ -67,24 +67,28 @@ export default async function DiaryPostPage({ params }: PageProps) {
       },
       relatedProducts: {
         orderBy: { sortOrder: "asc" },
-        include: {
-          product: {
-            include: {
-              brand: {
-                select: {
-                  name: true,
-                },
-              },
-              images: {
-                orderBy: { sortOrder: "asc" },
-                take: 1,
-                select: {
-                  url: true,
-                },
-              },
-            },
-          },
+       include: {
+  product: {
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      price: true,
+      currency: true,
+      brand: {
+        select: {
+          name: true,
+          slug: true,
         },
+      },
+      images: {
+        orderBy: { sortOrder: "asc" },
+        take: 1,
+        select: { url: true },
+      },
+    },
+  },
+},
       },
     },
   });
@@ -101,7 +105,7 @@ export default async function DiaryPostPage({ params }: PageProps) {
       <main className="bg-white text-black">
         <DiaryReadTracker diaryPostId={post.id} />
 
-        <article className="mx-auto w-full max-w-4xl px-6 pt-12 pb-6 md:px-8 md:pt-16 md:pb-8">
+        <article className="mx-auto w-full max-w-4xl px-4 pt-8 pb-6 md:px-8 md:pt-16 md:pb-8 overflow-hidden">
           <div className="mb-8 text-center">
             <h1 className="font-display text-4xl tracking-[0.01em] text-black md:text-5xl">
               {post.title}
@@ -154,7 +158,7 @@ export default async function DiaryPostPage({ params }: PageProps) {
 
           {html ? (
             <div
-              className="prose prose-neutral max-w-none prose-headings:font-display prose-headings:text-black prose-p:text-black/80 prose-p:leading-8 prose-li:text-black/80 prose-strong:text-black prose-a:text-black prose-a:underline prose-a:decoration-black/30"
+              className="prose prose-neutral max-w-none overflow-hidden prose-headings:font-display prose-headings:text-black prose-p:text-black/80 prose-p:leading-8 prose-li:text-black/80 prose-strong:text-black prose-a:text-black prose-a:underline prose-a:decoration-black/30"
               dangerouslySetInnerHTML={{ __html: html }}
             />
           ) : (
@@ -194,7 +198,7 @@ export default async function DiaryPostPage({ params }: PageProps) {
 
                 {post.relatedProducts.length > 0 ? (
           <section className="border-t border-black/10 bg-white">
-            <div className="mx-auto w-full max-w-[1800px] px-6 py-12 md:px-8 md:py-14">
+            <div className="mx-auto w-full max-w-[1800px] px-4 py-10 md:px-8 md:py-14">
               <div className="mb-8 text-center">
                                 <p className="text-[11px] uppercase tracking-[0.22em] text-black/45">
                   {post.shopSectionEyebrow || "Shop the Edit"}
@@ -209,7 +213,7 @@ export default async function DiaryPostPage({ params }: PageProps) {
               </div>
 
               <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 md:grid-cols-3 xl:grid-cols-4">
-                {post.relatedProducts.map(({ product }) => {
+                {post.relatedProducts.map(({ product }, index) => {
                   const imageUrl = product.images[0]?.url ?? null;
                   const price = formatMoney(
                     product.price ? product.price.toString() : null,
@@ -217,40 +221,39 @@ export default async function DiaryPostPage({ params }: PageProps) {
                   );
 
                   return (
-                    <article key={product.id} className="group">
-                      <Link href={`/out/${product.id}`} className="block">
-                        <div className="relative aspect-[4/4.8] overflow-hidden rounded-[20px] bg-black/5">
-                          {imageUrl ? (
-                            <Image
-                              src={imageUrl}
-                              alt={product.title}
-                              fill
-                              className="object-cover transition duration-500 group-hover:scale-[1.02]"
-                            />
-                          ) : (
-                            <div className="flex h-full items-center justify-center text-sm text-black/35">
-                              No image
-                            </div>
-                          )}
-                        </div>
+                    <article key={product.id} className="group relative">
+  <Link href={product.brand?.slug && product.slug ? `/b/${product.brand.slug}/p/${product.slug}` : `/out/${product.id}?src=DIARY&dpid=${post.id}&ctx=DIARY_RELATED_PRODUCT&pos=${index + 1}`} className="block">
+    <div className="relative aspect-[4/4.8] overflow-hidden rounded-[20px] bg-black/5">
+      {imageUrl ? (
+        <Image src={imageUrl} alt={product.title} fill
+          className="object-cover transition duration-500 group-hover:scale-[1.02]" />
+      ) : (
+        <div className="flex h-full items-center justify-center text-sm text-black/35">No image</div>
+      )}
+    </div>
+    <div className="pt-4 text-center">
+      {product.brand?.name ? (
+        <p className="text-[11px] uppercase tracking-[0.18em] text-black/45">{product.brand.name}</p>
+      ) : null}
+      <h3 className="mt-2 text-sm leading-6 text-black">{product.title}</h3>
+      {price ? <p className="mt-1 text-sm text-black/65">{price}</p> : null}
+    </div>
+  </Link>
 
-                        <div className="pt-4 text-center">
-                          {product.brand?.name ? (
-                            <p className="text-[11px] uppercase tracking-[0.18em] text-black/45">
-                              {product.brand.name}
-                            </p>
-                          ) : null}
+  {/* Net-a-Porter style + button */}
+  <div className="mt-3 flex justify-center">
+    <a
+  
+    href={`/out/${product.id}?src=DIARY&dpid=${post.id}&ctx=DIARY_RELATED_PRODUCT&pos=${index + 1}`}
+    target="_blank"
+    rel="noreferrer"
+    className="inline-flex items-center gap-1 rounded-full border border-black/10 bg-white px-4 py-1.5 text-[11px] font-medium uppercase tracking-[0.12em] hover:bg-black hover:text-white transition-colors"
+  >
+    Shop ↗
+  </a>
+</div>
 
-                          <h3 className="mt-2 text-sm leading-6 text-black">
-                            {product.title}
-                          </h3>
-
-                          {price ? (
-                            <p className="mt-1 text-sm text-black/65">{price}</p>
-                          ) : null}
-                        </div>
-                      </Link>
-                    </article>
+</article>
                   );
                 })}
               </div>

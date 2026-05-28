@@ -14,6 +14,7 @@ const storefrontSectionInclude = {
       product: {
         select: {
           id: true,
+          slug: true, // ← ADD
           title: true,
           price: true,
           currency: true,
@@ -23,13 +24,14 @@ const storefrontSectionInclude = {
           isActive: true,
           status: true,
           brand: {
-            select: {
-              name: true,
-              affiliateBaseUrl: true,
-              accountStatus: true,
-              affiliateStatus: true,
-            },
-          },
+  select: {
+    name: true,
+    slug: true, // ← ADD
+    affiliateBaseUrl: true,
+    accountStatus: true,
+    affiliateStatus: true,
+  },
+},
           images: {
             orderBy: { sortOrder: "asc" as const },
             take: 1,

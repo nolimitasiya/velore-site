@@ -17,19 +17,20 @@ export async function sendBrandInviteEmail(opts: {
     intro: `${sender} has invited you to join Veilora Club 👋`,
     bodyHtml: `
       <p style="margin:0 0 12px 0;">
-        You’ve been invited to join <strong>Veilora Club</strong> — a curated hub for modest fashion brands.
+        You can now create your brand account on <strong>Veilora Club</strong>, the platform connecting global Muslim and modest brands in one place.
       </p>
 
       <p style="margin:0 0 12px 0;">
-        You can upload your products via a simple CSV (takes ~5 minutes). Once imported, we review & publish on our side.
+        Once your account is set up, you’ll be able to access your brand portal and begin preparing your profile and product information for review.
       </p>
 
       <p style="margin:0; color:#6b6b6b; font-size:13px;">
-        This invite link is personal — please don’t forward it.
+        This link is personal to your brand, so please do not forward it.
       </p>
     `,
-    cta: { label: "Accept invite", href: opts.inviteLink },
-    footerNote: "If you need help with the CSV import, reply to this email and we’ll help you quickly.",
+    cta: { label: "Create brand account", href: opts.inviteLink },
+    footerNote:
+      "If you have any questions during onboarding, simply reply to this email and we’ll be happy to help.",
   });
 
   return sendEmail({

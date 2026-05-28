@@ -1,6 +1,9 @@
+// C:\Users\Asiya\projects\dalra\app\api\brand\profile\route.ts
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireBrandContext } from "@/lib/auth/BrandSession";
+import { ReturnsPaidBy } from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,7 +11,6 @@ export const dynamic = "force-dynamic";
 function normalizeUrl(value: unknown) {
   const raw = String(value ?? "").trim();
   if (!raw) return null;
-
   try {
     const url = new URL(raw);
     if (url.protocol !== "http:" && url.protocol !== "https:") return null;
@@ -27,53 +29,47 @@ function normalizePercent(value: unknown, fallback = 50) {
 function normalizeInstagramHandle(value: unknown) {
   const raw = String(value ?? "").trim();
   if (!raw) return null;
-
   let cleaned = raw;
-
   const isUrl = /^https?:\/\//i.test(cleaned);
   if (isUrl) {
     try {
       const url = new URL(cleaned);
       const host = url.hostname.toLowerCase();
-
-      const allowedHosts = new Set([
-        "instagram.com",
-        "www.instagram.com",
-      ]);
-
-      if (!allowedHosts.has(host)) {
-        return null;
-      }
-
+      const allowedHosts = new Set(["instagram.com", "www.instagram.com"]);
+      if (!allowedHosts.has(host)) return null;
       cleaned = url.pathname;
     } catch {
       return null;
     }
   }
-
-  cleaned = cleaned
-    .trim()
-    .replace(/^@+/, "")
-    .replace(/^\/+/, "")
-    .replace(/\/+$/, "")
-    .split("/")[0]
-    .split("?")[0]
-    .trim()
-    .toLowerCase();
-
+  cleaned = cleaned.trim().replace(/^@+/, "").replace(/^\/+/, "").replace(/\/+$/, "")
+    .split("/")[0].split("?")[0].trim().toLowerCase();
   if (!cleaned) return null;
-
-  if (!/^[a-z0-9._]+$/.test(cleaned)) {
-    return null;
-  }
-
+  if (!/^[a-z0-9._]+$/.test(cleaned)) return null;
   return cleaned;
+}
+
+function normalizeString(value: unknown): string | null {
+  const s = String(value ?? "").trim();
+  return s || null;
+}
+
+function normalizePositiveInt(value: unknown): number | null {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 1) return null;
+  return Math.floor(n);
+}
+
+function normalizeReturnsPaidBy(value: unknown): ReturnsPaidBy | null {
+  if (value === "BUYER" || value === "BRAND" || value === "NO_RETURNS") {
+    return value as ReturnsPaidBy;
+  }
+  return null;
 }
 
 export async function GET() {
   try {
     const { brandId } = await requireBrandContext();
-
     const brand = await prisma.brand.findUnique({
       where: { id: brandId },
       select: {
@@ -87,13 +83,15 @@ export async function GET() {
         baseCity: true,
         baseCountryCode: true,
         baseRegion: true,
+        shippingDomestic: true,
+        shippingInternational: true,
+        returnWindowDays: true,
+        returnsPaidBy: true,
       },
     });
-
     if (!brand) {
       return NextResponse.json({ ok: false, error: "Brand not found" }, { status: 404 });
     }
-
     return NextResponse.json({ ok: true, brand });
   } catch {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
@@ -124,16 +122,17 @@ export async function POST(req: Request) {
 
     if (body.instagramHandle && !instagramHandle) {
       return NextResponse.json(
-        {
-          ok: false,
-          error: "Please enter a valid Instagram handle or Instagram profile URL.",
-        },
+        { ok: false, error: "Please enter a valid Instagram handle or Instagram profile URL." },
         { status: 400 }
       );
     }
 
     const coverImageFocalX = normalizePercent(body.coverImageFocalX, 50);
     const coverImageFocalY = normalizePercent(body.coverImageFocalY, 50);
+    const shippingDomestic = normalizeString(body.shippingDomestic);
+    const shippingInternational = normalizeString(body.shippingInternational);
+    const returnWindowDays = normalizePositiveInt(body.returnWindowDays);
+    const returnsPaidBy = normalizeReturnsPaidBy(body.returnsPaidBy);
 
     const brand = await prisma.brand.update({
       where: { id: brandId },
@@ -142,6 +141,10 @@ export async function POST(req: Request) {
         coverImageUrl,
         coverImageFocalX,
         coverImageFocalY,
+        shippingDomestic,
+        shippingInternational,
+        returnWindowDays,
+        returnsPaidBy,
       },
       select: {
         id: true,
@@ -151,6 +154,10 @@ export async function POST(req: Request) {
         coverImageUrl: true,
         coverImageFocalX: true,
         coverImageFocalY: true,
+        shippingDomestic: true,
+        shippingInternational: true,
+        returnWindowDays: true,
+        returnsPaidBy: true,
       },
     });
 

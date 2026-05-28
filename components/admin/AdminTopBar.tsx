@@ -14,28 +14,19 @@ export default function AdminTopBar({
     window.location.assign("/admin/login");
   }
 
- return (
-  <div className="flex items-center justify-between">
-    {/* LEFT spacer */}
-    <div className="w-32" />
-
-    {/* CENTER (tabs) */}
-    <div className="flex flex-1 justify-center">
+  return (
+    <aside className="sticky top-0 flex h-screen w-72 shrink-0 flex-col border-r border-black/10 bg-white px-5 py-8">
       <AdminHeader
         unseenWaitlistCount={unseenWaitlistCount}
         unseenApplicationsCount={unseenApplicationsCount}
       />
-    </div>
 
-    {/* RIGHT (logout) */}
-    <div className="flex w-32 justify-end">
       <button
         onClick={logout}
-        className="rounded-lg border px-3 py-2 text-sm hover:bg-black/5"
+        className="mt-6 rounded-xl border border-black/10 bg-white px-4 py-3 text-left text-sm font-medium transition hover:bg-black hover:text-white"
       >
         Logout
       </button>
-    </div>
-  </div>
-);
+    </aside>
+  );
 }

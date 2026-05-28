@@ -16,7 +16,27 @@ import { buildStorefrontWhere } from "@/lib/storefront/buildStorefrontWhere";
 import { countryNameFromIso2 } from "@/lib/geo/countries";
 import { getStorefrontPaginationState } from "@/lib/storefront/pagination";
 
+
+
 type Opt = { value: string; label: string };
+
+const OCCASION_PRODUCT_TYPES: ProductType[] = [
+  ProductType.ABAYA,
+  ProductType.DRESS,
+  ProductType.SKIRT,
+  ProductType.TOP,
+  ProductType.HIJAB,
+  ProductType.SETS,
+  ProductType.MATERNITY,
+  ProductType.KHIMAR,
+  ProductType.JILBAB,
+  ProductType.COATS_JACKETS,
+  ProductType.HOODIE_SWEATSHIRT,
+  ProductType.PANTS,
+  ProductType.BLAZER,
+  ProductType.T_SHIRT,
+];
+
 
 function titleCaseLabel(s: string) {
   if (s === "COATS_JACKETS") return "Coats & Jackets";
@@ -95,7 +115,7 @@ export default async function OccasionSlugPage({
       label: countryNameFromIso2(String(cc)),
     }));
 
-  const typeOptions: Opt[] = Object.values(ProductType).map((t) => ({
+  const typeOptions: Opt[] = OCCASION_PRODUCT_TYPES.map((t) => ({
     value: t,
     label: titleCaseLabel(t),
   }));
@@ -148,11 +168,12 @@ export default async function OccasionSlugPage({
     take,
     select: {
       id: true,
+      slug: true, // ← ADDED
       title: true,
       price: true,
       currency: true,
       badges: true,
-      brand: { select: { name: true } },
+      brand: { select: { name: true, slug: true } }, // ← slug ADDED
       images: {
         orderBy: { sortOrder: "asc" },
         take: 1,
@@ -165,6 +186,8 @@ export default async function OccasionSlugPage({
     id: p.id,
     title: p.title,
     brandName: p.brand?.name ?? null,
+    brandSlug: p.brand?.slug ?? null, // ← ADDED
+    productSlug: p.slug ?? null,       // ← ADDED
     imageUrl: p.images?.[0]?.url ?? null,
     price: p.price ? p.price.toString() : null,
     currency: String(p.currency),

@@ -51,6 +51,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
         submittedAt: true,
         reviewNote: true,
         lastApprovedAt: true,
+        polyesterFree: true, // ← ADD THIS LINE
         images: { orderBy: { sortOrder: "asc" }, select: { url: true, sortOrder: true } },
         shippingCountries: { select: { countryCode: true } },
         productTags : { select: { tag: { select: { id: true, slug: true, name: true } } } },
@@ -115,6 +116,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     const shippingCountries = Array.isArray(body.shippingCountries) ? body.shippingCountries : undefined; // ["GB","FR"]
 
     const imageUrls = Array.isArray(body.images) ? body.images : undefined; // ["https://..."]
+    const polyesterFree = body.polyesterFree !== undefined ? toBool(body.polyesterFree) : undefined;
 
     // ✅ Rule: if product was APPROVED and brand edits → becomes DRAFT again
     const shouldDemote = existing.status === ProductStatus.APPROVED;
@@ -145,6 +147,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
           ...(badges !== undefined ? { badges } : {}),
           ...(tags !== undefined ? { tags } : {}),
           ...(worldwideShipping !== undefined ? { worldwideShipping } : {}),
+          ...(polyesterFree !== undefined ? { polyesterFree } : {}),
           ...(shouldDemote
             ? {
                 status: ProductStatus.DRAFT,

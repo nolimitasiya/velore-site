@@ -258,11 +258,12 @@ export default async function SearchPage({
     take: 120,
     select: {
       id: true,
+      slug: true,
       title: true,
       price: true,
       currency: true,
       badges: true,
-      brand: { select: { name: true } },
+      brand: { select: { name: true, slug: true } },
       images: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true } },
     },
   });
@@ -278,6 +279,8 @@ export default async function SearchPage({
     sourcePage: "SEARCH",
     position: index + 1,
   }),
+  brandSlug: p.brand?.slug ?? null, // ← ADD
+  productSlug: p.slug ?? null,       // ← ADD
   badges: (p.badges ?? []) as any,
 }));
 

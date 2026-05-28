@@ -39,11 +39,13 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ id: string }> }
 ) {
   await requireAdminSession();
   const { id } = await ctx.params;
+  const body = await req.json().catch(() => ({}));
+ const sendEmail = body.sendEmail !== false;
 
   const app = await prisma.brandApplication.findUnique({
     where: { id },
@@ -125,12 +127,14 @@ export async function POST(
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
   const onboardingUrl = `${siteUrl}/brand/onboarding?token=${rawToken}`;
 
+  if (sendEmail) {
   await sendBrandInviteEmail({
     to: email,
     brandName: brand.name,
     inviteLink: onboardingUrl,
     senderName: "Asiya",
   });
+}
 
   await prisma.brandApplication.update({
     where: { id },

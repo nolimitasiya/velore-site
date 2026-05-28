@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import HeroCtaTrackingLink from "@/components/analytics/HeroCtaTrackingLink";
 import type { MouseEvent as ReactMouseEvent } from "react";
 
 export type StorefrontHeroData = {
@@ -128,12 +128,11 @@ export function Hero({
                       {hero.ctaLabel}
                     </div>
                   ) : (
-                    <Link
-                      href={hero.ctaHref}
-                      className="inline-flex items-center rounded-full bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-white/90"
-                    >
-                      {hero.ctaLabel}
-                    </Link>
+                    <HeroCtaTrackingLink
+  href={hero.ctaHref}
+  label={hero.ctaLabel}
+  className="inline-flex items-center rounded-full bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-white/90"
+/>
                   )}
                 </div>
               ) : null}

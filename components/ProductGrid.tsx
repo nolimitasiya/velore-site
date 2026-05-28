@@ -1,11 +1,19 @@
+// C:\Users\Asiya\projects\dalra\components\ProductGrid.tsx
+// CHANGED: card image/title now links to /b/[brandSlug]/p/[productSlug]
+// The "Shop" button still goes to /out/[id] via buildTrackedUrl (unchanged)
+
 import Image from "next/image";
+import Link from "next/link";
 import MoneyLabel from "@/components/MoneyLabel";
+import ProductClickTrackingLink from "@/components/analytics/ProductClickTrackingLink";
 
 export type GridProduct = {
   id: string;
   title: string;
   imageUrl: string | null;
   brandName?: string | null;
+  brandSlug?: string | null; // ← ADD THIS to your data fetch
+  productSlug?: string | null; // ← ADD THIS to your data fetch
   price: string | null;
   currency: string;
   priceLabel?: string | null;
@@ -58,10 +66,15 @@ function buildTrackedUrl(product: GridProduct, fallbackIndex: number) {
 
 export function ProductGrid({ products }: { products: GridProduct[] }) {
   return (
-    <div className="grid gap-5 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4">
-
+    <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4">
       {products.map((p, index) => {
-        const href = buildTrackedUrl(p, index);
+        const outHref = buildTrackedUrl(p, index);
+
+        // Internal detail page link (if we have slugs)
+        const detailHref =
+          p.brandSlug && p.productSlug
+            ? `/b/${p.brandSlug}/p/${p.productSlug}`
+            : null;
 
         return (
           <div
@@ -70,8 +83,8 @@ export function ProductGrid({ products }: { products: GridProduct[] }) {
           >
             <div className="relative aspect-[3/4] bg-black/5">
               {p.imageUrl ? (
-                href ? (
-                  <a href={href} target="_blank" rel="noreferrer">
+                detailHref ? (
+                  <Link href={detailHref}>
                     <Image
                       src={p.imageUrl}
                       alt={p.title}
@@ -79,15 +92,22 @@ export function ProductGrid({ products }: { products: GridProduct[] }) {
                       className="object-cover transition-transform duration-300 hover:scale-105"
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                     />
-                  </a>
+                  </Link>
                 ) : (
-                  <Image
-                    src={p.imageUrl}
-                    alt={p.title}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                  />
+                  <ProductClickTrackingLink
+                    href={outHref}
+                    productId={p.id}
+                    productName={p.title}
+                    brandName={p.brandName}
+                  >
+                    <Image
+                      src={p.imageUrl}
+                      alt={p.title}
+                      fill
+                      className="object-cover transition-transform duration-300 hover:scale-105"
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    />
+                  </ProductClickTrackingLink>
                 )
               ) : (
                 <div className="absolute inset-0 grid place-items-center text-xs text-black/40">
@@ -96,24 +116,30 @@ export function ProductGrid({ products }: { products: GridProduct[] }) {
               )}
 
               {p.badges?.includes("sale") ? (
-  <div className="absolute left-3 top-3 flex flex-col gap-2">
-    <BadgePill>SALE</BadgePill>
-  </div>
-) : null}
+                <div className="absolute left-3 top-3 flex flex-col gap-2">
+                  <BadgePill>SALE</BadgePill>
+                </div>
+              ) : null}
             </div>
 
             <div className="p-4">
-              {href ? (
-                <a
-                  href={href}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="line-clamp-2 text-sm font-medium leading-5 hover:underline"
-                >
-                  {p.title}
-                </a>
+              {detailHref ? (
+                <Link href={detailHref}>
+                  <div className="line-clamp-2 text-sm font-medium leading-5 hover:underline">
+                    {p.title}
+                  </div>
+                </Link>
               ) : (
-                <div className="line-clamp-2 text-sm font-medium leading-5">{p.title}</div>
+                <ProductClickTrackingLink
+                  href={outHref}
+                  productId={p.id}
+                  productName={p.title}
+                  brandName={p.brandName}
+                >
+                  <div className="line-clamp-2 text-sm font-medium leading-5 hover:underline">
+                    {p.title}
+                  </div>
+                </ProductClickTrackingLink>
               )}
 
               {p.brandName ? (
@@ -121,22 +147,21 @@ export function ProductGrid({ products }: { products: GridProduct[] }) {
                   {p.brandName}
                 </div>
               ) : null}
-              
 
               <div className="mt-2 text-sm text-black/70">
                 <MoneyLabel amount={p.price} currency={p.currency} />
               </div>
 
-              {href ? (
-                <a
-                  href={href}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-3 inline-flex items-center rounded-full bg-black px-4 py-2 text-xs font-medium text-white hover:opacity-90"
-                >
-                  Shop
-                </a>
-              ) : null}
+              {/* Shop button always goes to /out/[id] for affiliate tracking */}
+              <ProductClickTrackingLink
+                href={outHref}
+                productId={p.id}
+                productName={p.title}
+                brandName={p.brandName}
+                className="mt-3 inline-flex items-center rounded-full bg-black px-4 py-2 text-xs font-medium text-white hover:opacity-90"
+              >
+                Shop
+              </ProductClickTrackingLink>
             </div>
           </div>
         );

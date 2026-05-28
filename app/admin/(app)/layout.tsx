@@ -27,18 +27,20 @@ export default async function AdminAppLayout({
     where: { createdAt: { gt: admin.lastSeenApplicationsAt ?? new Date(0) } },
   });
 
-  return (
-    <AdminShell fullWidth>
-      <div className="space-y-8">
-        <AdminTopBar
-          unseenWaitlistCount={unseenWaitlistCount}
-          unseenApplicationsCount={unseenApplicationsCount}
-        />
+ return (
+  <AdminShell fullWidth>
+    <div className="flex min-h-screen bg-[#f7f1e8]">
+      <AdminTopBar
+        unseenWaitlistCount={unseenWaitlistCount}
+        unseenApplicationsCount={unseenApplicationsCount}
+      />
 
-        <main>{children}</main>
+      <main className="flex-1 overflow-y-auto px-10 py-12">
+        {children}
+      </main>
 
-        {modal}
-      </div>
-    </AdminShell>
-  );
+      {modal}
+    </div>
+  </AdminShell>
+);
 }

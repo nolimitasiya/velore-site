@@ -40,6 +40,8 @@ function isLaunchPublicPage(pathname: string) {
   return (
     pathname === "/" ||
     pathname === "/shipping-returns" ||
+    pathname === "/b" ||
+    pathname.startsWith("/b/") ||
     pathname === "/" ||
     pathname === "/contact" ||
     pathname === "/" ||

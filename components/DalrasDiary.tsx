@@ -19,7 +19,7 @@ export function DalrasDiary({ posts = [] }: { posts?: DiaryCardItem[] }) {
     <div className="mx-auto w-full max-w-[1800px] px-8 pb-14 pt-4">
       <Link href={post.href} className="group block">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-14">
-          <div className="order-2 flex items-center lg:order-1 lg:col-span-5">
+          <div className="order-1 flex items-center lg:order-1 lg:col-span-5">
   <div className="text-center lg:text-left">
     <h2 className="font-display text-4xl leading-[0.98] tracking-tight text-black sm:text-5xl xl:text-6xl">
       {post.title}
@@ -31,7 +31,7 @@ export function DalrasDiary({ posts = [] }: { posts?: DiaryCardItem[] }) {
   </div>
 </div>
 
-          <div className="order-1 lg:order-2 lg:col-span-7">
+          <div className="order-2 lg:order-2 lg:col-span-7">
             <div className="relative aspect-[16/10] overflow-hidden bg-black/5">
               {post.imageUrl ? (
                 <Image

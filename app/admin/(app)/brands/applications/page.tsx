@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import StatusSelect from "./StatusSelect";
-import OnboardButton from "./OnboardButton";
+import ApplicationNotesButton from "./ApplicationNotesButton";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
 
 export const dynamic = "force-dynamic";
@@ -375,10 +375,15 @@ export default async function Page({
   const c = (s: string) => counts[s] ?? 0;
 
   const items = await prisma.brandApplication.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    take: 200,
-  });
+  where,
+  orderBy: { createdAt: "desc" },
+  take: 200,
+  include: {
+    internalNotes: {
+      orderBy: { createdAt: "desc" },
+    },
+  },
+});
 
   const qs = (
     next: Partial<{ status: string; range: string; from: string; to: string }>
@@ -670,7 +675,7 @@ export default async function Page({
                   <th className="px-6 py-4 font-semibold">Status</th>
                   <th className="px-6 py-4 font-semibold">Created</th>
                   <th className="px-6 py-4 font-semibold">Stage</th>
-                  <th className="px-6 py-4 font-semibold">Onboard</th>
+                  <th className="px-6 py-4 font-semibold">Notes</th>
                 </tr>
               </thead>
 
@@ -768,13 +773,11 @@ export default async function Page({
                       </td>
 
                       <td className="px-6 py-4">
-                        {String(a.status).toLowerCase() ===
-                        "contract_signed" ? (
-                          <OnboardButton applicationId={String(a.id)} />
-                        ) : (
-                          <span className="text-xs text-neutral-400">—</span>
-                        )}
-                      </td>
+  <ApplicationNotesButton
+    applicationId={String(a.id)}
+    initialNotes={a.internalNotes}
+  />
+</td>
                     </tr>
                   );
                 })}

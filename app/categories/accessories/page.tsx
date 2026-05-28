@@ -244,11 +244,12 @@ const coloursRaw = await prisma.colour.findMany({
       take,
       select: {
         id: true,
+        slug: true, // ← ADDED
         title: true,
         price: true,
         currency: true,
         badges: true,
-        brand: { select: { name: true } },
+        brand: { select: { name: true, slug: true } }, // ← slug ADDED
         images: {
           orderBy: { sortOrder: "asc" },
           take: 1,
@@ -261,6 +262,8 @@ const coloursRaw = await prisma.colour.findMany({
       id: p.id,
       title: p.title,
       brandName: p.brand?.name ?? null,
+      brandSlug: p.brand?.slug ?? null, // ← ADDED
+      productSlug: p.slug ?? null,       // ← ADDED
       imageUrl: p.images?.[0]?.url ?? null,
       price: p.price ? p.price.toString() : null,
       currency: String(p.currency),

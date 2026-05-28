@@ -113,9 +113,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
                 <Link href="/terms" className="block text-white/70 transition hover:text-white">
                   Terms &amp; Conditions
                 </Link>
-                <Link href="/shipping-returns" className="block text-white/70 transition hover:text-white">
-                  Shipping &amp; Returns
-                  </Link>
+                
                   <Link href="/contact"  className="block text-white/70 transition hover:text-white">
                   Contact Us
                   </Link>

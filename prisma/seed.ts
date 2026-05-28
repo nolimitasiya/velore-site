@@ -333,7 +333,6 @@ async function main() {
     "skirts",
     "trousers",
     "co_ords",
-    "activewear",
     "maternity",
     "khimar",
     "swimwear_modest",

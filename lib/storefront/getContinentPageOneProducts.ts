@@ -4,6 +4,7 @@ import type { Region } from "@prisma/client";
 
 type CandidateProduct = {
   id: string;
+  slug: string;
   title: string;
   price: unknown;
   currency: string;
@@ -11,9 +12,10 @@ type CandidateProduct = {
   affiliateUrl: string | null;
   publishedAt: Date | null;
   brand: {
-    name: string;
-    baseCountryCode: string | null;
-  } | null;
+  name: string;
+  slug: string; // ← add
+  baseCountryCode: string | null;
+} | null;
   images: Array<{
     url: string;
   }>;
@@ -28,6 +30,8 @@ function mapToGridProduct(
     id: product.id,
     title: product.title,
     brandName: product.brand?.name ?? null,
+    brandSlug: product.brand?.slug ?? null,
+    productSlug: product.slug,
     imageUrl: product.images[0]?.url ?? null,
     price: product.price == null ? null : String(product.price),
     currency: String(product.currency),
@@ -69,6 +73,7 @@ export async function getContinentPageOneProducts(
     take: 240,
     select: {
       id: true,
+      slug: true, // ← after id: true
       title: true,
       price: true,
       currency: true,
@@ -78,7 +83,8 @@ export async function getContinentPageOneProducts(
       brand: {
         select: {
           name: true,
-          baseCountryCode: true,
+          slug: true, // ← add
+         baseCountryCode: true,
         },
       },
       images: {
