@@ -108,6 +108,7 @@ export default function BrandApplyForm() {
 
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [showErrors, setShowErrors] = useState(false);
 
   const isGB = String(form.countryCode || "").toUpperCase() === "GB";
 
@@ -175,14 +176,20 @@ export default function BrandApplyForm() {
     return true;
   }, [form, resolvedCity, showOtherPlatform]);
 
+   function fieldError(condition: boolean) {
+  if (!showErrors) return "";
+  return condition ? "border-red-400 bg-red-50" : "";
+}
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
 
-    if (!canSubmit) {
-      setErr("Please complete all required fields.");
-      return;
-    }
+  if (!canSubmit) {
+    setShowErrors(true);
+    setErr("Please complete all required fields before submitting.");
+    return;
+  }   
 
     setSubmitting(true);
     try {
@@ -230,17 +237,14 @@ export default function BrandApplyForm() {
     }
   }
 
-  const inputClass =
-  "mt-1 w-full rounded-xl border border-black/15 bg-white px-3 py-2 text-black placeholder:text-black/40";
+  const inputClass = "mt-1 w-full rounded border border-[#d8c9b5] bg-white px-4 py-3 text-sm text-[#1a0a0e] placeholder:text-[#c0b0a0] outline-none focus:border-[#7B2D3E]";
+  const selectClass = "mt-1 w-full rounded border border-[#d8c9b5] bg-white px-4 py-3 text-sm text-[#1a0a0e] outline-none focus:border-[#7B2D3E]";
+  const labelClass = "text-[11px] uppercase tracking-[0.14em] text-[#6b5c4e]";
+  const sectionTitle = "font-heading text-2xl text-[#1a0a0e] md:text-3xl";
+  const sectionWrap = "rounded-2xl border border-[#e8ddd4] bg-white p-6 md:p-8";
+  const errMsg = "mt-1 text-xs text-red-500"; // ← ADD HERE
 
-const selectClass =
-  "mt-1 w-full rounded-xl border border-black/15 bg-white px-3 py-2 text-black";
 
-const labelClass = "text-sm font-medium text-black";
-
-const sectionTitle = "text-2xl md:text-3xl font-semibold text-black";
-
-const sectionWrap = "rounded-2xl border border-black/10 bg-white p-5 md:p-7 text-black";
 
   // IDs for accessibility linking
   const phoneLegendId = "phoneLegend";
@@ -260,28 +264,33 @@ const sectionWrap = "rounded-2xl border border-black/10 bg-white p-5 md:p-7 text
               <label htmlFor="firstName" className={labelClass}>
                 First name *
               </label>
-              <input
-                id="firstName"
-                className={inputClass}
+              <input id="firstName" className={`${inputClass} ${fieldError(!form.firstName.trim())}`}
                 value={form.firstName}
                 onChange={(e) => setForm({ ...form, firstName: e.target.value })}
                 required
                 disabled={submitting}
               />
+              {showErrors && !form.firstName.trim() && (
+  <p className={errMsg}>First name is required</p>
+)}
+              
             </div>
+
+            
 
             <div>
               <label htmlFor="lastName" className={labelClass}>
                 Last name *
               </label>
-              <input
-                id="lastName"
-                className={inputClass}
+              <input id="lastName" className={`${inputClass} ${fieldError(!form.lastName.trim())}`}
                 value={form.lastName}
                 onChange={(e) => setForm({ ...form, lastName: e.target.value })}
                 required
                 disabled={submitting}
               />
+              {showErrors && !form.lastName.trim() && (
+  <p className={errMsg}>Last name is required</p>
+)}
             </div>
           </div>
 
@@ -290,10 +299,7 @@ const sectionWrap = "rounded-2xl border border-black/10 bg-white p-5 md:p-7 text
             <label htmlFor="email" className={labelClass}>
               Business email *
             </label>
-            <input
-              id="email"
-              type="email"
-              className={inputClass}
+            <input id="email" className={`${inputClass} ${fieldError(!form.email.includes("@"))}`}
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               placeholder="name@company.com"
@@ -301,6 +307,9 @@ const sectionWrap = "rounded-2xl border border-black/10 bg-white p-5 md:p-7 text
               disabled={submitting}
               autoComplete="email"
             />
+            {showErrors && !form.email.includes("@") && (
+  <p className={errMsg}>A valid email address is required</p>
+)}
           </div>
 
           {/* Phone */}
@@ -319,6 +328,7 @@ const sectionWrap = "rounded-2xl border border-black/10 bg-white p-5 md:p-7 text
                 title="Phone country code"
                 disabled={submitting}
               >
+                
                 <option value="+44">United Kingdom (+44)</option>
                 <option disabled>──────────</option>
                 {countryCodes
@@ -330,9 +340,7 @@ const sectionWrap = "rounded-2xl border border-black/10 bg-white p-5 md:p-7 text
                   ))}
               </select>
 
-              <input
-                id="phoneNumber"
-                className="rounded-xl border border-black/15 bg-white px-3 py-2 text-black placeholder:text-black/40"
+              <input id="phoneNumber" className={`rounded-xl border border-black/15 bg-white px-3 py-2 text-black placeholder:text-black/40 ${fieldError(!form.phoneNumber.trim())}`}
                 value={form.phoneNumber}
                 onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
                 placeholder="Phone number"
@@ -342,6 +350,9 @@ const sectionWrap = "rounded-2xl border border-black/10 bg-white p-5 md:p-7 text
                 disabled={submitting}
                 autoComplete="tel"
               />
+              {showErrors && !form.phoneNumber.trim() && (
+  <p className={errMsg}>Phone number is required</p>
+)}
             </div>
           </fieldset>
         </div>
@@ -359,9 +370,7 @@ const sectionWrap = "rounded-2xl border border-black/10 bg-white p-5 md:p-7 text
             <label htmlFor="companyName" className={labelClass}>
               Company *
             </label>
-            <input
-              id="companyName"
-              className={inputClass}
+            <input id="companyName" className={`${inputClass} ${fieldError(!form.companyName.trim())}`}
               value={form.companyName}
               onChange={(e) => setForm({ ...form, companyName: e.target.value })}
               placeholder="Your brand name"
@@ -369,6 +378,9 @@ const sectionWrap = "rounded-2xl border border-black/10 bg-white p-5 md:p-7 text
               disabled={submitting}
               autoComplete="organization"
             />
+            {showErrors && !form.companyName.trim() && (
+  <p className={errMsg}>Company name is required</p>
+)}
           </div>
 
           {/* Website */}
@@ -376,10 +388,8 @@ const sectionWrap = "rounded-2xl border border-black/10 bg-white p-5 md:p-7 text
             <label htmlFor="website" className={labelClass}>
               Company website *
             </label>
-            <input
-              id="website"
+            <input id="website" className={`${inputClass} ${fieldError(!form.website.trim())}`}
               type="url"
-              className={inputClass}
               value={form.website}
               onChange={(e) => setForm({ ...form, website: e.target.value })}
               placeholder="https://example.com"
@@ -387,6 +397,9 @@ const sectionWrap = "rounded-2xl border border-black/10 bg-white p-5 md:p-7 text
               disabled={submitting}
               autoComplete="url"
             />
+            {showErrors && !form.website.trim() && (
+  <p className={errMsg}>Website is required</p>
+)}
           </div>
 
           {/* Country + City */}
@@ -395,9 +408,7 @@ const sectionWrap = "rounded-2xl border border-black/10 bg-white p-5 md:p-7 text
               <label htmlFor="countryCode" className={labelClass}>
                 Country or region *
               </label>
-              <select
-                id="countryCode"
-                className={selectClass}
+              <select id="countryCode" className={`${selectClass} ${fieldError(!form.countryCode.trim())}`} 
                 value={form.countryCode}
                 onChange={(e) => onChangeCountry(e.target.value)}
                 required
@@ -455,9 +466,7 @@ const sectionWrap = "rounded-2xl border border-black/10 bg-white p-5 md:p-7 text
               <label htmlFor="platformHosted" className={labelClass}>
                 Where is your store hosted? *
               </label>
-              <select
-                id="platformHosted"
-                className={selectClass}
+              <select id="platformHosted" className={selectClass}
                 value={form.platformHosted}
                 onChange={(e) => {
                   const v = e.target.value as PlatformHosted;
@@ -530,16 +539,21 @@ const sectionWrap = "rounded-2xl border border-black/10 bg-white p-5 md:p-7 text
                 ))}
               </select>
 
-              <input
-                id="socialHandle"
-                className="rounded-xl border px-3 py-2"
+              <input id="socialHandle" className={`rounded-xl border px-3 py-2 ${fieldError(!form.socialHandle.trim())}`} 
                 value={form.socialHandle}
                 onChange={(e) => setForm({ ...form, socialHandle: e.target.value })}
                 placeholder="Username or link"
                 required
                 disabled={submitting}
               />
+              
             </div>
+            {showErrors && form.socialPlatform === "none" && (
+  <p className={errMsg}>Please select a social platform</p>
+)}
+{showErrors && form.socialPlatform !== "none" && !form.socialHandle.trim() && (
+  <p className={errMsg}>Social handle or link is required</p>
+)}
           </div>
         </div>
       </section>
@@ -554,15 +568,16 @@ const sectionWrap = "rounded-2xl border border-black/10 bg-white p-5 md:p-7 text
           <label htmlFor="notes" className={labelClass}>
             Please explain how we can assist you *
           </label>
-          <textarea
-            id="notes"
-            className={inputClass}
+          <textarea id="notes" className={`${inputClass} ${fieldError(!form.notes.trim())}`} 
             value={form.notes}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
             rows={7}
             required
             disabled={submitting}
           />
+          {showErrors && !form.notes.trim() && (
+  <p className={errMsg}>Please tell us how we can help</p>
+)}
         </div>
       </section>
 
@@ -578,8 +593,8 @@ const sectionWrap = "rounded-2xl border border-black/10 bg-white p-5 md:p-7 text
 
       <button
         type="submit"
-        disabled={!canSubmit || submitting}
-        className="w-full rounded-xl bg-[var(--accent)] px-4 py-3 font-medium text-white shadow-sm transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+        disabled={submitting}
+        className="w-full rounded bg-[#7B2D3E] px-4 py-4 text-sm tracking-wide text-white transition hover:bg-[#6a2535] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {submitting ? "Sending…" : "Submit application"}
       </button>

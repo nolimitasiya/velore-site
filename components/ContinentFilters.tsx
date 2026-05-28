@@ -627,11 +627,31 @@ const activeFilterCount = chips.length;
   onClick={() => setPanel("offers")}
 />
 
-<FilterRow
-  label="Polyester-free"
-  valueLabel={draft.polyesterFree ? "On" : "All"}
+<button
   onClick={() => setDraft((d) => ({ ...d, polyesterFree: !d.polyesterFree }))}
-/>
+  className={[
+    "w-full px-5 py-4 text-left transition-colors",
+    draft.polyesterFree
+      ? "bg-green-50 border-l-4 border-green-500"
+      : "hover:bg-black/[0.02]",
+  ].join(" ")}
+>
+  <div className="flex items-center justify-between gap-4">
+    <div className="flex items-center gap-2">
+      <span className={`text-sm font-medium ${draft.polyesterFree ? "text-green-700" : "text-black"}`}>
+        Polyester-free
+      </span>
+      {draft.polyesterFree && (
+        <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700">
+          ON
+        </span>
+      )}
+    </div>
+    <div className={`text-sm ${draft.polyesterFree ? "text-green-600" : "text-black/60"}`}>
+      {draft.polyesterFree ? "✓" : "All"}
+    </div>
+  </div>
+</button>
 </div>
               )}
 

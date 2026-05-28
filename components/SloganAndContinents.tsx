@@ -1,3 +1,4 @@
+// C:\Users\Asiya\projects\dalra\components\SloganAndContinents.tsx
 "use client";
 
 import { useRef, useState } from "react";
@@ -24,11 +25,8 @@ export function SloganAndContinents({
   function updateScrollState() {
     const el = scrollRef.current;
     if (!el) return;
-
     setCanScrollLeft(el.scrollLeft > 10);
-    setCanScrollRight(
-      el.scrollLeft + el.clientWidth < el.scrollWidth - 10
-    );
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 10);
   }
 
   function scrollBy(amount: number) {
@@ -38,47 +36,41 @@ export function SloganAndContinents({
 
   return (
     <section className="bg-white">
-      <div className="w-full px-6 pb-10">
+      <div className="w-full px-6 pb-12">
 
-
-      {/* Slogan */}
-<div className="text-center mt-16 mb-12">
-  <p className="text-2xl md:text-3xl italic font-serif text-center text-foreground/100">
+        {/* Slogan */}
+        <div className="text-center mt-16 mb-10">
+          <p className="font-display text-2xl uppercase tracking-[0.28em] text-black font-semibold">
   {slogan}
 </p>
-</div>
-
-
-
-
+        </div>
 
         <div className="relative">
           {/* Scroll area */}
           <div
             ref={scrollRef}
             onScroll={updateScrollState}
-            className="
-              flex gap-4 overflow-x-auto pb-4
-              snap-x snap-mandatory
-              scrollbar-hide
-            "
+            className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide"
           >
             {continents.map((c) => (
               <Link
                 key={c.slug}
                 href={`/continent/${c.slug}`}
-                className="group relative shrink-0 w-[260px] sm:w-[300px] lg:w-[340px]"
+                className="group relative shrink-0 w-[220px] sm:w-[260px] lg:w-[300px]"
               >
-                <div className="relative aspect-[3/4] overflow-hidden rounded-3xl bg-black/5">
+                <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-black/5">
                   <Image
                     src={c.imageUrl}
                     alt={c.name}
                     fill
-                    className="object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+                    className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                   />
-                  <div className="absolute inset-0 bg-black/25" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="font-display text-white text-xl sm:text-2xl font-semibold tracking-wide drop-shadow">
+                  {/* Gradient overlay — bottom heavy */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                  
+                  {/* Name — bottom left, editorial style */}
+                  <div className="absolute bottom-0 left-0 right-0 p-5">
+                    <span className="text-white text-sm uppercase tracking-[0.2em] font-medium">
                       {c.name}
                     </span>
                   </div>
@@ -92,12 +84,7 @@ export function SloganAndContinents({
             <button
               onClick={() => scrollBy(-280)}
               aria-label="Scroll left"
-              className="
-                absolute left-3 top-1/2 -translate-y-1/2 z-10
-                rounded-full bg-white/40 backdrop-blur
-                px-3 py-1.5 text-black shadow
-                hover:bg-white transition
-              "
+              className="absolute left-3 top-1/2 -translate-y-1/2 z-10 rounded-full bg-white border border-black/10 shadow-sm w-9 h-9 flex items-center justify-center text-black hover:bg-black hover:text-white transition-colors"
             >
               ←
             </button>
@@ -108,21 +95,11 @@ export function SloganAndContinents({
             <button
               onClick={() => scrollBy(280)}
               aria-label="Scroll right"
-              className="
-                absolute right-3 top-1/2 -translate-y-1/2 z-10
-                flex items-center gap-1
-                rounded-full bg-white/40 backdrop-blur
-                px-3 py-1.5 text-black shadow
-                hover:bg-white transition
-              "
+              className="absolute right-3 top-1/2 -translate-y-1/2 z-10 rounded-full bg-white border border-black/10 shadow-sm w-9 h-9 flex items-center justify-center text-black hover:bg-black hover:text-white transition-colors"
             >
-              <span className="hidden sm:inline text-xs">Scroll</span> →
+              →
             </button>
           )}
-
-          {/* Edge fade */}
-          <div className="pointer-events-none absolute right-0 top-0 h-full w-16 bg-gradient-to-l from-[#eee] to-transparent" />
-          <div className="pointer-events-none absolute left-0 top-0 h-full w-16 bg-gradient-to-r from-[#eee] to-transparent" />
         </div>
       </div>
     </section>

@@ -76,6 +76,8 @@ function searchParamsToRaw(sp: URLSearchParams): RawSearchParams {
     sort: sp.get("sort") ?? undefined,
     sale: sp.get("sale") ?? undefined,
     next_day: sp.get("next_day") ?? undefined,
+    polyester_free: sp.get("polyester_free") ?? undefined,
+
   };
 }
 
