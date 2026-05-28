@@ -23,6 +23,9 @@ export default function MobileMenu() {
   const [query, setQuery] = useState("");
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
+  const [brands, setBrands] = useState<LinkItem[]>([]);
+  const [brandsLoaded, setBrandsLoaded] = useState(false);
+
   // --- Menu structure (root + nested groups)
   const rootLinks = useMemo<LinkItem[]>(
   () => [
@@ -67,8 +70,9 @@ export default function MobileMenu() {
       { label: "Party", href: "/categories/occasion/party" },
       { label: "Everyday", href: "/categories/occasion/everyday" },
     ],
+     "Shop by Brands": brands, 
   }),
-  []
+  [brands]
 );
 
   function closeMenu() {
@@ -77,16 +81,30 @@ export default function MobileMenu() {
   }
 
   // --- Scroll lock when menu open
-  useEffect(() => {
-    if (!open) return;
+  // Scroll lock
+useEffect(() => {
+  if (!open) return;
+  const prev = document.body.style.overflow;
+  document.body.style.overflow = "hidden";
+  return () => { document.body.style.overflow = prev; };
+}, [open]);
 
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [open]);
+// Brands fetch
+useEffect(() => {
+  if (!open || brandsLoaded) return;
+  fetch("/api/storefront/brands")
+    .then((r) => r.json())
+    .then((j) => {
+      if (j.brands) {
+        setBrands(j.brands.map((b: any) => ({
+          label: b.name,
+          href: `/brands/${b.slug}`,
+        })));
+        setBrandsLoaded(true);
+      }
+    })
+    .catch(() => {});
+}, [open, brandsLoaded]);
 
   // --- Load recent searches
   useEffect(() => {
@@ -300,11 +318,11 @@ export default function MobileMenu() {
     </button>
 
     {/* Shop by Brands */}
-    <Link href="/brands" onClick={closeMenu}
-      className="flex items-center justify-between px-5 py-4 border-b border-black/6 hover:bg-black/[0.02] transition-colors">
-      <span className={isActive("/brands") ? "font-medium text-black" : "text-black"}>Shop by Brands</span>
-      <span className="text-black/30">›</span>
-    </Link>
+    <button onClick={() => setScreen({ type: "group", title: "Shop by Brands", items: brands })}
+  className="flex items-center justify-between px-5 py-4 border-b border-black/6 hover:bg-black/[0.02] transition-colors w-full">
+  <span className="text-black">Shop by Brands</span>
+  <span className="text-black/30">›</span>
+</button>
 
     {/* Editorial */}
     <Link href="/diary" onClick={closeMenu}
@@ -323,8 +341,12 @@ export default function MobileMenu() {
 )}
 
           {/* Nested group screen */}
-          {!isRoot &&
-            currentItems.map((item) => {
+          {!isRoot && title === "Shop by Brands" && !brandsLoaded ? (
+  <div className="px-5 py-8 text-sm text-black/40 text-center">
+    Loading brands…
+  </div>
+) : 
+  currentItems.map((item) => {
               const active = isActive(item.href);
               return (
                 <Link
@@ -338,15 +360,14 @@ export default function MobileMenu() {
                   onClick={closeMenu}
                 >
                   <span className={active ? "font-medium text-black" : "text-black"}>
-
+                
                     {item.label}
                   </span>
                   <span
                     className={[
                       "text-black/30 transition-colors duration-200",
                       active ? "text-[var(--accent)]" : "group-hover:text-black/50",
-                    ].join(" ")}
-                  >
+                    ].join(" ")}>
                     ›
                   </span>
                 </Link>

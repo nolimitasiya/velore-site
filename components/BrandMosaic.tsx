@@ -12,7 +12,7 @@ export type StorefrontBrandTile = {
 
 export function BrandMosaic({ tiles }: { tiles: StorefrontBrandTile[] }) {
   return (
-    <section className="bg-background">
+    <section className="bg-white">
       <div className="mx-auto w-full max-w-[1800px] px-8 pt-8 pb-10">
         <SectionTitle>Emerging Brands</SectionTitle>
         <div className="mt-8 grid grid-cols-2 gap-0">

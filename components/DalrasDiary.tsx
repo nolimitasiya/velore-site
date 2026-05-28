@@ -15,7 +15,7 @@ export function DalrasDiary({ posts = [] }: { posts?: DiaryCardItem[] }) {
   if (!post) return null;
 
   return (
-  <section className="bg-background">
+  <section className="bg-white">
     <div className="mx-auto w-full max-w-[1800px] px-8 pb-14 pt-4">
       <Link href={post.href} className="group block">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-14">

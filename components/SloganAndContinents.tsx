@@ -37,7 +37,7 @@ export function SloganAndContinents({
   }
 
   return (
-    <section className="bg-background">
+    <section className="bg-white">
       <div className="w-full px-6 pb-10">
 
 

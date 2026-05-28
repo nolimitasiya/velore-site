@@ -16,7 +16,7 @@ export type StyleFeedPost = {
 
 export function StyleFeed({ posts }: { posts: StyleFeedPost[] }) {
   return (
-    <section className="bg-background">
+    <section className="bg-white">
       <div className="mx-auto w-full max-w-[1800px] px-8 pb-6">
         <div className="pt-0 pb-8 text-center">
           <h2 className="text-4xl font-semibold text-black">The Style Feed</h2>
