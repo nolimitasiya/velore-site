@@ -1,4 +1,3 @@
-import SiteShell from "@/components/SiteShell";
 import BrandApplyForm from "./BrandApplyForm";
 
 export const metadata = {
@@ -7,7 +6,7 @@ export const metadata = {
 
 export default function Page() {
   return (
-    <SiteShell>
+    <main className="min-h-screen w-full bg-white">
       <section className="mx-auto w-full max-w-[1800px] px-8 py-16 md:py-24">
         
         <div className="mx-auto max-w-3xl text-center">
@@ -30,6 +29,6 @@ export default function Page() {
         </div>
 
       </section>
-    </SiteShell>
+    </main>
   );
 }

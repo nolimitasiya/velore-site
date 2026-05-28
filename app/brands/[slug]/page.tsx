@@ -196,6 +196,7 @@ try {
     take: 48,
     select: {
       id: true,
+      slug: true,
       title: true,
       price: true,
       currency: true,
@@ -218,9 +219,11 @@ try {
       sourcePage: "BRAND",
       position: index + 1,
     }),
+    brandSlug: brand.slug,   // ← ADD
+    productSlug: p.slug,     // ← ADD
   }));
 
-  const location = [brand.baseCity, brand.baseCountryCode, regionLabel(brand.baseRegion)]
+  const location = [brand.baseCity, brand.baseCountryCode]
     .filter(Boolean)
     .join(" • ");
 

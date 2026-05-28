@@ -96,10 +96,13 @@ useEffect(() => {
     .then((r) => r.json())
     .then((j) => {
       if (j.brands) {
-        setBrands(j.brands.map((b: any) => ({
-          label: b.name,
-          href: `/brands/${b.slug}`,
-        })));
+        setBrands([
+  { label: "Shop All Brands", href: "/brands" },
+  ...j.brands.map((b: any) => ({
+    label: b.name,
+    href: `/brands/${b.slug}`,
+  }))
+]);
         setBrandsLoaded(true);
       }
     })

@@ -140,7 +140,7 @@ export default async function BrandsPage({
 
           <div className="flex justify-center">
             <BrandFilters
-              regions={regionOptions}
+              regions={[]}
               countries={countryOptions}
             />
           </div>

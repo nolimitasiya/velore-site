@@ -39,52 +39,22 @@ function isBrandApi(pathname: string) {
 function isLaunchPublicPage(pathname: string) {
   return (
     pathname === "/" ||
-    pathname === "/shipping-returns" ||
-    pathname === "/b" ||
-    pathname.startsWith("/b/") ||
-    pathname === "/" ||
-    pathname === "/contact" ||
-    pathname === "/" ||
-    pathname === "/cookie-policy" ||
-    pathname === "/" ||
-    pathname === "/terms" ||
-    pathname === "/" ||
-    pathname === "/privacy-policy" ||
-    pathname === "/" ||
-    pathname === "/ethics" ||
-    pathname === "/" ||
-    pathname === "/about" ||
-    pathname === "/" ||
     pathname === "/thanks" ||
     pathname.startsWith("/thanks/") ||
     pathname === "/contact/thanks" ||
-    pathname.startsWith("/contact/thanks/") ||
-    pathname === "/brand-apply" ||
-    pathname.startsWith("/brand-apply/") ||
     pathname === "/brands/apply" ||
     pathname.startsWith("/brands/apply/") ||
-    pathname === "/categories" ||
-    pathname.startsWith("/categories/") ||
-    pathname === "/p" ||
-    pathname.startsWith("/p/") ||
+    pathname === "/brand-apply" ||
+    pathname.startsWith("/brand-apply/") ||
     pathname === "/out" ||
     pathname.startsWith("/out/") ||
-    pathname === "/continent" ||
-    pathname.startsWith("/continent/") ||
-    pathname === "/brands" ||
-    pathname.startsWith("/brands/") ||
-    pathname === "/sale" ||
-    pathname.startsWith("/sale/") ||
-    pathname === "/new-in" ||
-    pathname.startsWith("/new-in/") ||
-    pathname === "/search" ||
-    pathname.startsWith("/search/") ||
-    pathname === "/storefront" ||
-    pathname.startsWith("/storefront/")||
-    pathname === "/diary" ||
-    pathname.startsWith("/diary/")
-    
-    
+    pathname === "/contact" ||
+    pathname === "/cookie-policy" ||
+    pathname === "/terms" ||
+    pathname === "/privacy-policy" ||
+    pathname === "/ethics" ||
+    pathname === "/about" ||
+    pathname === "/shipping-returns"
   );
 }
 
