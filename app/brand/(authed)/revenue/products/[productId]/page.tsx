@@ -72,8 +72,8 @@ export default async function ProductAnalyticsPage({
 
   if (!product) {
     return (
-      <div className="p-6">
-        <div className="rounded-2xl border p-6">
+      <div className="space-y-6">
+  <div className="rounded-[28px] border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
           <div className="font-semibold">Product not found</div>
           <a className="mt-2 inline-block underline" href="/brand/revenue/products">
             Back
@@ -113,45 +113,41 @@ export default async function ProductAnalyticsPage({
   const qs = (r: RangeKey) => (r === "30d" ? "" : `?range=${r}`);
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+  <div className="space-y-6">
+    <section className="rounded-[28px] bg-[#7B2D3E] px-6 py-7 md:px-8">
+      <div className="flex items-start justify-between gap-6">
+        <div className="space-y-2">
           <a
-            className="text-sm underline underline-offset-4 text-neutral-600"
+            className="text-[11px] font-medium uppercase tracking-[0.16em] text-white/50 underline-offset-4 hover:text-white/80"
             href={`/brand/revenue/products${qs(range)}`}
           >
-            ← Back to Top products
+            ← Back to top products
           </a>
-
-          <h1 className="mt-2 text-2xl font-semibold">{product.title}</h1>
-          <p className="mt-1 text-sm text-neutral-600">
-            Range: <span className="font-medium">{range}</span> · Total clicks:{" "}
-            <span className="font-medium">{totalClicks}</span>
+          <h1 className="text-2xl font-semibold tracking-tight text-white">{product.title}</h1>
+          <p className="text-sm text-white/60">
+            Range: <span className="font-medium text-white/80">{range}</span> · Total clicks:{" "}
+            <span className="font-medium text-white/80">{totalClicks}</span>
           </p>
         </div>
-
-        <div className="h-16 w-16 overflow-hidden rounded-xl border bg-neutral-50 flex items-center justify-center">
+        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-white/20 bg-white/10">
           {product.images?.[0]?.url ? (
-            <img
-              src={product.images[0].url}
-              alt={product.title}
-              className="h-full w-full object-cover"
-            />
+            <img src={product.images[0].url} alt={product.title} className="h-full w-full object-cover" />
           ) : (
-            <span className="text-xs text-neutral-400">No image</span>
+            <div className="flex h-full items-center justify-center text-xs text-white/40">No image</div>
           )}
         </div>
       </div>
+    </section>
 
       {/* Keep your table */}
-      <div className="rounded-2xl border bg-white overflow-hidden">
-        <div className="px-4 py-3 border-b">
-          <div className="font-semibold">Clicks by country</div>
-          <div className="text-xs text-neutral-500">Range: {range}</div>
-        </div>
-
-        <table className="w-full text-sm">
-          <thead className="bg-neutral-50 text-left text-neutral-600">
+      <div className="overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+  <div className="border-b border-[#e8ddd4] bg-[#fdf7f4] px-5 py-4">
+    <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">Breakdown</div>
+    <div className="mt-0.5 font-semibold text-black">Clicks by country</div>
+    <div className="text-xs text-neutral-400">Range: {range}</div>
+  </div>
+  <table className="w-full text-sm">
+    <thead className="bg-[#fdf7f4] text-left text-[#a89280]">
             <tr>
               <th className="px-4 py-3">Country</th>
               <th className="px-4 py-3 text-right">Clicks</th>
@@ -166,7 +162,7 @@ export default async function ProductAnalyticsPage({
                 <td className="px-4 py-3">
                   <div className="h-2 w-full rounded-full bg-black/10 overflow-hidden">
                     <div
-                      className="h-2 bg-black/70"
+                      className="h-2 bg-[#7B2D3E]/70"
                       style={{
                         width: `${Math.max(
                           5,

@@ -1,12 +1,17 @@
 // lib/revenue/ranges.ts
-export type RangeKey = "today" | "7d" | "30d";
-
+export type RangeKey = "today" | "7d" | "30d" | "custom";
 export function parseRange(input: string | null | undefined): RangeKey {
   const r = String(input ?? "").toLowerCase();
-  if (r === "today" || r === "7d" || r === "30d") return r;
+  if (r === "today" || r === "7d" || r === "30d" || r === "custom") return r;
   return "30d";
 }
 
+export function customRangeWindow(from: string, to: string) {
+  const gte = new Date(from);
+  const toDate = new Date(to);
+  toDate.setDate(toDate.getDate() + 1); // make `to` inclusive
+  return { gte, lt: toDate };
+}
 // returns a [gte, lt] window (lt is exclusive)
 export function rangeWindow(range: RangeKey) {
   const now = new Date();

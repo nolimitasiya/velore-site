@@ -223,13 +223,21 @@ export default function AdminNavigationPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-7xl space-y-6 px-6 py-8">
-      <div>
-        <h1 className="text-2xl font-semibold">Navigation Promos</h1>
-        <p className="mt-1 text-sm text-black/60">
-          Manage editorial content for the storefront header navigation.
-        </p>
+    <main className="min-h-screen bg-neutral-50/70">
+  <div className="mx-auto w-full max-w-7xl space-y-6 px-6 py-8">
+  <section className="rounded-[28px] bg-[#7B2D3E] px-6 py-7 md:px-8">
+    <div className="space-y-2">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+        Admin · Content
       </div>
+      <h1 className="text-3xl font-semibold tracking-tight text-white">
+        Navigation Promos
+      </h1>
+      <p className="max-w-2xl text-sm leading-6 text-white/60">
+        Manage editorial content for each storefront header navigation slot.
+      </p>
+    </div>
+  </section>
 
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -247,22 +255,21 @@ export default function AdminNavigationPage() {
             const promo = promos[key];
 
             return (
-              <section
-                key={key}
-                className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm"
-              >
-                <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                  <div>
-                    <h2 className="text-xl font-semibold">{prettyKey(key)}</h2>
-                    <p className="mt-1 text-sm text-black/50">
-                      Header navigation editorial slot for {prettyKey(key).toLowerCase()}.
-                    </p>
-                  </div>
-
-                  <span className="rounded-full border border-black/10 bg-black/5 px-3 py-1 text-xs">
-                    {promo.isActive ? "Active" : "Inactive"}
-                  </span>
-                </div>
+                <section key={key} className="overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+  <div className="flex items-center justify-between border-b border-[#e8ddd4] bg-[#fdf7f4] px-6 py-4">
+    <div>
+      <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">Nav slot</div>
+      <h2 className="mt-0.5 text-base font-semibold text-black">{prettyKey(key)}</h2>
+    </div>
+    <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-medium ${
+      promo.isActive
+        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+        : "border-black/10 bg-neutral-100 text-neutral-600"
+    }`}>
+      {promo.isActive ? "Active" : "Inactive"}
+    </span>
+  </div>
+  <div className="p-6">
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="space-y-1">
@@ -273,7 +280,7 @@ export default function AdminNavigationPage() {
                       onChange={(e) =>
                         updatePromo(key, (p) => ({ ...p, kicker: e.target.value }))
                       }
-                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      className="w-full rounded-2xl border border-black/10 px-4 py-2.5 text-sm outline-none transition focus:border-[#7B2D3E]/30 focus:ring-2 focus:ring-[#7B2D3E]/10"
                       placeholder="e.g. Veilora Edit"
                     />
                   </label>
@@ -286,7 +293,7 @@ export default function AdminNavigationPage() {
                       onChange={(e) =>
                         updatePromo(key, (p) => ({ ...p, title: e.target.value }))
                       }
-                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      className="w-full rounded-2xl border border-black/10 px-4 py-2.5 text-sm outline-none transition focus:border-[#7B2D3E]/30 focus:ring-2 focus:ring-[#7B2D3E]/10"
                       placeholder="Promo title"
                     />
                   </label>
@@ -299,7 +306,7 @@ export default function AdminNavigationPage() {
                         updatePromo(key, (p) => ({ ...p, blurb: e.target.value }))
                       }
                       rows={4}
-                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      className="w-full rounded-2xl border border-black/10 px-4 py-2.5 text-sm outline-none transition focus:border-[#7B2D3E]/30 focus:ring-2 focus:ring-[#7B2D3E]/10"
                       placeholder="Short editorial description"
                     />
                   </label>
@@ -312,7 +319,7 @@ export default function AdminNavigationPage() {
                       onChange={(e) =>
                         updatePromo(key, (p) => ({ ...p, imageUrl: e.target.value }))
                       }
-                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      className="w-full rounded-2xl border border-black/10 px-4 py-2.5 text-sm outline-none transition focus:border-[#7B2D3E]/30 focus:ring-2 focus:ring-[#7B2D3E]/10"
                       placeholder="https://..."
                     />
                   </label>
@@ -325,7 +332,7 @@ export default function AdminNavigationPage() {
                       onChange={(e) =>
                         updatePromo(key, (p) => ({ ...p, ctaLabel: e.target.value }))
                       }
-                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      className="w-full rounded-2xl border border-black/10 px-4 py-2.5 text-sm outline-none transition focus:border-[#7B2D3E]/30 focus:ring-2 focus:ring-[#7B2D3E]/10"
                       placeholder="e.g. View all clothing"
                     />
                   </label>
@@ -338,29 +345,28 @@ export default function AdminNavigationPage() {
                       onChange={(e) =>
                         updatePromo(key, (p) => ({ ...p, ctaHref: e.target.value }))
                       }
-                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                      className="w-full rounded-2xl border border-black/10 px-4 py-2.5 text-sm outline-none transition focus:border-[#7B2D3E]/30 focus:ring-2 focus:ring-[#7B2D3E]/10"
                       placeholder="/categories/clothing"
                     />
                   </label>
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-6">
-                  <label className="inline-flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
+                  <label className="inline-flex cursor-pointer items-center gap-3 rounded-2xl border border-black/10 bg-neutral-50/80 px-4 py-3 text-sm">
+                  <input type="checkbox" className="h-4 w-4 accent-[#7B2D3E]"
                       checked={promo.isActive}
                       onChange={(e) =>
                         updatePromo(key, (p) => ({ ...p, isActive: e.target.checked }))
                       }
                     />
-                    Active
-                  </label>
+                    <span className="font-medium text-neutral-800">Active — show this promo in the nav</span>
+                    </label>
                 </div>
 
                 <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_300px]">
-                  <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-4">
-                    <div className="mb-3 text-xs uppercase tracking-[0.14em] text-black/40">
-                      Preview copy
+                  <div className="rounded-2xl border border-[#e8ddd4] bg-[#fdf7f4] p-5">
+                    <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7B2D3E]/50">
+                    Preview copy
                     </div>
 
                     <div className="space-y-3">
@@ -376,7 +382,7 @@ export default function AdminNavigationPage() {
                         {promo.blurb || "No blurb"}
                       </div>
 
-                      <div className="inline-flex w-fit border-b border-black pb-1 text-[12px] uppercase tracking-[0.14em] text-black">
+                      <div className="inline-flex w-fit border-b border-[#7B2D3E] pb-1 text-[11px] uppercase tracking-[0.14em] text-[#7B2D3E]">
                         {promo.ctaLabel || "No CTA"}
                       </div>
                     </div>
@@ -405,18 +411,20 @@ export default function AdminNavigationPage() {
 
                 <div className="mt-6 flex gap-3">
                   <button
-                    onClick={() => savePromo(key)}
-                    disabled={savingKey === key}
-                    className="rounded-lg border border-black/10 px-4 py-2 text-sm hover:bg-black/5 disabled:opacity-50"
-                  >
-                    {savingKey === key ? "Saving..." : "Save promo"}
-                  </button>
+  onClick={() => savePromo(key)}
+  disabled={savingKey === key}
+  className="inline-flex items-center rounded-2xl bg-[#7B2D3E] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#6a2435] disabled:cursor-not-allowed disabled:opacity-50"
+>
+  {savingKey === key ? "Saving..." : "Save promo"}
+</button>
                 </div>
-              </section>
-            );
-          })}
+                 </div>
+            </section>
+          );
+        })}
         </div>
       )}
-    </main>
+    </div>
+  </main>
   );
 }

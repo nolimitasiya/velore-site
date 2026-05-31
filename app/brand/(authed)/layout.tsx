@@ -13,12 +13,14 @@ export default async function BrandAuthedLayout({
   await requireBrandContext();
   const brand = await getCurrentBrand();
 
-  return (
-    <BrandShell brandName={brand?.name ?? "Brand Portal"}>
-      <div className="space-y-8">
-        <BrandHeader brandName={brand?.name ?? "Brand Portal"} />
+ return (
+  <BrandShell brandName={brand?.name ?? "Brand Portal"}>
+    <div className="flex min-h-screen bg-[#faf8f4]">
+      <BrandHeader brandName={brand?.name ?? "Brand Portal"} />
+      <main className="flex-1 overflow-y-auto px-8 py-8 bg-[#faf8f4]">
         {children}
-      </div>
-    </BrandShell>
-  );
+      </main>
+    </div>
+  </BrandShell>
+);
 }

@@ -94,9 +94,9 @@ export default function ContinentsAdminClient({
 
         return (
           <section
-            key={item.id}
-            className="overflow-hidden rounded-3xl border border-black/10 bg-white shadow-sm"
-          >
+  key={item.id}
+  className="overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+>
             <div className="relative aspect-[3/2] w-full bg-neutral-100">
               {hasImage ? (
                 <Image
@@ -115,15 +115,16 @@ export default function ContinentsAdminClient({
 
             <div className="space-y-5 p-5">
               <div>
-                <h2 className="text-lg font-semibold text-neutral-950">
-                  {item.name}
-                </h2>
-                <div className="mt-1 text-sm text-neutral-500">
-                  <span>Slug: {item.slug}</span>
-                  <span className="mx-2">•</span>
-                  <span>Region: {item.region}</span>
-                </div>
-              </div>
+  <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">
+    {item.region}
+  </div>
+  <h2 className="mt-0.5 text-lg font-semibold text-neutral-950">
+    {item.name}
+  </h2>
+  <div className="mt-1 text-xs text-neutral-400">
+    {item.slug}
+  </div>
+</div>
 
               <div className="space-y-4">
                 <div>
@@ -140,7 +141,7 @@ export default function ContinentsAdminClient({
                     onChange={(e) =>
                       updateItem(item.id, { name: e.target.value })
                     }
-                    className="w-full rounded-2xl border border-black/10 px-4 py-3 text-sm outline-none transition focus:border-black/30"
+                    className="w-full rounded-2xl border border-black/10 px-4 py-3 text-sm outline-none transition focus:border-[#7B2D3E]/30 focus:ring-2 focus:ring-[#7B2D3E]/10"
                   />
                 </div>
 
@@ -158,7 +159,7 @@ export default function ContinentsAdminClient({
                     onChange={(e) =>
                       updateItem(item.id, { imageUrl: e.target.value })
                     }
-                    className="w-full rounded-2xl border border-black/10 px-4 py-3 text-sm outline-none transition focus:border-black/30"
+                    className="w-full rounded-2xl border border-black/10 px-4 py-3 text-sm outline-none transition focus:border-[#7B2D3E]/30 focus:ring-2 focus:ring-[#7B2D3E]/10"
                     placeholder="https://..."
                   />
                 </div>
@@ -180,22 +181,20 @@ export default function ContinentsAdminClient({
                           sortOrder: Number(e.target.value || 0),
                         })
                       }
-                      className="w-full rounded-2xl border border-black/10 px-4 py-3 text-sm outline-none transition focus:border-black/30"
+                      className="w-full rounded-2xl border border-black/10 px-4 py-3 text-sm outline-none transition focus:border-[#7B2D3E]/30 focus:ring-2 focus:ring-[#7B2D3E]/10"
                     />
                   </div>
 
                   <div className="flex items-end">
-                    <label className="inline-flex items-center gap-3 rounded-2xl border border-black/10 px-4 py-3 text-sm text-neutral-800">
-                      <input
-                        type="checkbox"
-                        checked={item.isActive}
-                        onChange={(e) =>
-                          updateItem(item.id, { isActive: e.target.checked })
-                        }
-                        className="h-4 w-4"
-                      />
-                      Active
-                    </label>
+                    <label className="inline-flex cursor-pointer items-center gap-3 rounded-2xl border border-black/10 bg-neutral-50/80 px-4 py-3 text-sm font-medium text-neutral-800">
+  <input
+    type="checkbox"
+    checked={item.isActive}
+    onChange={(e) => updateItem(item.id, { isActive: e.target.checked })}
+    className="h-4 w-4 accent-[#7B2D3E]"
+  />
+  Active
+</label>
                   </div>
                 </div>
               </div>
@@ -209,7 +208,7 @@ export default function ContinentsAdminClient({
                   type="button"
                   onClick={() => saveItem(item)}
                   disabled={isSaving}
-                  className="inline-flex items-center justify-center rounded-full bg-black px-5 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex items-center justify-center rounded-2xl bg-[#7B2D3E] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#6a2435] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSaving ? "Saving..." : "Save"}
                 </button>

@@ -20,19 +20,28 @@ type Props = {
 };
 
 function SectionCard({
+  eyebrow,
   title,
   description,
   children,
 }: {
+  eyebrow?: string;
   title: string;
   description?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-3xl border border-black/10 bg-white p-6 shadow-sm">
-      <div className="text-xl font-semibold">{title}</div>
-      {description && <p className="mt-1 text-sm text-black/60">{description}</p>}
-      <div className="mt-6">{children}</div>
+    <div className="overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+      <div className="border-b border-[#e8ddd4] bg-[#fdf7f4] px-6 py-4">
+        {eyebrow ? (
+          <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">
+            {eyebrow}
+          </div>
+        ) : null}
+        <h2 className="mt-0.5 text-md font-medium text-black">{title}</h2>
+        {description && <p className="mt-1 text-xs text-neutral-500">{description}</p>}
+      </div>
+      <div className="p-6">{children}</div>
     </div>
   );
 }
@@ -159,26 +168,31 @@ export default function BrandProfileForm({
     <div className="space-y-6">
 
       {/* ── Brand profile ── */}
-      <SectionCard title="Brand profile" description="Manage how your brand appears across Veilora.">
+      <SectionCard eyebrow="Profile" title="Brand profile" description="Manage how your brand appears across Veilora.">
         <div className="grid gap-6 md:grid-cols-2">
           <div>
-            <label htmlFor="brand-name" className="text-sm font-medium">Brand name</label>
+            <label htmlFor="brand-name" className="text-sm font-medium text-neutral-700">Brand name</label>
+
             <input id="brand-name" value={initialName} disabled className="mt-2 w-full rounded-2xl border border-black/10 bg-black/[0.03] px-4 py-3 text-sm outline-none" />
           </div>
           <div>
-            <label htmlFor="brand-slug" className="text-sm font-medium">Slug</label>
+            <label htmlFor="brand-slug" className="text-sm font-medium text-neutral-700">Brand Handle</label>
+
+
             <input id="brand-slug" value={initialSlug} disabled className="mt-2 w-full rounded-2xl border border-black/10 bg-black/[0.03] px-4 py-3 text-sm outline-none" />
           </div>
         </div>
 
         <div className="mt-6 rounded-2xl border border-black/10 bg-neutral-50 p-4">
-          <label htmlFor="brand-instagram-handle" className="text-sm font-medium">Instagram handle</label>
+          <label htmlFor="brand-instagram-handle" className="text-sm font-medium text-neutral-700">Instagram handle</label>
+
+
           <input
             id="brand-instagram-handle"
             value={instagramHandle}
             onChange={(e) => setInstagramHandle(e.target.value)}
             placeholder="@brandname"
-            className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-black"
+            className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-[#7B2D3E]/40 focus:ring-2 focus:ring-[#7B2D3E]/10"
           />
           <p className="mt-2 text-xs text-black/50">Enter @brandname, brandname, or a full Instagram profile URL.</p>
           {instagramPreviewUrl ? (
@@ -195,7 +209,8 @@ export default function BrandProfileForm({
 
         {/* Cover image upload */}
         <div className="mt-6">
-          <div className="text-sm font-medium">Upload cover image</div>
+          <div className="text-sm font-medium text-neutral-700">Upload cover image</div>
+
           <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp" className="hidden" aria-label="Upload brand cover image"
             onChange={(e) => { const file = e.target.files?.[0]; if (file) onUploadFile(file); }} />
           <div
@@ -218,14 +233,16 @@ export default function BrandProfileForm({
         </div>
 
         <div className="mt-6 rounded-2xl border border-black/10 p-4 bg-neutral-50 space-y-3">
-          <label htmlFor="brand-cover-image-url" className="text-sm font-medium">Or use an image URL</label>
+          <label htmlFor="brand-cover-image-url" className="text-sm font-medium text-neutral-700">Or use an image URL</label>
+
           <input id="brand-cover-image-url" value={coverImageUrl} onChange={(e) => setCoverImageUrl(e.target.value)}
             placeholder="https://example.com/your-brand-cover.jpg"
-            className="mt-2 w-full rounded-2xl border border-black/10 px-4 py-3 text-sm outline-none focus:border-black" />
+            className="mt-2 w-full rounded-2xl border border-black/10 px-4 py-3 text-sm outline-none focus:border-[#7B2D3E]/40 focus:ring-2 focus:ring-[#7B2D3E]/10"/>
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            <button type="button" onClick={applyImageUrl} className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium hover:bg-black/[0.05] transition">Apply image</button>
-            <button type="button" onClick={clearImage} className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium hover:bg-black/[0.05] transition">Remove image</button>
-            <button type="button" onClick={resetFocalPoint} className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium hover:bg-black/[0.05] transition">Reset position</button>
+            <button type="button" onClick={applyImageUrl} className="rounded-full border border-black/10 bg-white px-4 py-2 text-xs text-neutral-700 transition hover:bg-[#fdf7f4]">Apply image</button>
+
+            <button type="button" onClick={clearImage} className="rounded-full border border-black/10 bg-white px-4 py-2 text-xs text-neutral-700 transition hover:bg-[#fdf7f4]">Remove image</button>
+            <button type="button" onClick={resetFocalPoint} className="rounded-full border border-black/10 bg-white px-4 py-2 text-xs text-neutral-700 transition hover:bg-[#fdf7f4]">Reset position</button>
           </div>
         </div>
 
@@ -237,15 +254,17 @@ export default function BrandProfileForm({
 
       {/* ── Shipping & Returns ── */}
       <SectionCard
-        title="Shipping & returns"
-        description="This information will be shown to shoppers on your product pages. Set it once and it applies to all your products."
-      >
+  eyebrow="Logistics"
+  title="Shipping & returns"
+  description="This information will be shown to shoppers on your product pages. Set it once and it applies to all your products."
+>
         <div className="space-y-6">
 
           {/* Domestic shipping */}
           <div className="rounded-2xl border border-black/10 bg-neutral-50 p-4 space-y-3">
             <div>
-              <p className="text-sm font-medium">Domestic shipping</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">Domestic shipping</p>
+
               <p className="mt-0.5 text-xs text-black/50">
                 Delivery time for shoppers in your home country (same country as your brand).
               </p>
@@ -254,14 +273,14 @@ export default function BrandProfileForm({
               value={shippingDomestic}
               onChange={(e) => setShippingDomestic(e.target.value)}
               placeholder="e.g. 2–4 working days"
-              className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-black"
+              className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-[#7B2D3E]/40 focus:ring-2 focus:ring-[#7B2D3E]/10"
             />
           </div>
 
           {/* International shipping */}
           <div className="rounded-2xl border border-black/10 bg-neutral-50 p-4 space-y-3">
             <div>
-              <p className="text-sm font-medium">International shipping</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">International shipping</p>
               <p className="mt-0.5 text-xs text-black/50">
                 Delivery time for shoppers outside your home country.
               </p>
@@ -270,14 +289,14 @@ export default function BrandProfileForm({
               value={shippingInternational}
               onChange={(e) => setShippingInternational(e.target.value)}
               placeholder="e.g. 1–3 weeks"
-              className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-black"
+              className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-[#7B2D3E]/40 focus:ring-2 focus:ring-[#7B2D3E]/10"
             />
           </div>
 
           {/* Returns */}
           <div className="rounded-2xl border border-black/10 bg-neutral-50 p-4 space-y-4">
             <div>
-              <p className="text-sm font-medium">Returns policy</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">Returns policy</p>
               <p className="mt-0.5 text-xs text-black/50">
                 Let shoppers know your return window and who covers return postage.
               </p>
@@ -293,7 +312,7 @@ export default function BrandProfileForm({
                   value={returnWindowDays}
                   onChange={(e) => setReturnWindowDays(e.target.value)}
                   placeholder="e.g. 14"
-                  className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-black"
+                  className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-[#7B2D3E]/40 focus:ring-2 focus:ring-[#7B2D3E]/10"
                 />
                 <p className="mt-1 text-xs text-black/40">Enter 0 for no returns.</p>
               </div>
@@ -309,7 +328,7 @@ export default function BrandProfileForm({
     id="returns-paid-by"
     value={returnsPaidBy}
     onChange={(e) => setReturnsPaidBy(e.target.value as ReturnsPaidBy | "")}
-    className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-black"
+    className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-[#7B2D3E]/40 focus:ring-2 focus:ring-[#7B2D3E]/10"
   >
     <option value="">Select...</option>
     <option value="BUYER">Buyer pays return postage</option>
@@ -342,7 +361,7 @@ export default function BrandProfileForm({
           type="button"
           onClick={onSave}
           disabled={saving || uploading}
-          className="rounded-full bg-black px-6 py-2.5 text-sm font-medium text-white hover:opacity-90 transition shadow-sm"
+          className="rounded-2xl bg-[#7B2D3E] px-6 py-2.5 text-sm font-medium text-white transition hover:bg-[#6a2435] shadow-sm"
         >
           {saving ? "Saving..." : "Save profile"}
         </button>

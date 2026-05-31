@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
-function NavLink({ href, label }: { href: string; label: string }) {
+function NavLink({ href, label, icon }: { href: string; label: string; icon: string }) {
   const pathname = usePathname();
   const active = pathname === href || pathname.startsWith(href + "/");
 
@@ -12,12 +12,16 @@ function NavLink({ href, label }: { href: string; label: string }) {
     <Link
       href={href}
       className={[
-        "inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-medium transition-all",
+        "group flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-all",
         active
-          ? "border border-black bg-black text-white shadow-[0_6px_18px_rgba(0,0,0,0.12)]"
-          : "border border-black/10 bg-white text-neutral-700 hover:border-black/15 hover:bg-neutral-50 hover:text-neutral-950",
+          ? "bg-[#f2ece4] font-medium text-[#7B2D3E]"
+          : "text-[#9a7e6f] hover:bg-[#f2ece4] hover:text-[#1a0a0e]",
       ].join(" ")}
     >
+      <i
+        className={`ti ${icon} text-[15px] ${active ? "text-[#7B2D3E]" : "text-[#c4a898] group-hover:text-[#7B2D3E]"}`}
+        aria-hidden="true"
+      />
       {label}
     </Link>
   );
@@ -45,38 +49,54 @@ export function BrandHeader({ brandName }: { brandName: string }) {
   }
 
   return (
-    <div className="rounded-[28px] border border-black/8 bg-white/95 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.04)] backdrop-blur-sm md:p-5">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        {/* left: brand identity */}
+    <>
+      <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"
+      />
+      <aside className="sticky top-[57px] flex h-[calc(100vh-57px)] w-60 shrink-0 flex-col border-r border-[#e8ddd4] bg-[#faf8f4]">
         
 
-        {/* center: nav */}
-        <div className="flex flex-1 flex-wrap items-center justify-start gap-2 lg:justify-center">
-          <NavLink href="/brand/revenue" label="Analytics" />
-          <NavLink href="/brand/products" label="Products" />
-          <NavLink href="/brand/import" label="Import" />
-          <NavLink href="/brand/profile" label="Profile" />
+        {/* Nav */}
+        <nav className="flex flex-col gap-0.5 flex-1 overflow-y-auto px-3 py-4">
+          <div className="mb-1 px-3 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#c4a898]">
+            Overview
+          </div>
+          <NavLink href="/brand/revenue" label="Analytics" icon="ti-chart-bar" />
+
+          <div className="mb-1 mt-4 px-3 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#c4a898]">
+            Catalogue
+          </div>
+          <NavLink href="/brand/products" label="Products" icon="ti-shirt" />
+          <NavLink href="/brand/import" label="Import" icon="ti-upload" />
+
+          <div className="mb-1 mt-4 px-3 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#c4a898]">
+            Account
+          </div>
+          <NavLink href="/brand/profile" label="Profile" icon="ti-user" />
 
           <button
             type="button"
             onClick={refreshNow}
-            className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 transition hover:border-black/15 hover:bg-neutral-50 hover:text-neutral-950"
+            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-[#9a7e6f] transition-all hover:bg-[#f2ece4] hover:text-[#1a0a0e]"
           >
+            <i className="ti ti-refresh text-[15px] text-[#c4a898]" aria-hidden="true" />
             Refresh
           </button>
-        </div>
+        </nav>
 
-        {/* right: logout */}
-        <div className="flex justify-start lg:justify-end">
+        {/* Logout */}
+        <div className="border-t border-[#e8ddd4] p-3">
           <button
             onClick={logout}
             disabled={busy}
-            className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 transition hover:border-black/15 hover:bg-neutral-50 hover:text-neutral-950 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex w-full items-center gap-2.5 rounded-lg border border-[#e8ddd4] bg-white px-3 py-2.5 text-left text-[13px] text-[#a89280] transition hover:border-[#7B2D3E] hover:text-[#7B2D3E]"
           >
+            <i className="ti ti-logout text-[15px]" aria-hidden="true" />
             {busy ? "Logging out..." : "Logout"}
           </button>
         </div>
-      </div>
-    </div>
+      </aside>
+    </>
   );
 }

@@ -30,6 +30,11 @@ export function getSuggestedCurrencyForCountry(countryCode: string) {
     : DEFAULT_LOCATION.currency;
 }
 
+function hasDismissedCookie(): boolean {
+  if (typeof document === "undefined") return false;
+  return document.cookie.includes("vc_prefs_dismissed=1");
+}
+
 export function readInitialShopperPreferences() {
   const cookieCountry = normalizeCountryCode(
     readCookie("vc_country") || readCookie("dalra_country")
@@ -75,7 +80,8 @@ export function readInitialShopperPreferences() {
     country,
     currency,
     hasSavedPrefs,
-    shouldPrompt: !hasSavedPrefs,
+    shouldPrompt: !hasSavedPrefs && !hasDismissedCookie(), // ← changed
+
   };
 }
 

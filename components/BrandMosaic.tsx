@@ -17,22 +17,23 @@ export function BrandMosaic({ tiles }: { tiles: StorefrontBrandTile[] }) {
       <div className="mx-auto w-full max-w-[1800px] px-8 pt-8 pb-14">
 
         {/* Header */}
-        <div className="mb-8 flex items-end justify-between">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.24em] text-black/40">
-              Discover
-            </p>
-            <h2 className="mt-2 font-heading text-3xl tracking-tight text-black md:text-4xl">
-              Emerging Brands
-            </h2>
-          </div>
-          <Link
-            href="/brands"
-            className="text-xs uppercase tracking-[0.18em] text-black/50 underline underline-offset-4 hover:text-black transition-colors"
-          >
-            View all
-          </Link>
-        </div>
+<div className="mb-8 flex items-end justify-between">
+  <div>
+    <p className="mb-2 text-[11px] uppercase tracking-[0.22em] text-black/40">
+      Discover
+    </p>
+    <h2 className="font-heading text-3xl font-normal tracking-tight text-black md:text-4xl">
+      Emerging Brands
+    </h2>
+    <div className="mt-3 h-px w-12 bg-black/20" />
+  </div>
+  <Link
+    href="/brands"
+    className="text-[11px] uppercase tracking-[0.18em] text-black/50 underline underline-offset-4 hover:text-black transition-colors"
+  >
+    View all
+  </Link>
+</div>
 
         {/* Mosaic grid */}
         <div className="grid grid-cols-2 gap-2 md:gap-3">

@@ -401,49 +401,49 @@ const selectedBrandLabel =
   return (
     <main className="min-h-screen bg-neutral-50/70">
       <div className="space-y-6">
-        <section className="rounded-[28px] border border-black/10 bg-white px-6 py-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)] md:px-8">
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-            <div className="space-y-2">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
-                Admin catalog
-              </div>
-              <h1 className="text-3xl font-semibold tracking-tight text-black md:text-4xl">
-                Product moderation
-              </h1>
-              <p className="max-w-3xl text-sm leading-6 text-neutral-500">
-                Review, publish, activate, and manage marketplace products across all brands
-                from one clean control surface.
-              </p>
-            </div>
+        <section className="rounded-[28px] bg-[#7B2D3E] px-6 py-7 shadow-sm md:px-8">
+  <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+    <div className="space-y-2">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+        Admin catalogue
+      </div>
+      <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
+        Product moderation
+      </h1>
+      <p className="max-w-3xl text-sm leading-6 text-white/60">
+        Review, publish, activate, and manage marketplace products across all brands
+        from one clean control surface.
+      </p>
+    </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
-              <div className="rounded-2xl border border-black/10 bg-neutral-50 px-4 py-3">
-                <div className="text-xs text-neutral-500">Total</div>
-                <div className="mt-1 text-xl font-semibold text-black">{stats.total}</div>
-              </div>
-              <div className="rounded-2xl border border-black/10 bg-neutral-50 px-4 py-3">
-                <div className="text-xs text-neutral-500">Approved</div>
-                <div className="mt-1 text-xl font-semibold text-black">{stats.approved}</div>
-              </div>
-              <div className="rounded-2xl border border-black/10 bg-neutral-50 px-4 py-3">
-                <div className="text-xs text-neutral-500">Pending</div>
-                <div className="mt-1 text-xl font-semibold text-black">{stats.pending}</div>
-              </div>
-              <div className="rounded-2xl border border-black/10 bg-neutral-50 px-4 py-3">
-                <div className="text-xs text-neutral-500">Needs changes</div>
-                <div className="mt-1 text-xl font-semibold text-black">{stats.needsChanges}</div>
-              </div>
-              <div className="rounded-2xl border border-black/10 bg-neutral-50 px-4 py-3">
-                <div className="text-xs text-neutral-500">Published</div>
-                <div className="mt-1 text-xl font-semibold text-black">{stats.published}</div>
-              </div>
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-                <div className="text-xs text-amber-700">Missing affiliate</div>
-                <div className="mt-1 text-xl font-semibold text-amber-900">
-                  {stats.missingAffiliate}
-                  </div>
-                  </div>
-            </div>
+  <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3">
+    <div className="text-xs text-white/50">Total</div>
+    <div className="mt-1 text-xl font-semibold text-white">{stats.total}</div>
+  </div>
+  <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3">
+    <div className="text-xs text-white/50">Approved</div>
+    <div className="mt-1 text-xl font-semibold text-white">{stats.approved}</div>
+  </div>
+  <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3">
+    <div className="text-xs text-white/50">Pending</div>
+    <div className="mt-1 text-xl font-semibold text-white">{stats.pending}</div>
+  </div>
+  <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3">
+    <div className="text-xs text-white/50">Needs changes</div>
+    <div className="mt-1 text-xl font-semibold text-white">{stats.needsChanges}</div>
+  </div>
+  <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3">
+    <div className="text-xs text-white/50">Published</div>
+    <div className="mt-1 text-xl font-semibold text-white">{stats.published}</div>
+  </div>
+  <div className="rounded-2xl border border-white/30 bg-white px-4 py-3">
+    <div className="text-xs text-[#7B2D3E]/70">Missing affiliate</div>
+    <div className="mt-1 text-xl font-semibold text-[#7B2D3E]">
+      {stats.missingAffiliate}
+    </div>
+  </div>
+</div>
           </div>
         </section>
 
@@ -517,7 +517,7 @@ const selectedBrandLabel =
       <div className="flex gap-2">
         <button
           onClick={load}
-          className="inline-flex min-w-[110px] items-center justify-center rounded-2xl bg-black px-4 py-3 text-sm font-medium text-white transition hover:bg-black/90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex min-w-[110px] items-center justify-center rounded-2xl bg-[#7B2D3E] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#6a2435] disabled:cursor-not-allowed disabled:opacity-50"
           disabled={busy}
         >
           {busy ? "Loading..." : "Apply"}
@@ -585,10 +585,10 @@ const selectedBrandLabel =
                         type="button"
                         onClick={() => void selectBrandAndLoad(option.slug)}
                         className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition ${
-                          selected
-                            ? "bg-black text-white"
-                            : "text-neutral-700 hover:bg-neutral-50"
-                        }`}
+  selected
+    ? "bg-[#7B2D3E] text-white"
+    : "text-neutral-700 hover:bg-[#fdf7f4]"
+}`}
                       >
                         <span className="truncate">{option.name}</span>
                         {selected ? (
@@ -610,8 +610,25 @@ const selectedBrandLabel =
     </div>
   </div>
 
-          <div className="overflow-x-auto">
-            <div className="min-w-[1700px] [&_table]:w-full [&_thead_th]:bg-neutral-50 [&_thead_th]:px-4 [&_thead_th]:py-3 [&_thead_th]:text-left [&_thead_th]:text-xs [&_thead_th]:font-semibold [&_thead_th]:uppercase [&_thead_th]:tracking-[0.12em] [&_thead_th]:text-neutral-500 [&_tbody_td]:px-4 [&_tbody_td]:py-4 [&_tbody_tr]:border-t [&_tbody_tr]:border-black/6">
+          <div
+  className="overflow-x-auto scrollbar-thin scrollbar-thumb-[#e8ddd4] scrollbar-track-transparent"
+  id="table-scroll-top"
+  onScroll={(e) => {
+    const bottom = document.getElementById("table-scroll-bottom");
+    if (bottom) bottom.scrollLeft = e.currentTarget.scrollLeft;
+  }}
+>
+  <div style={{height: 8}} className="min-w-[1450px]" />
+</div>
+<div
+  className="overflow-x-auto scrollbar-thin scrollbar-thumb-[#e8ddd4] scrollbar-track-transparent"
+  id="table-scroll-bottom"
+  onScroll={(e) => {
+    const top = document.getElementById("table-scroll-top");
+    if (top) top.scrollLeft = e.currentTarget.scrollLeft;
+  }}
+>
+  <div className="min-w-[1450px] [&_table]:w-full [&_thead_th]:bg-[#fdf7f4] [&_thead_th]:px-4 [&_thead_th]:py-3 [&_thead_th]:text-left [&_thead_th]:text-xs [&_thead_th]:font-semibold [&_thead_th]:uppercase [&_thead_th]:tracking-[0.12em] [&_thead_th]:text-[#a89280] [&_tbody_td]:px-4 [&_tbody_td]:py-4 [&_tbody_tr]:border-t [&_tbody_tr]:border-black/6">
               <AdminTable
                 rows={rows}
                 rowKey={(p) => p.id}
@@ -620,7 +637,7 @@ const selectedBrandLabel =
                   {
                     header: "Updated",
                     cell: (p) => (
-                      <div className="min-w-[110px] leading-tight">
+                      <div className="min-w-[90px] leading-tight">
                         <div className="font-medium text-black">
                           {formatRelativeTime(p.updatedAt, locale)}
                         </div>
@@ -647,7 +664,7 @@ const selectedBrandLabel =
                   {
                     header: "Product",
                     cell: (p) => (
-                      <div className="min-w-[260px] leading-tight">
+                      <div className="min-w-[200px] leading-tight">
                         <div className="font-medium text-black">{p.title}</div>
                         <div className="mt-1 text-xs text-neutral-500">{p.slug}</div>
 
@@ -678,16 +695,16 @@ const selectedBrandLabel =
                   {
   header: "Brand",
   cell: (p) => (
-    <div className="min-w-[180px] leading-tight">
-      <div className="font-medium text-black">{p.brand?.name ?? "-"}</div>
-      <div className="mt-1 text-xs text-neutral-500">{p.brand?.slug ?? "-"}</div>
-    </div>
+    <div className="min-w-[90px] leading-tight">
+  <div className="font-medium text-black">{p.brand?.name ?? "-"}</div>
+  <div className="mt-1 text-xs text-neutral-500">{p.brand?.slug ?? "-"}</div>
+</div>
   ),
 },
                   {
                     header: "Price",
                     cell: (p) => (
-                      <div className="min-w-[90px]">
+                      <div className="min-w-[55px]">
                         {p.price ? (
                           <span className="font-medium text-black">
                             {formatMoney(p.price, p.currency, locale)}
@@ -699,74 +716,71 @@ const selectedBrandLabel =
                     ),
                   },
                   {
-                    header: "Publish",
-                    cell: (p) => {
-                      const hasAffiliate = Boolean(p.affiliateUrl?.trim());
-                      const canPublish = p.status === "APPROVED" && hasAffiliate;
-                      const isPublished = Boolean(p.publishedAt);
+  header: "Visibility",
+  cell: (p) => {
+    const hasAffiliate = Boolean(p.affiliateUrl?.trim());
+    const canPublish = p.status === "APPROVED" && hasAffiliate;
+    const isPublished = Boolean(p.publishedAt);
+    return (
+      <div className="min-w-[160px] space-y-3">
+        {/* Publish row */}
+        <div className="flex items-center gap-2">
+          <span
+            className={`inline-flex w-[80px] justify-center rounded-full border px-2 py-1 text-[11px] font-medium ${
+              isPublished
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-black/10 bg-neutral-100 text-neutral-600"
+            }`}
+          >
+            {isPublished ? "Published" : "Draft"}
+          </span>
+          <button
+            className="text-[11px] font-medium text-[#7B2D3E] underline decoration-[#7B2D3E]/30 underline-offset-2 transition hover:decoration-[#7B2D3E] disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={busy || (!canPublish && !isPublished)}
+            onClick={() => setProductPublished(p.id, !isPublished)}
+            title={
+              !canPublish && !isPublished
+                ? p.status !== "APPROVED"
+                  ? "Approve first"
+                  : "Add affiliate link first"
+                : ""
+            }
+          >
+            {isPublished ? "Unpublish" : "Publish"}
+          </button>
+        </div>
 
-                      return (
-                        <div className="flex min-w-[170px] flex-col gap-2">
-                          <span
-                            className={`inline-flex w-fit rounded-full border px-3 py-1 text-[11px] font-medium ${
-                              isPublished
-                                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                                : "border-black/10 bg-neutral-100 text-neutral-700"
-                            }`}
-                          >
-                            {isPublished ? "Published" : "Draft"}
-                          </span>
-
-                          <button
-                            className="inline-flex w-fit items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition hover:bg-black/[0.03] disabled:cursor-not-allowed disabled:opacity-50"
-                            disabled={busy || (!canPublish && !isPublished)}
-                            onClick={() => setProductPublished(p.id, !isPublished)}
-                            title={
-                              !canPublish && !isPublished
-                              ? p.status !== "APPROVED"
-                              ? "Approve the product before publishing"
-                              : "Add affiliate link before publishing"
-                              : ""
-                            }
-                          >
-                            {isPublished ? "Unpublish" : "Publish"}
-                          </button>
-                        </div>
-                      );
-                    },
-                  },
+        {/* Active row */}
+        <div className="flex items-center gap-2">
+          <span
+            className={`inline-flex w-[80px] justify-center rounded-full border px-2 py-1 text-[11px] font-medium ${
+              p.isActive
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-red-200 bg-red-50 text-red-700"
+            }`}
+          >
+            {p.isActive ? "Active" : "Inactive"}
+          </span>
+          <button
+            className="text-[11px] font-medium text-[#7B2D3E] underline decoration-[#7B2D3E]/30 underline-offset-2 transition hover:decoration-[#7B2D3E] disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={busy}
+            onClick={() => setProductActive(p.id, !p.isActive)}
+          >
+            {p.isActive ? "Deactivate" : "Activate"}
+          </button>
+        </div>
+      </div>
+    );
+  },
+},
                   {
-                    header: "Active",
-                    cell: (p) => (
-                      <div className="flex min-w-[170px] flex-col gap-2">
-                        <span
-                          className={`inline-flex w-fit rounded-full border px-3 py-1 text-[11px] font-medium ${
-                            p.isActive
-                              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                              : "border-red-200 bg-red-50 text-red-700"
-                          }`}
-                        >
-                          {p.isActive ? "Active" : "Inactive"}
-                        </span>
-
-                        <button
-                          className="inline-flex w-fit items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition hover:bg-black/[0.03] disabled:cursor-not-allowed disabled:opacity-50"
-                          disabled={busy}
-                          onClick={() => setProductActive(p.id, !p.isActive)}
-                        >
-                          {p.isActive ? "Deactivate" : "Activate"}
-                        </button>
-                      </div>
-                    ),
-                  },
-                  {
-                    header: "Review",
-                    cell: (p) => {
-                      const disabled = busyId === p.id || busy;
-                      const note = noteDraft[p.id] ?? "";
-
-                      return (
-                        <div className="min-w-[420px] space-y-3">
+                    
+  header: "Review",
+  cell: (p) => {
+    const disabled = busyId === p.id || busy;
+    const note = noteDraft[p.id] ?? "";
+    return (
+      <div className="min-w-[380px] space-y-3">
                            <div className="space-y-2">
   <div className="flex items-center justify-between">
     <div className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">
@@ -827,7 +841,7 @@ const selectedBrandLabel =
                             <button
                               disabled={disabled}
                               onClick={() => reviewProduct(p.id, "approve")}
-                              className="inline-flex items-center justify-center rounded-xl bg-black px-3.5 py-2 text-xs font-medium text-white transition hover:bg-black/90 disabled:cursor-not-allowed disabled:opacity-50"
+                              className="inline-flex items-center justify-center rounded-xl bg-[#7B2D3E] px-3.5 py-2 text-xs font-medium text-white transition hover:bg-[#6a2435] disabled:cursor-not-allowed disabled:opacity-50"
                               title="Approve product (brand can be published after)"
                             >
                               {busyId === p.id ? "..." : "Approve"}

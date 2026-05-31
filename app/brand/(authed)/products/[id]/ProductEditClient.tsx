@@ -20,17 +20,17 @@ function SectionCard({
 }) {
   return (
     <section className="overflow-hidden rounded-[28px] border border-black/8 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-      <div className="border-b border-black/6 bg-[linear-gradient(180deg,#fff_0%,#fbf8f2_100%)] px-5 py-5 md:px-6">
+      <div className="border-b border-[#e8ddd4] bg-[#fdf7f4] px-5 py-5 md:px-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-2xl">
             {eyebrow ? (
-              <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-400">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">
                 {eyebrow}
               </div>
             ) : null}
-            <h2 className="mt-2 text-xl font-semibold tracking-tight text-neutral-950">
-              {title}
-            </h2>
+            <h2 className="mt-1 text-md font-medium text-black">
+  {title}
+</h2>
             {description ? (
               <p className="mt-1 text-sm text-neutral-500">{description}</p>
             ) : null}
@@ -83,9 +83,9 @@ function PrimaryButton({
       onClick={onClick}
       disabled={disabled}
       className={[
-        "rounded-full bg-black px-4 py-2 text-sm text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50",
-        className,
-      ].join(" ")}
+  "rounded-full bg-[#7B2D3E] px-4 py-2 text-sm text-white shadow-sm transition hover:bg-[#6a2435] disabled:cursor-not-allowed disabled:opacity-50",
+  className,
+].join(" ")}
     >
       {children}
     </button>
@@ -179,7 +179,7 @@ function RequestTaxonomyModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]">
       <div className="w-full max-w-lg overflow-hidden rounded-[28px] border border-black/8 bg-white shadow-2xl">
-        <div className="border-b border-black/6 bg-[linear-gradient(180deg,#fff_0%,#fbf8f2_100%)] px-5 py-5">
+        <div className="border-b border-[#e8ddd4] bg-[#fdf7f4] px-5 py-5">
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-400">
@@ -267,7 +267,7 @@ function RequestTaxonomyModal({
             <button
               type="button"
               onClick={submit}
-              className="flex-1 rounded-full bg-black px-4 py-2.5 text-sm text-white hover:opacity-90 disabled:opacity-60"
+              className="flex-1 rounded-full bg-[#7B2D3E] px-4 py-2.5 text-sm text-white hover:bg-[#6a2435] disabled:opacity-60"
               disabled={busy || name.trim().length < 2}
             >
               {busy ? "Submitting..." : "Submit request"}
@@ -350,8 +350,8 @@ function Chip({
       className={[
         "rounded-full border px-3.5 py-1.5 text-xs transition",
         active
-          ? "border-black bg-black text-white shadow-sm"
-          : "border-black/10 bg-white text-neutral-700 hover:bg-black/[0.03]",
+        ? "border-[#7B2D3E] bg-[#7B2D3E] text-white shadow-sm"
+        : "border-black/10 bg-white text-neutral-700 hover:bg-[#fdf7f4]",
       ].join(" ")}
     >
       {children}
@@ -416,7 +416,7 @@ export default function ProductEditClient({ id }: { id: string }) {
   const [myReqs, setMyReqs] = useState<BrandTaxRequest[]>([]);
   const [showMyReqs, setShowMyReqs] = useState(false);
   const isExpanded = showMyReqs;
-  const ariaExpanded = isExpanded ? "true" : "false";
+  const ariaExpanded = isExpanded;
   const ariaLabel = isExpanded ? "Collapse taxonomy requests" : "Expand taxonomy requests";
 
   const [materials, setMaterials] = useState<TaxItem[]>([]);
@@ -766,62 +766,50 @@ if (pt === "ACCESSORIES") {
       />
 
       <section className="overflow-hidden rounded-[28px] border border-black/8 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-        <div className="border-b border-black/6 bg-[linear-gradient(180deg,#fff_0%,#fbf8f2_100%)] px-5 py-5 md:px-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="max-w-2xl">
-              <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-400">
-                Product editor
-              </div>
-              <h1 className="mt-2 text-2xl font-semibold tracking-tight text-neutral-950">
-                Edit product
-              </h1>
-              <p className="mt-1 text-sm text-neutral-500">
-                Update your product details, taxonomy, badges, and shipping information before submission.
-              </p>
-
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-black/10 bg-black/5 px-3 py-1 text-xs text-neutral-700">
-                  Status: {p.status.replace("_", " ")}
-                </span>
-
-                {p.publishedAt ? (
-                  <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs text-emerald-800">
-                    Live
-                  </span>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              {buyUrl ? (
-                <a
-                  href={buyUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-full border border-black/10 bg-white px-4 py-2 text-sm text-neutral-700 shadow-sm transition hover:bg-black/[0.03]"
-                >
-                  View live product
-                </a>
-              ) : null}
-
-              <button
-                onClick={saveDraft}
-                disabled={saving || !dirty}
-                className={[
-                  "rounded-full px-4 py-2 text-sm transition shadow-sm",
-                  saving
-                    ? "bg-black text-white opacity-60"
-                    : dirty
-                    ? "bg-black text-white hover:opacity-90"
-                    : "cursor-not-allowed bg-neutral-200 text-neutral-600",
-                ].join(" ")}
-              >
-                {saving ? "Saving..." : justSaved ? "Saved ✓" : dirty ? "Save draft" : "No changes"}
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
+  <div className="border-b border-[#e8ddd4] bg-[#fdf7f4] px-5 py-5 md:px-6">
+    <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">
+      Product editor
+    </div>
+    <div className="mt-3 flex flex-wrap items-center justify-center gap-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-full border border-black/10 bg-black/5 px-3 py-1 text-xs text-neutral-700">
+          Status: {p.status.replace("_", " ")}
+        </span>
+        {p.publishedAt ? (
+          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs text-emerald-800">
+            Live
+          </span>
+        ) : null}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {buyUrl ? (
+          <a
+            href={buyUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-full border border-black/10 bg-white px-4 py-2 text-sm text-neutral-700 shadow-sm transition hover:bg-black/[0.03]"
+          >
+            View live product
+          </a>
+        ) : null}
+        <button
+          onClick={saveDraft}
+          disabled={saving || !dirty}
+          className={[
+            "rounded-full px-4 py-2 text-sm transition shadow-sm",
+            saving
+            ? "bg-[#7B2D3E] text-white opacity-60"
+            : dirty
+            ? "bg-[#7B2D3E] text-white hover:bg-[#6a2435]"
+            : "cursor-not-allowed bg-neutral-200 text-neutral-600",
+          ].join(" ")}
+        >
+          {saving ? "Saving..." : justSaved ? "Saved ✓" : dirty ? "Save draft" : "No changes"}
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
 
       
 
@@ -1192,8 +1180,8 @@ if (pt === "ACCESSORIES") {
                 className={[
                   "rounded-full border px-3.5 py-1.5 text-xs transition",
                   active
-                    ? "border-black bg-black text-white shadow-sm"
-                    : "border-black/10 bg-white text-neutral-700 hover:bg-black/[0.03]",
+                  ? "border-[#7B2D3E] bg-[#7B2D3E] text-white shadow-sm"
+                   : "border-black/10 bg-white text-neutral-700 hover:bg-[#fdf7f4]",
                 ].join(" ")}
               >
                 {b}

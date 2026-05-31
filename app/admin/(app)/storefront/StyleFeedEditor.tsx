@@ -342,19 +342,18 @@ export default function StyleFeedEditor() {
   }
 
   return (
-    <section className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold">Homepage style feed</h2>
-          <p className="mt-1 text-sm text-black/60">
-            Curate up to 4 editorial style feed cards for the homepage. Upload the
-            image directly into Veilora, keep a fixed 4:5 crop, and drag the focal
-            point to control the exact framing shown on storefront.
-          </p>
-        </div>
-
-        <div className="text-sm text-black/50">{items.length} / 4 items</div>
-      </div>
+    <section className="overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+  <div className="flex items-center justify-between border-b border-[#e8ddd4] bg-[#fdf7f4] px-6 py-4">
+    <div>
+      <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">Storefront</div>
+      <h2 className="mt-0.5 text-base font-semibold text-black">Homepage style feed</h2>
+      <p className="mt-1 text-xs text-neutral-500">
+        Curate up to 4 editorial style feed cards for the homepage.
+      </p>
+    </div>
+    <div className="text-sm text-neutral-500">{items.length} / 4 items</div>
+  </div>
+  <div className="p-6">
 
       {message && (
         <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
@@ -644,7 +643,7 @@ export default function StyleFeedEditor() {
               type="button"
               onClick={addItem}
               disabled={items.length >= 4}
-              className="rounded-lg border border-black/10 px-4 py-2 text-sm hover:bg-black/5 disabled:opacity-50"
+              className="inline-flex items-center rounded-2xl border border-black/10 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-[#fdf7f4] disabled:cursor-not-allowed disabled:opacity-50"
             >
               Add item
             </button>
@@ -653,13 +652,14 @@ export default function StyleFeedEditor() {
               type="button"
               onClick={save}
               disabled={saving || hasUploadingItem}
-              className="rounded-lg border border-black/10 px-4 py-2 text-sm hover:bg-black/5 disabled:opacity-50"
+              className="inline-flex items-center rounded-2xl bg-[#7B2D3E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#6a2435] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {saving ? "Saving..." : hasUploadingItem ? "Wait for uploads..." : "Save style feed"}
             </button>
           </div>
         </>
       )}
+      </div>
     </section>
   );
 }

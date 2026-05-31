@@ -125,18 +125,42 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
             <NewsletterSignup />
           </div>
 
-          <div className="mt-10 border-t border-white/10 pt-6 text-center text-xs text-white/50">
-            © {new Date().getFullYear()} Veilora Club
-          </div>
+          <div className="mt-10 border-t border-white/10 pt-8 flex flex-col items-center gap-3">
+  <Link
+    href="/brand/login"
+    className="flex items-center gap-2.5 text-base text-white/80 transition hover:text-white"
+  >
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+    </svg>
+    Brand Portal
+  </Link>
 
-          <div className="mt-4 flex justify-center gap-6 text-xs text-white/40">
-            <Link href="/admin" className="transition hover:text-white">
-              Admin
-            </Link>
-            <Link href="/brand/login" className="transition hover:text-white">
-              Brand Portal
-            </Link>
-          </div>
+   <div className="flex items-center gap-4">
+    {/* Instagram */}
+    <a href="https://instagram.com/veiloraclub" target="_blank" rel="noopener noreferrer" className="text-white/40 transition hover:text-white/70" aria-label="Veilora Club on Instagram">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+        <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+        <circle cx="12" cy="12" r="4" />
+        <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none" />
+      </svg>
+    </a>
+    {/* TikTok */}
+    <a href="https://tiktok.com/@veiloraclub" target="_blank" rel="noopener noreferrer" className="text-white/40 transition hover:text-white/70" aria-label="Veilora Club on TikTok">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.79 1.54V6.78a4.85 4.85 0 0 1-1.02-.09Z" />
+      </svg>
+    </a>
+  </div>
+  <p className="text-xs text-white/20 mt-1">
+    © {new Date().getFullYear()} Veilora Club
+  </p>
+</div>
+
+         
         </div>
       </footer>
 

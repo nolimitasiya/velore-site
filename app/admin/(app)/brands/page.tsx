@@ -48,7 +48,7 @@ function StatCard({
 }) {
   const toneClass =
     tone === "dark"
-      ? "border-black bg-black text-white"
+  ? "border-[#7B2D3E] bg-[#7B2D3E] text-white"
       : tone === "soft"
       ? "border-black/5 bg-neutral-50 text-neutral-900"
       : "border-black/10 bg-white text-neutral-900";
@@ -124,32 +124,28 @@ export default async function AdminBrandsPage() {
     <PageShell>
       <div className="space-y-6">
         <SectionCard className="overflow-hidden">
-          <div className="border-b border-black/5 bg-[linear-gradient(135deg,rgba(0,0,0,0.03),rgba(0,0,0,0))] px-6 py-6 sm:px-8">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
-              Brand management
-            </p>
-
-            <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <h1 className="text-3xl font-semibold tracking-tight text-neutral-950">
-                  Brands
-                </h1>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
-                  Manage onboarded brands, review their operational status, and
-                  maintain affiliate readiness across the Veilora platform.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <Link
-                  href="/admin/brands/applications"
-                  className="inline-flex h-11 items-center rounded-2xl border border-black/10 bg-white px-5 text-sm font-medium text-neutral-700 transition hover:bg-black/[0.03]"
-                >
-                  View applications
-                </Link>
-              </div>
-            </div>
-          </div>
+          <div className="rounded-[28px] bg-[#7B2D3E] px-6 py-7 shadow-sm md:px-8">
+  <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+    <div className="space-y-2">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+        Admin · Brand management
+      </div>
+      <h1 className="text-3xl font-semibold tracking-tight text-white">
+        Brands
+      </h1>
+      <p className="max-w-2xl text-sm leading-6 text-white/60">
+        Manage onboarded brands, review their operational status, and
+        maintain affiliate readiness across the Veilora platform.
+      </p>
+    </div>
+    <Link
+      href="/admin/brands/applications"
+      className="inline-flex h-11 items-center rounded-2xl border border-white/20 bg-white/10 px-5 text-sm font-medium text-white/80 transition hover:bg-white/15"
+    >
+      View applications
+    </Link>
+  </div>
+</div>
 
           <div className="grid gap-4 px-6 py-6 sm:grid-cols-2 xl:grid-cols-4 sm:px-8">
             <StatCard
@@ -193,8 +189,8 @@ export default async function AdminBrandsPage() {
 
           <div className="overflow-x-auto">
             <table className="w-full min-w-[980px] text-sm">
-              <thead className="bg-neutral-50/80 text-left">
-                <tr className="text-xs uppercase tracking-[0.16em] text-neutral-500">
+              <thead className="bg-[#fdf7f4] text-left">
+                <tr className="text-xs uppercase tracking-[0.16em] text-[#a89280]">
                   <th className="px-6 py-4 font-semibold">Brand</th>
                   <th className="px-6 py-4 font-semibold">Status</th>
                   <th className="px-6 py-4 text-right font-semibold">

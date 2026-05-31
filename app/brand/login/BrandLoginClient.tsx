@@ -1,3 +1,4 @@
+// C:\Users\Asiya\projects\dalra\app\brand\login\BrandLoginClient.tsx
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
@@ -5,7 +6,6 @@ import { useState } from "react";
 import AuthShell from "@/components/AuthShell";
 
 export default function BrandLoginClient() {
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -19,21 +19,18 @@ export default function BrandLoginClient() {
     e.preventDefault();
     setBusy(true);
     setErr(null);
-
     try {
       const r = await fetch("/api/brand/auth/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        credentials: "include", // ✅
+        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
-
       const j = await r.json().catch(() => ({}));
       if (!r.ok) {
         setErr(j?.error ?? `Login failed (${r.status})`);
         return;
       }
-
       window.location.assign(next);
     } finally {
       setBusy(false);
@@ -41,46 +38,69 @@ export default function BrandLoginClient() {
   }
 
   return (
-  <AuthShell title="Sign in" variant="brand">
-    <form onSubmit={onLogin} className="space-y-5">
-      <div className="space-y-2">
-        <label className="text-sm text-black/70">Email</label>
-        <input
-          type="email"
-          className="w-full rounded-md border border-black/20 px-3 py-2 text-sm focus:outline-none focus:border-black"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-      </div>
+    <AuthShell
+      title="Welcome back."
+      subtitle="Sign in to manage your brand on Veilora Club."
+      variant="brand"
+    >
+      <form onSubmit={onLogin} className="space-y-5">
+        <div>
+          <label className="text-[11px] uppercase tracking-[0.14em] text-[#6b5c4e]">
+            Email address
+          </label>
+          <input
+            type="email"
+            className="mt-1 w-full rounded border border-[#d8c9b5] bg-white px-4 py-3 text-sm text-[#1a0a0e] placeholder:text-[#c0b0a0] outline-none focus:border-[#7B2D3E]"
+            placeholder="name@brand.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
 
-      <div className="space-y-2">
-        <label className="text-sm text-black/70">Password</label>
-        <input
-          type="password"
-          className="w-full rounded-md border border-black/20 px-3 py-2 text-sm focus:outline-none focus:border-black"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-      </div>
+        <div>
+          <label className="text-[11px] uppercase tracking-[0.14em] text-[#6b5c4e]">
+            Password
+          </label>
+          <input
+            type="password"
+            className="mt-1 w-full rounded border border-[#d8c9b5] bg-white px-4 py-3 text-sm text-[#1a0a0e] placeholder:text-[#c0b0a0] outline-none focus:border-[#7B2D3E]"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </div>
 
-      <button
-        type="submit"
-        disabled={busy || !email || !password}
-        className="w-full rounded-md bg-black text-white py-3 text-sm disabled:opacity-50"
-      >
-        {busy ? "Signing in..." : "Sign in"}
-      </button>
+        <button
+          type="submit"
+          disabled={busy || !email || !password}
+          className="w-full rounded bg-[#7B2D3E] px-4 py-3.5 text-sm tracking-wide text-white transition hover:bg-[#6a2535] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {busy ? "Signing in..." : "Sign in →"}
+        </button>
 
-      <div className="text-sm">
-        <a href="/brand/forgot" className="underline text-black/70 hover:text-black">
-          Forgot your password?
-        </a>
-      </div>
+        <div className="flex items-center justify-between text-xs">
+          <a
+            href="/brand/forgot"
+            className="text-[#7B2D3E] underline underline-offset-4 hover:opacity-70 transition-opacity"
+          >
+            Forgot your password?
+          </a>
+          <a
+            href="/brands/apply"
+            className="text-[#a89280] underline underline-offset-4 hover:text-[#7B2D3E] transition-colors"
+          >
+            Apply as a brand
+          </a>
+        </div>
 
-      {err && <div className="text-sm text-red-600">{err}</div>}
-    </form>
-  </AuthShell>
-);
+        {err && (
+          <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {err}
+          </div>
+        )}
+      </form>
+    </AuthShell>
+  );
 }

@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/admin/snapshots/daily",
+      "schedule": "0 1 * * *"
+    }
+  ]
+}

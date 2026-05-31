@@ -14,7 +14,7 @@ const BodySchema = z.object({
 
 export async function POST(req: Request) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  if (!siteUrl?.startsWith("https://")) {
+  if (!siteUrl) {
     console.error("Invalid NEXT_PUBLIC_SITE_URL:", siteUrl);
     return NextResponse.json(
       { ok: false, error: "Server misconfigured: invalid NEXT_PUBLIC_SITE_URL" },

@@ -160,33 +160,29 @@ export default function StorefrontHeroEditor() {
 
   if (!form) {
     return (
-      <section className="rounded-3xl border border-black/10 bg-white p-6 shadow-sm">
-        <p className="text-sm text-neutral-500">Loading hero…</p>
-      </section>
+      <section className="rounded-[28px] border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+  <p className="text-sm text-neutral-500">Loading hero…</p>
+</section>
     );
   }
 
   return (
-    <section className="rounded-3xl border border-black/10 bg-white p-6 shadow-sm">
-      <div className="mb-6">
-        <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-neutral-500">
-          Storefront
-        </p>
-        <h2 className="mt-2 text-2xl font-semibold tracking-tight text-neutral-950">
-          Homepage hero
-        </h2>
-        <p className="mt-2 max-w-2xl text-sm text-neutral-600">
-          Manage the main storefront image, text and call-to-action shown at the
-          top of the homepage.
-        </p>
-      </div>
+    <section className="overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+  <div className="border-b border-[#e8ddd4] bg-[#fdf7f4] px-6 py-4">
+    <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">Storefront</div>
+    <h2 className="mt-0.5 text-base font-semibold text-black">Homepage hero</h2>
+    <p className="mt-1 text-xs text-neutral-500">
+      Manage the main storefront image, text and call-to-action shown at the top of the homepage.
+    </p>
+  </div>
+  <div className="p-6">
 
       <div className="space-y-8">
         <div className="space-y-5">
           <Field id="hero-title" label="Title">
             <input
               id="hero-title"
-              className="w-full rounded-2xl border border-black/10 px-4 py-3 text-sm outline-none transition focus:border-black/30"
+              className="w-full rounded-2xl border border-black/10 px-4 py-3 text-sm outline-none transition focus:border-[#7B2D3E]/30 focus:ring-2 focus:ring-[#7B2D3E]/10"          
               value={form.title ?? ""}
               onChange={(e) => update("title", e.target.value)}
               placeholder="Discover modest fashion from around the world"
@@ -206,7 +202,7 @@ export default function StorefrontHeroEditor() {
           <Field id="hero-desktop-image-url" label="Desktop image URL">
             <input
               id="hero-desktop-image-url"
-              className="w-full rounded-2xl border border-black/10 px-4 py-3 text-sm outline-none transition focus:border-black/30"
+              className="w-full rounded-2xl border border-black/10 px-4 py-3 text-sm outline-none transition focus:border-[#7B2D3E]/30 focus:ring-2 focus:ring-[#7B2D3E]/10"
               value={form.desktopImageUrl}
               onChange={(e) => update("desktopImageUrl", e.target.value)}
               placeholder="https://..."
@@ -216,7 +212,7 @@ export default function StorefrontHeroEditor() {
           <Field id="hero-mobile-image-url" label="Mobile image URL">
             <input
               id="hero-mobile-image-url"
-              className="w-full rounded-2xl border border-black/10 px-4 py-3 text-sm outline-none transition focus:border-black/30"
+              className="w-full rounded-2xl border border-black/10 px-4 py-3 text-sm outline-none transition focus:border-[#7B2D3E]/30 focus:ring-2 focus:ring-[#7B2D3E]/10"
               value={form.mobileImageUrl ?? ""}
               onChange={(e) => update("mobileImageUrl", e.target.value)}
               placeholder="Optional mobile-specific image"
@@ -228,7 +224,7 @@ export default function StorefrontHeroEditor() {
               id="hero-text-align"
               aria-label="Text alignment"
               title="Text alignment"
-              className="w-full rounded-2xl border border-black/10 px-4 py-3 text-sm outline-none transition focus:border-black/30"
+              className="w-full rounded-2xl border border-black/10 px-4 py-3 text-sm outline-none transition focus:border-[#7B2D3E]/30 focus:ring-2 focus:ring-[#7B2D3E]/10"
               value={form.textAlign}
               onChange={(e) =>
                 update("textAlign", e.target.value as "LEFT" | "CENTER" | "RIGHT")
@@ -244,7 +240,7 @@ export default function StorefrontHeroEditor() {
             <Field id="hero-cta-label" label="CTA label">
               <input
                 id="hero-cta-label"
-                className="w-full rounded-2xl border border-black/10 px-4 py-3 text-sm outline-none transition focus:border-black/30"
+                className="w-full rounded-2xl border border-black/10 px-4 py-3 text-sm outline-none transition focus:border-[#7B2D3E]/30 focus:ring-2 focus:ring-[#7B2D3E]/10"
                 value={form.ctaLabel ?? ""}
                 onChange={(e) => update("ctaLabel", e.target.value)}
                 placeholder="Shop now"
@@ -254,7 +250,7 @@ export default function StorefrontHeroEditor() {
             <Field id="hero-cta-link" label="CTA link">
               <input
                 id="hero-cta-link"
-                className="w-full rounded-2xl border border-black/10 px-4 py-3 text-sm outline-none transition focus:border-black/30"
+                className="w-full rounded-2xl border border-black/10 px-4 py-3 text-sm outline-none transition focus:border-[#7B2D3E]/30 focus:ring-2 focus:ring-[#7B2D3E]/10"
                 value={form.ctaHref ?? ""}
                 onChange={(e) => update("ctaHref", e.target.value)}
                 placeholder="/new-in"
@@ -347,7 +343,7 @@ export default function StorefrontHeroEditor() {
               type="button"
               onClick={onSave}
               disabled={saving}
-              className="rounded-full bg-black px-5 py-3 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-2xl bg-[#7B2D3E] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#6a2435] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {saving ? "Saving..." : "Save hero"}
             </button>
@@ -393,6 +389,7 @@ export default function StorefrontHeroEditor() {
             </p>
           </div>
         </div>
+      </div>
       </div>
     </section>
   );

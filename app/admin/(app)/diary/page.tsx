@@ -47,33 +47,32 @@ export default async function AdminDiaryPage() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[28px] border border-black/10 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.22em] text-black/45">
-              Editorial
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-black">
-              Diary
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm text-black/60">
-              Write, manage, and publish Veilora diary articles.
-            </p>
-          </div>
-
-          <Link
-            href="/admin/diary/new"
-            className="inline-flex items-center justify-center rounded-full bg-black px-5 py-3 text-sm font-medium text-white transition hover:opacity-90"
-          >
-            New post
-          </Link>
-        </div>
+      <div className="rounded-[28px] bg-[#7B2D3E] px-6 py-7 md:px-8">
+  <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <div className="space-y-2">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+        Admin · Editorial
       </div>
+      <h1 className="text-3xl font-semibold tracking-tight text-white">
+        Diary
+      </h1>
+      <p className="max-w-2xl text-sm leading-6 text-white/60">
+        Write, manage, and publish Veilora diary articles.
+      </p>
+    </div>
+    <Link
+      href="/admin/diary/new"
+      className="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-medium text-white/80 transition hover:bg-white/15"
+    >
+      New post
+    </Link>
+  </div>
+</div>
 
       <div className="overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
-            <thead className="bg-black/[0.03] text-left text-black/55">
+            <thead className="bg-[#fdf7f4] text-left text-[#a89280]">
               <tr>
                 <th className="px-6 py-4 font-medium">Title</th>
                 <th className="px-6 py-4 font-medium">Status</th>
@@ -111,20 +110,12 @@ export default async function AdminDiaryPage() {
 
                     <td className="px-6 py-5 align-top">
                       <div className="flex flex-wrap gap-3">
-                        <Link
-                          href={`/admin/diary/${post.id}`}
-                          className="text-sm font-medium text-black underline decoration-black/20 underline-offset-4"
-                        >
-                          Edit
-                        </Link>
-
-                        <Link
-                          href={`/diary/${post.slug}`}
-                          className="text-sm font-medium text-black/60 underline decoration-black/20 underline-offset-4"
-                          target="_blank"
-                        >
-                          View
-                        </Link>
+                        <Link href={`/admin/diary/${post.id}`} className="text-sm font-medium text-[#7B2D3E] underline decoration-[#7B2D3E]/30 underline-offset-4 hover:decoration-[#7B2D3E]">
+  Edit
+</Link>
+<Link href={`/diary/${post.slug}`} className="text-sm font-medium text-neutral-500 underline decoration-black/20 underline-offset-4 hover:text-black" target="_blank">
+  View
+</Link>
                       </div>
                     </td>
                   </tr>

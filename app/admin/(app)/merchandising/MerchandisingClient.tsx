@@ -466,46 +466,36 @@ export default function MerchandisingClient({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-black/10 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
-              Collection Merchandising
-            </h1>
-            <p className="mt-1 text-sm text-black/60">
-              Organise internal merchandising buckets for page 1 while keeping
-              the shopper-facing grid seamless.
-            </p>
-          </div>
-
-          <div className="w-full max-w-xs">
-            <label
-              htmlFor="pageKey"
-              className="mb-2 block text-sm font-medium text-black"
-            >
-              Page
-            </label>
-            <select
-              id="pageKey"
-              value={pageKey}
-              onChange={(e) => loadPage(e.target.value as MerchPageKey)}
-              className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-black/30"
-            >
-              {PAGE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {error ? (
-          <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        ) : null}
-      </div>
+      <div className="overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+  <div className="flex flex-col gap-4 border-b border-[#e8ddd4] bg-[#fdf7f4] px-6 py-4 xl:flex-row xl:items-center xl:justify-between">
+    <div>
+      <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">Page</div>
+      <h2 className="mt-0.5 text-base font-semibold text-black">Select a collection page</h2>
+    </div>
+    <div className="w-full max-w-xs">
+      <label htmlFor="pageKey" className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+        Page
+      </label>
+      <select
+        id="pageKey"
+        value={pageKey}
+        onChange={(e) => loadPage(e.target.value as MerchPageKey)}
+        className="w-full rounded-2xl border border-black/10 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-[#7B2D3E]/30 focus:ring-2 focus:ring-[#7B2D3E]/10"
+      >
+        {PAGE_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  </div>
+  {error ? (
+    <div className="mx-6 my-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+      {error}
+    </div>
+  ) : null}
+</div>
 
       <section className="grid gap-4 md:grid-cols-3">
         {summary.map((row) => {
@@ -520,8 +510,8 @@ export default function MerchandisingClient({
               key={row.pageKey}
               className={`rounded-3xl border p-5 shadow-sm ${
                 isCurrent
-                  ? "border-black bg-black text-white"
-                  : "border-black/10 bg-white text-black"
+                ? "border-[#7B2D3E] bg-[#7B2D3E] text-white"
+                : "border-black/10 bg-white text-black"
               }`}
             >
               <div className="flex items-start justify-between gap-3">
@@ -541,8 +531,8 @@ export default function MerchandisingClient({
                   onClick={() => loadPage(row.pageKey)}
                   className={`rounded-full px-3 py-1 text-xs font-medium ${
                     isCurrent
-                      ? "bg-white text-black"
-                      : "bg-black/5 text-black"
+                    ? "bg-white text-[#7B2D3E]"
+                    : "bg-black/5 text-black"
                   }`}
                 >
                   {isCurrent ? "Viewing" : "Open"}
@@ -597,9 +587,9 @@ export default function MerchandisingClient({
       {currentSummary ? (
         <section className="rounded-3xl border border-black/10 bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="rounded-2xl bg-black px-4 py-2 text-sm font-medium text-white">
+            <div className="rounded-2xl bg-[#7B2D3E] px-4 py-2 text-sm font-medium text-white">
               {PAGE_OPTIONS.find((option) => option.value === pageKey)?.label}
-            </div>
+              </div>
             <div className="text-sm text-black/60">
               {currentSummary.liveCount} live items across page 1 buckets
             </div>
@@ -607,14 +597,15 @@ export default function MerchandisingClient({
         </section>
       ) : null}
 
-      <section className="rounded-3xl border border-black/10 bg-white p-6 shadow-sm">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold tracking-tight">Add products</h2>
-          <p className="mt-1 text-sm text-black/60">
-            Search approved, published products eligible for this page and add
-            them into a bucket.
-          </p>
-        </div>
+      <section className="overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+  <div className="border-b border-[#e8ddd4] bg-[#fdf7f4] px-6 py-4">
+    <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">Search</div>
+    <h2 className="mt-0.5 text-base font-semibold text-black">Add products</h2>
+    <p className="mt-1 text-xs text-neutral-500">
+      Search approved, published products eligible for this page and add them into a bucket.
+    </p>
+  </div>
+  <div className="p-6">
 
         <div className="flex flex-col gap-3 md:flex-row">
           <input
@@ -637,7 +628,7 @@ export default function MerchandisingClient({
             type="button"
             onClick={() => void runSearch()}
             disabled={searching}
-            className="rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl bg-[#7B2D3E] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#6a2435] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {searching ? "Searching..." : "Search"}
           </button>
@@ -735,6 +726,7 @@ export default function MerchandisingClient({
             No matching products found.
           </div>
         ) : null}
+         </div>
       </section>
 
       {loading ? (
@@ -748,26 +740,18 @@ export default function MerchandisingClient({
           const items = buckets[bucketMeta.key] ?? [];
 
           return (
-            <section
-              key={bucketMeta.key}
-              className="rounded-3xl border border-black/10 bg-white p-5 shadow-sm"
-            >
-              <div className="mb-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h2 className="text-lg font-semibold tracking-tight">
-                      {bucketMeta.title}
-                    </h2>
-                    <p className="mt-1 text-sm text-black/60">
-                      {bucketMeta.description}
-                    </p>
-                  </div>
-
-                  <div className="rounded-full bg-black/5 px-3 py-1 text-xs font-medium text-black/70">
-                    {items.length} item{items.length === 1 ? "" : "s"}
-                  </div>
-                </div>
-              </div>
+            <section key={bucketMeta.key} className="overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+  <div className="flex items-center justify-between border-b border-[#e8ddd4] bg-[#fdf7f4] px-5 py-4">
+    <div>
+      <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">Bucket</div>
+      <h2 className="mt-0.5 text-sm font-semibold text-black">{bucketMeta.title}</h2>
+      <p className="mt-0.5 text-xs text-neutral-400">{bucketMeta.description}</p>
+    </div>
+    <div className="rounded-full border border-[#e8ddd4] bg-white px-3 py-1 text-xs font-medium text-neutral-600">
+      {items.length} item{items.length === 1 ? "" : "s"}
+    </div>
+  </div>
+  <div className="space-y-3 p-5">
 
               <div className="space-y-3">
                 {items.length === 0 ? (
@@ -936,7 +920,7 @@ export default function MerchandisingClient({
                                 type="button"
                                 disabled={!!actionKey}
                                 onClick={() => void saveDetails(item)}
-                                className="rounded-xl bg-black px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-xl bg-[#7B2D3E] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#6a2435] disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 {isSaving ? "Saving..." : "Save details"}
                               </button>
@@ -956,6 +940,7 @@ export default function MerchandisingClient({
                     );
                   })
                 )}
+              </div>
               </div>
             </section>
           );

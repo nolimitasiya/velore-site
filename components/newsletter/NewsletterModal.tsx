@@ -81,14 +81,18 @@ export function NewsletterModal() {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center">
-      <button
-        aria-label="Close newsletter modal"
-        onClick={close}
-        className="absolute inset-0 bg-black/40"
-      />
+  <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center pb-4 sm:pb-0">
+    <button
+      aria-label="Close newsletter modal"
+      onClick={close}
+      className="absolute inset-0 bg-black/40"
+    />
 
-      <div className="relative w-[92vw] max-w-md rounded-2xl bg-white p-5 shadow-xl">
+    <div className="relative w-[92vw] max-w-md rounded-[24px] border border-[#e8ddd4] bg-[#fdf7f4] shadow-xl overflow-hidden max-h-[90vh] overflow-y-auto">
+      <div className="h-1 w-full bg-[#7B2D3E]" />
+      <div className="p-5">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60 mb-1">The edit</div>
+
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-xl font-semibold text-black">Join the edit</h3>
@@ -106,7 +110,7 @@ export function NewsletterModal() {
 
         {done ? (
           <div className="mt-4 rounded-xl bg-black/5 p-3 text-sm">
-            You’re subscribed 💌
+            You're subscribed 💌
           </div>
         ) : (
           <>
@@ -116,7 +120,7 @@ export function NewsletterModal() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email"
                 inputMode="email"
-                className="w-full rounded-xl border border-black/10 px-3 py-2 outline-none focus:border-black/30"
+                className="w-full rounded-[14px] border border-[#e8ddd4] bg-white px-3 py-2 outline-none focus:border-[#7B2D3E]/40"
               />
               {error ? (
                 <div className="text-sm text-red-600">{error}</div>
@@ -126,7 +130,7 @@ export function NewsletterModal() {
             <button
               onClick={submit}
               disabled={loading || email.trim().length === 0}
-              className="mt-4 w-full rounded-xl bg-black px-4 py-2 text-white disabled:opacity-60"
+              className="mt-4 w-full rounded-[14px] bg-[#7B2D3E] px-4 py-2 text-white disabled:opacity-60"
             >
               {loading ? "Joining..." : "Join newsletter"}
             </button>
@@ -138,5 +142,6 @@ export function NewsletterModal() {
         )}
       </div>
     </div>
-  );
+  </div>
+);
 }

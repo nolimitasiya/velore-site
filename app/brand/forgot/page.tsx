@@ -1,7 +1,9 @@
+// C:\Users\Asiya\projects\dalra\app\brand\forgot\page.tsx
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import AuthShell from "@/components/AuthShell";
 
 export default function BrandForgotPage() {
   const [email, setEmail] = useState("");
@@ -12,56 +14,70 @@ export default function BrandForgotPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-
     await fetch("/api/brand/auth/forgot", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ email }),
     });
-
     setLoading(false);
     setSent(true);
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#eee]">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-8 w-full max-w-md space-y-6 border border-black/10"
-      >
-        <h1 className="text-xl font-semibold text-center">Brand Password Reset</h1>
-
-        {!sent ? (
-          <>
+    <AuthShell
+      title="Reset your password."
+      subtitle="Enter your email and we'll send you a reset link."
+      variant="brand"
+    >
+      {!sent ? (
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="text-[11px] uppercase tracking-[0.14em] text-[#6b5c4e]">
+              Email address
+            </label>
             <input
               type="email"
               required
-              placeholder="Brand email"
+              placeholder="name@brand.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-black/20 px-3 py-2 text-sm focus:outline-none"
+              className="mt-1 w-full rounded border border-[#d8c9b5] bg-white px-4 py-3 text-sm text-[#1a0a0e] placeholder:text-[#c0b0a0] outline-none focus:border-[#7B2D3E]"
             />
+          </div>
 
-            <button
-              disabled={loading}
-              className="w-full bg-black text-white py-2 text-sm disabled:opacity-50"
-            >
-              {loading ? "Sending..." : "Send Reset Link"}
-            </button>
-          </>
-        ) : (
-          <div className="text-sm text-center space-y-4">
-            <p>If the email exists, a reset link has been sent.</p>
-            <button
-              type="button"
-              onClick={() => router.push("/brand/login")}
-              className="underline text-black"
+          <button
+            type="submit"
+            disabled={loading || !email}
+            className="w-full rounded bg-[#7B2D3E] px-4 py-3.5 text-sm tracking-wide text-white transition hover:bg-[#6a2535] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading ? "Sending..." : "Send reset link →"}
+          </button>
+
+          <div className="text-center">
+            <a
+              href="/brand/login"
+              className="text-xs text-[#a89280] underline underline-offset-4 hover:text-[#7B2D3E] transition-colors"
             >
               Back to login
-            </button>
+            </a>
           </div>
-        )}
-      </form>
-    </div>
+        </form>
+      ) : (
+        <div className="space-y-6 text-center">
+          <div className="rounded border border-[#d8c9b5] bg-white px-6 py-5">
+            <p className="text-sm text-[#6b5c4e] leading-relaxed">
+              If that email is registered, a reset link has been sent. Check your inbox.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => router.push("/brand/login")}
+            className="text-xs text-[#7B2D3E] underline underline-offset-4 hover:opacity-70 transition-opacity"
+          >
+            Back to login
+          </button>
+        </div>
+      )}
+    </AuthShell>
   );
 }

@@ -14,6 +14,10 @@ import { sortSizes, formatSizeLabel } from "@/lib/sizing/order";
 import { BrandAccountStatus, AffiliateStatus } from "@prisma/client";
 import ImageGallery from "./ImageGallery";
 import Accordion from "./Accordion";
+import WishlistButton from "@/components/WishlistButton";
+import ProductViewTracker from "./ProductViewTracker";
+
+
 
 function formatProductTypeLabel(value: string) {
   if (value === "COATS_JACKETS") return "Coats & Jackets";
@@ -156,8 +160,9 @@ export default async function ProductPage({
     : formatReturnsPaidBy(brand.returnsPaidBy);
 
   return (
-    <SiteShell>
-      <div className="mx-auto w-full max-w-[1800px] px-4 py-8 md:px-8 md:py-10">
+  <SiteShell>
+    <ProductViewTracker productId={product.id} />
+    <div className="mx-auto w-full max-w-[1800px] px-4 py-8 md:px-8 md:py-10">
 
         {/* Breadcrumb */}
         <nav className="mb-6 flex items-center gap-2 text-xs text-black/50">
@@ -239,23 +244,28 @@ export default async function ProductPage({
             )}
 
             {/* CTA */}
-            <div className="flex flex-col gap-3">
-              {hasOutLink ? (
-                <ProductClickTrackingLink
-                  href={outUrl}
-                  productId={product.id}
-                  productName={product.title}
-                  brandName={brand.name}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-black px-6 py-3.5 text-sm font-medium text-white transition hover:opacity-90"
-                >
-                  Shop at {brand.name} ↗
-                </ProductClickTrackingLink>
-              ) : (
-                <button disabled className="w-full rounded-full bg-black/20 px-6 py-3.5 text-sm font-medium text-white">
-                  Coming soon
-                </button>
-              )}
-            </div>
+<div className="flex flex-col gap-3">
+  <div className="flex gap-3">
+    {hasOutLink ? (
+      <ProductClickTrackingLink
+        href={outUrl}
+        productId={product.id}
+        productName={product.title}
+        brandName={brand.name}
+        className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-black px-6 py-3.5 text-sm font-medium text-white transition hover:opacity-90"
+      >
+        Shop at {brand.name} ↗
+      </ProductClickTrackingLink>
+    ) : (
+      <button disabled className="flex-1 rounded-full bg-black/20 px-6 py-3.5 text-sm font-medium text-white">
+        Coming soon
+      </button>
+    )}
+    <div className="flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-full border border-black/10 bg-white">
+      <WishlistButton productId={product.id} />
+    </div>
+  </div>
+</div>
 
             {/* Accordions */}
             <div className="rounded-[20px] border border-black/8 bg-white divide-y divide-black/6 overflow-hidden">

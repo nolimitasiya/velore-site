@@ -107,7 +107,7 @@ export default function AffiliateControls({
         type="button"
         onClick={save}
         disabled={saving}
-        className="inline-flex h-10 items-center rounded-2xl border border-black bg-black px-4 text-xs font-semibold uppercase tracking-[0.14em] text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex h-10 items-center rounded-2xl bg-[#7B2D3E] px-4 text-xs font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-[#6a2435] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {saving ? "Saving…" : "Save"}
       </button>

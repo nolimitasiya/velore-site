@@ -1,11 +1,15 @@
+"use client";
+
 // C:\Users\Asiya\projects\dalra\components\ProductGrid.tsx
 // CHANGED: card image/title now links to /b/[brandSlug]/p/[productSlug]
 // The "Shop" button still goes to /out/[id] via buildTrackedUrl (unchanged)
+
 
 import Image from "next/image";
 import Link from "next/link";
 import MoneyLabel from "@/components/MoneyLabel";
 import ProductClickTrackingLink from "@/components/analytics/ProductClickTrackingLink";
+import WishlistButton from "@/components/WishlistButton";
 
 export type GridProduct = {
   id: string;
@@ -114,6 +118,12 @@ export function ProductGrid({ products }: { products: GridProduct[] }) {
                   No image
                 </div>
               )}
+
+              {/* Wishlist heart */}
+<div className="absolute right-3 top-3">
+  <WishlistButton productId={p.id} />
+</div>
+
 
               {p.badges?.includes("sale") ? (
                 <div className="absolute left-3 top-3 flex flex-col gap-2">

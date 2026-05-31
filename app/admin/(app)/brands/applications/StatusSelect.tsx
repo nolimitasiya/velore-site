@@ -424,7 +424,7 @@ Veilora Club`
                 type="button"
                 onClick={confirmStatusChange}
                 disabled={loading}
-                className="inline-flex h-11 items-center justify-center rounded-2xl bg-black px-5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                className="inline-flex h-11 items-center justify-center rounded-2xl bg-[#7B2D3E] px-5 text-sm font-medium text-white hover:bg-[#6a2435] disabled:opacity-50"
               >
                 {loading
                   ? "Saving..."

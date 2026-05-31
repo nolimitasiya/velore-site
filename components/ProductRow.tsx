@@ -1,8 +1,9 @@
-// C:\Users\Asiya\projects\dalra\components\ProductRow.tsx
+"use client";
 import Image from "next/image";
 import Link from "next/link";
 import MoneyLabel from "@/components/MoneyLabel";
 import ProductClickTrackingLink from "@/components/analytics/ProductClickTrackingLink";
+import WishlistButton from "@/components/WishlistButton";
 
 export type StorefrontProduct = {
   id: string;
@@ -73,6 +74,12 @@ export function ProductRow({ products }: { products: StorefrontProduct[] }) {
                     No image
                   </div>
                 )}
+
+                {/* Wishlist heart */}
+                <div className="absolute right-3 top-3">
+                  <WishlistButton productId={p.id} />
+                </div>
+                
               </div>
 
               <div className="p-4">

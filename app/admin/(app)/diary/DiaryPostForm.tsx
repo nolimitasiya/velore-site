@@ -247,16 +247,22 @@ export default function DiaryPostForm({ mode, initialValues }: Props) {
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
-      <div className="rounded-[28px] border border-black/10 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-6">
-          <div>
-            <p className="text-xs uppercase tracking-[0.22em] text-black/45">
-              Editorial
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-black">
-              {mode === "create" ? "New diary post" : "Edit diary post"}
-            </h1>
-          </div>
+      <div className="rounded-[28px] bg-[#7B2D3E] px-6 py-7 md:px-8">
+  <div className="space-y-2">
+    <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+      Admin · Editorial
+    </div>
+    <h1 className="text-3xl font-semibold tracking-tight text-white">
+      {mode === "create" ? "New diary post" : "Edit diary post"}
+    </h1>
+  </div>
+</div>
+
+<div className="rounded-[28px] border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+  <div className="flex flex-col gap-6">
+    <div>
+
+    </div>
 
           {error ? (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -276,7 +282,7 @@ export default function DiaryPostForm({ mode, initialValues }: Props) {
                     setSlug(slugify(next));
                   }
                 }}
-                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-black"
+                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-[#7B2D3E]/40 focus:ring-2 focus:ring-[#7B2D3E]/10"
                 placeholder="Winter neutrals for modest dressing"
                 required
               />
@@ -606,7 +612,7 @@ export default function DiaryPostForm({ mode, initialValues }: Props) {
               </select>
             </label>
 
-            <div className="rounded-2xl border border-black/10 bg-black/[0.02] px-4 py-4 text-sm text-black/60">
+            <div className="rounded-2xl border border-[#e8ddd4] bg-[#fdf7f4] px-4 py-4 text-sm text-neutral-600">
               Public preview URL:{" "}
               {previewUrl ? (
                 <a
@@ -627,7 +633,7 @@ export default function DiaryPostForm({ mode, initialValues }: Props) {
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center justify-center rounded-full bg-black px-5 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center justify-center rounded-2xl bg-[#7B2D3E] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#6a2435] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {saving ? "Saving..." : mode === "create" ? "Create post" : "Save changes"}
             </button>

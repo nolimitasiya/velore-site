@@ -232,6 +232,7 @@ model Product {
 
   diaryPosts           DiaryPostProduct[]
   collectionMerchItems CollectionMerchItem[]
+  wishlistItems        WishlistItem[]
 
   @@unique([brandId, sourceUrl], name: "brandId_sourceUrl")
   @@index([brandId, slug])
@@ -383,9 +384,11 @@ model AffiliateClick {
   productId   String?  @db.Uuid
   brandId     String   @db.Uuid
   clickedAt   DateTime @default(now())
+  type        String   @default("SHOP_AT") // "SHOP_AT" | "PRODUCT_VIEW"
   countryCode String?  @db.Char(2)
   region      String?
   city        String?
+
 
   destinationUrl      String?
   shopperCountryCode  String? @db.Char(2)
@@ -417,6 +420,8 @@ model AffiliateClick {
   @@index([pageNumber, clickedAt])
   @@index([contextType, clickedAt])
   @@index([diaryPostId, clickedAt])
+  @@index([type, clickedAt])
+
 
 }
 
@@ -854,6 +859,7 @@ model ProductStyle {
 enum PasswordResetUserType {
   ADMIN
   BRAND
+  SHOPPER
 }
 
 model PasswordResetToken {
@@ -1119,4 +1125,73 @@ enum ReturnsPaidBy {
   BUYER
   BRAND
   NO_RETURNS
+}
+
+
+model Shopper {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email       String   @unique
+  password    String
+  firstName   String?
+  lastName    String?
+  countryCode String?  @db.Char(2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  wishlistItems WishlistItem[]
+}
+
+model WishlistItem {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopperId String   @db.Uuid
+  productId String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  shopper Shopper @relation(fields: [shopperId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([shopperId, productId])
+  @@index([shopperId])
+  @@index([productId])
+}
+
+model PlatformSnapshot {
+  id           String   @id @default(cuid())
+  date         DateTime @unique
+  brandCount   Int
+  productCount Int
+  createdAt    DateTime @default(now())
+}
+
+model AdminCalendarEvent {
+  id          String   @id @default(cuid())
+  title       String
+  date        DateTime
+  time        String?
+  description String?
+  color       String   @default("burgundy")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([date])
+}
+
+model AdminNote {
+  id        String   @id @default(cuid())
+  title     String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AdminTodo {
+  id          String    @id @default(cuid())
+  text        String
+  tag         String?
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([completed])
 }

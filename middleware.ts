@@ -37,6 +37,14 @@ function isBrandApi(pathname: string) {
   return pathname.startsWith("/api/brand");
 }
 
+function isAccountPage(pathname: string) {
+  return pathname === "/account" || pathname.startsWith("/account/");
+}
+
+function isAccountApi(pathname: string) {
+  return pathname.startsWith("/api/account");
+}
+
 function isLaunchPublicPage(pathname: string) {
   return (
     pathname === "/" ||
@@ -80,6 +88,14 @@ function isLaunchPublicPage(pathname: string) {
     pathname.startsWith("/search/") ||
     pathname === "/storefront" ||
     pathname.startsWith("/storefront/")||
+    pathname === "/brands" ||
+    pathname.startsWith("/brands/") ||
+    pathname === "/newsletter/confirm" ||
+    pathname.startsWith("/newsletter/confirm") ||
+    pathname === "/newsletter/unsubscribe" ||
+    pathname.startsWith("/newsletter/unsubscribe") ||
+    pathname === "/newsletter/unsubscribed" ||
+    pathname.startsWith("/newsletter/unsubscribed") ||
     pathname === "/diary" ||
     pathname.startsWith("/diary/")
     
@@ -100,7 +116,10 @@ function isLaunchPublicApi(pathname: string) {
     pathname === "/api/search" ||
     pathname.startsWith("/api/search/") ||
     pathname.startsWith("/api/storefront/") ||
-    pathname.startsWith("/api/diary/")
+    pathname.startsWith("/api/account/") ||
+    pathname.startsWith("/api/diary/")||
+    pathname.startsWith("/api/newsletter/") ||
+    pathname.startsWith("/api/clicks/")
   );
 }
 
@@ -124,6 +143,17 @@ function isUnauthedAllowedRoute(pathname: string) {
     pathname === "/api/brand/auth/forgot" ||
     pathname === "/api/brand/auth/reset" ||
 
+    // shopper auth
+    pathname === "/account/login" ||
+    pathname === "/account/register" ||
+    pathname === "/account/forgot" ||
+    pathname === "/account/reset" ||
+    pathname === "/api/account/auth/login" ||
+    pathname === "/api/account/auth/logout" ||
+    pathname === "/api/account/auth/register" ||
+    pathname === "/api/account/auth/forgot" ||
+    pathname === "/api/account/auth/reset" ||
+
     // onboarding / apply
     pathname === "/brand/onboarding" ||
     pathname === "/api/brand/onboarding" ||
@@ -133,6 +163,8 @@ function isUnauthedAllowedRoute(pathname: string) {
     // public utility APIs used before login
     pathname.startsWith("/api/currency/") ||
     pathname.startsWith("/api/shopper-preferences/")
+
+    
   );
 }
 
@@ -148,7 +180,6 @@ export function middleware(req: NextRequest) {
   if (pathname.startsWith("/api/cron/")) {
     return NextResponse.next();
   }
-
   // ---------------------------
   // PUBLIC LOCKDOWN (launch mode)
   // ---------------------------
@@ -159,7 +190,9 @@ export function middleware(req: NextRequest) {
       isAdminPage(pathname) ||
       isAdminApi(pathname) ||
       isBrandPage(pathname) ||
-      isBrandApi(pathname);
+      isBrandApi(pathname) ||
+      isAccountPage(pathname) ||   
+      isAccountApi(pathname);       
 
     if (!allowPublic) {
       const url = req.nextUrl.clone();
@@ -176,6 +209,8 @@ export function middleware(req: NextRequest) {
   const adminRoute = isAdminPage(pathname) || isAdminApi(pathname);
   const brandRoute = isBrandPage(pathname) || isBrandApi(pathname);
   const allowUnauthed = isUnauthedAllowedRoute(pathname);
+  const accountRoute = isAccountPage(pathname) || isAccountApi(pathname);
+  const isPublicAccountRoute = isUnauthedAllowedRoute(pathname);
 
   if (adminRoute && !allowUnauthed) {
     const authed = Boolean(req.cookies.get("admin_authed")?.value);
@@ -207,6 +242,23 @@ export function middleware(req: NextRequest) {
 
       const res = NextResponse.json({ ok: false }, { status: 401 });
       res.headers.set("x-mw-block", "brand");
+      return res;
+    }
+  }
+
+  
+
+  if (accountRoute && !isPublicAccountRoute) {
+    const authed = Boolean(req.cookies.get("shopper_authed")?.value);
+    if (!authed) {
+      if (isAccountPage(pathname)) {
+        const url = req.nextUrl.clone();
+        url.pathname = "/account/login";
+        url.searchParams.set("next", pathname);
+        return NextResponse.redirect(url);
+      }
+      const res = NextResponse.json({ ok: false }, { status: 401 });
+      res.headers.set("x-mw-block", "shopper");
       return res;
     }
   }

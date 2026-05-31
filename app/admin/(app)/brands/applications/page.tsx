@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import StatusSelect from "./StatusSelect";
 import ApplicationNotesButton from "./ApplicationNotesButton";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
+import ApplicationsTable from "./ApplicationsTable";
+
 
 export const dynamic = "force-dynamic";
 
@@ -212,8 +214,8 @@ function FilterButton({
       className={[
         "inline-flex items-center rounded-full border px-4 py-2 text-sm font-medium transition",
         active
-          ? "border-black bg-black text-white shadow-sm"
-          : "border-black/10 bg-white text-neutral-700 hover:border-black/20 hover:bg-black/[0.03]",
+  ? "border-[#7B2D3E] bg-[#7B2D3E] text-white shadow-sm"
+  : "border-black/10 bg-white text-neutral-700 hover:border-black/20 hover:bg-black/[0.03]",
       ].join(" ")}
     >
       {label}
@@ -418,15 +420,15 @@ export default async function Page({
     <PageShell>
       <div className="space-y-6">
         <SectionCard className="overflow-hidden">
-          <div className="border-b border-black/5 bg-[linear-gradient(135deg,rgba(0,0,0,0.03),rgba(0,0,0,0))] px-6 py-6 sm:px-8">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
-              Brand pipeline
-            </p>
-            <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <h1 className="text-3xl font-semibold tracking-tight text-neutral-950">
-                  Brand Applications
-                </h1>
+          <div className="rounded-[28px] bg-[#7B2D3E] px-6 py-7 sm:px-8">
+  <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="space-y-2">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+        Admin · Brand pipeline
+      </div>
+      <h1 className="text-3xl font-semibold tracking-tight text-white">
+        Brand Applications
+      </h1>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
                   Review inbound partner interest, move applicants through each
                   stage, and onboard approved brands into Veilora with a cleaner
@@ -564,7 +566,7 @@ export default async function Page({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
-                  <button className="inline-flex h-11 items-center rounded-2xl bg-black px-5 text-sm font-medium text-white transition hover:opacity-90">
+                  <button className="inline-flex h-11 items-center rounded-2xl bg-[#7B2D3E] px-5 text-sm font-medium text-white transition hover:bg-[#6a2435]">
                     Apply range
                   </button>
 
@@ -663,129 +665,9 @@ export default async function Page({
             />
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1180px] text-sm">
-              <thead className="bg-neutral-50/80 text-left">
-                <tr className="text-xs uppercase tracking-[0.16em] text-neutral-500">
-                  <th className="px-6 py-4 font-semibold">Contact</th>
-                  <th className="px-6 py-4 font-semibold">Email</th>
-                  <th className="px-6 py-4 font-semibold">Phone</th>
-                  <th className="px-6 py-4 font-semibold">Website</th>
-                  <th className="px-6 py-4 font-semibold">Social</th>
-                  <th className="px-6 py-4 font-semibold">Status</th>
-                  <th className="px-6 py-4 font-semibold">Created</th>
-                  <th className="px-6 py-4 font-semibold">Stage</th>
-                  <th className="px-6 py-4 font-semibold">Notes</th>
-                </tr>
-              </thead>
+          <ApplicationsTable items={items} />
 
-              <tbody>
-                {items.map((a) => {
-                  const name =
-                    [a.firstName, a.lastName].filter(Boolean).join(" ") || "—";
-                  const b = statusBadge(a.status);
 
-                  return (
-                    <tr
-                      key={a.id}
-                      className={[
-                        "border-t border-black/5 align-top transition-colors hover:bg-black/[0.02]",
-                        rowHighlight(a.status),
-                      ].join(" ")}
-                    >
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-neutral-950">{name}</div>
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <a
-                          className="break-all text-neutral-700 underline decoration-black/20 underline-offset-4 transition hover:text-neutral-950"
-                          href={`mailto:${a.email}`}
-                        >
-                          {a.email}
-                        </a>
-                      </td>
-
-                      <td className="px-6 py-4">
-                        {a.phone ? (
-                          <a
-                            className="text-neutral-700 underline decoration-black/20 underline-offset-4 transition hover:text-neutral-950"
-                            href={`tel:${a.phone}`}
-                          >
-                            {a.phone}
-                          </a>
-                        ) : (
-                          <span className="text-neutral-400">—</span>
-                        )}
-                      </td>
-
-                     <td className="px-6 py-4">
-  {a.website ? (
-    <a
-      className="break-all text-neutral-700 underline decoration-black/20 underline-offset-4 transition hover:text-neutral-950"
-      href={
-        a.website.startsWith("http")
-          ? a.website
-          : `https://${a.website}`
-      }
-      target="_blank"
-      rel="noreferrer"
-    >
-      {a.website}
-    </a>
-  ) : (
-    <span className="text-neutral-400">—</span>
-  )}
-</td>
-
-                      <td className="px-6 py-4">
-                        {a.socialMedia ? (
-                          <a
-                            className="break-all text-neutral-700 underline decoration-black/20 underline-offset-4 transition hover:text-neutral-950"
-                            href={
-                              a.socialMedia.startsWith("http")
-                                ? a.socialMedia
-                                : `https://${a.socialMedia}`
-                            }
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {a.socialMedia}
-                          </a>
-                        ) : (
-                          <span className="text-neutral-400">—</span>
-                        )}
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <span className={b.cls}>{b.label}</span>
-                      </td>
-
-                      <td className="px-6 py-4 text-neutral-600">
-                        {fmt(a.createdAt)}
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <StatusSelect
-                          id={String(a.id)}
-                          value={String(a.status)}
-                        />
-                      </td>
-
-                      <td className="px-6 py-4">
-  <ApplicationNotesButton
-    applicationId={String(a.id)}
-    initialNotes={a.internalNotes}
-  />
-</td>
-                    </tr>
-                  );
-                })}
-
-                {items.length === 0 && <EmptyRow colSpan={9} />}
-              </tbody>
-            </table>
-          </div>
         </SectionCard>
       </div>
     </PageShell>

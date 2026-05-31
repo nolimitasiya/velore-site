@@ -26,6 +26,13 @@ export default function MobileMenu() {
   const [brands, setBrands] = useState<LinkItem[]>([]);
   const [brandsLoaded, setBrandsLoaded] = useState(false);
 
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+useEffect(() => {
+  const match = document.cookie.match(/(?:^|; )shopper_authed=([^;]*)/);
+  setIsLoggedIn(!!match?.[1]);
+}, []);
+
   // --- Menu structure (root + nested groups)
   const rootLinks = useMemo<LinkItem[]>(
   () => [
@@ -376,6 +383,59 @@ useEffect(() => {
                 </Link>
               );
             })}
+        {/* Account section — always visible at bottom */}
+        {isRoot && (
+  <div className="mt-auto border-t border-black/8 p-4 space-y-2">
+    <p className="text-xs font-medium uppercase tracking-[0.14em] text-black/40 px-1 mb-3">
+      My account
+    </p>
+
+    {isLoggedIn ? (
+      <>
+        <Link
+          href="/account"
+          onClick={closeMenu}
+          className="flex items-center gap-3 rounded-2xl px-4 py-3 hover:bg-black/[0.03] transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-black/50">
+            <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+          </svg>
+          <span className="text-sm text-black">My account</span>
+        </Link>
+        <Link
+          href="/account/logout"
+          onClick={closeMenu}
+          className="flex items-center gap-3 rounded-2xl px-4 py-3 hover:bg-black/[0.03] transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-black/50">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          <span className="text-sm text-black">Sign out</span>
+        </Link>
+      </>
+    ) : (
+      <>
+        <Link
+          href="/account/login"
+          onClick={closeMenu}
+          className="flex items-center gap-3 rounded-2xl px-4 py-3 hover:bg-black/[0.03] transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-black/50">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
+          </svg>
+          <span className="text-sm text-black">Sign in</span>
+        </Link>
+        <Link
+          href="/account/register"
+          onClick={closeMenu}
+          className="flex items-center justify-center rounded-2xl bg-[#7B2D3E] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#6a2435]"
+        >
+          Create account
+        </Link>
+      </>
+    )}
+  </div>
+)}
         </nav>
       </div>
     </>

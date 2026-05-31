@@ -299,8 +299,8 @@ function clearSelected() {
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`rounded-full border px-3 py-1 text-xs ${
-              tab === t.key ? "bg-black text-white border-black" : "border-black/10 hover:bg-black/5"
-            }`}
+  tab === t.key ? "bg-[#7B2D3E] text-white border-[#7B2D3E]" : "border-black/10 hover:bg-[#fdf7f4]"
+}`}
           >
             {t.label}
           </button>
@@ -394,13 +394,13 @@ function clearSelected() {
               <div className="flex flex-wrap gap-2 pt-1">
                 <Link
                   href={`/brand/products/${p.id}`}
-                  className="rounded-lg border px-3 py-1.5 text-xs hover:bg-black/5"
+                  className="rounded-lg border border-[#e8ddd4] px-3 py-1.5 text-xs transition hover:bg-[#fdf7f4]"
                 >
                   Edit
                 </Link>
 
                 <button
-                  className="rounded-lg bg-black px-3 py-1.5 text-xs text-white disabled:opacity-50"
+                  className="rounded-lg bg-[#7B2D3E] px-3 py-1.5 text-xs text-white transition hover:bg-[#6a2435] disabled:opacity-50"
                   disabled={
                     busyId === p.id ||
                     p.status === "PENDING_REVIEW" ||

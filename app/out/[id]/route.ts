@@ -70,11 +70,34 @@ function normalizeContextType(v: string | null) {
   return s || null;
 }
 
+const BOT_PATTERN = /bot|crawler|spider|crawling|facebookexternalhit|linkedinbot|twitterbot|whatsapp|slack|discord|telegram|preview|prefetch/i;
+
 export async function GET(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> }
 ) {
   const { id } = await ctx.params;
+
+  // Block bots and prefetch requests from recording clicks
+  const ua = req.headers.get("user-agent") ?? "";
+  const purpose = req.headers.get("purpose") ?? req.headers.get("sec-purpose") ?? "";
+  const fetchDest = req.headers.get("sec-fetch-dest") ?? "";
+
+  const isBot = BOT_PATTERN.test(ua);
+  const isPrefetch = purpose === "prefetch" || fetchDest === "empty";
+
+  if (isBot || isPrefetch) {
+    // Still redirect them, just don't record a click
+    const product = await prisma.product.findUnique({
+      where: { id },
+      select: { sourceUrl: true, affiliateUrl: true, brand: { select: { affiliateStatus: true, affiliateBaseUrl: true } } },
+    });
+    if (!product || product.brand?.affiliateStatus !== "ACTIVE") {
+      return NextResponse.redirect(new URL("/", req.url));
+    }
+    const dest = product.affiliateUrl?.trim() || buildTrackedProductUrl({ sourceUrl: String(product.sourceUrl || ""), affiliateBaseUrl: product.brand?.affiliateBaseUrl ?? null });
+    return NextResponse.redirect(dest || new URL("/", req.url));
+  }
 
   const product = await prisma.product.findUnique({
     where: { id },

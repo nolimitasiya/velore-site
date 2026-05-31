@@ -36,21 +36,28 @@ export default async function BrandProfilePage() {
 
   if (!brand) redirect("/brand/login");
 
-  return (
-    <main className="max-w-3xl mx-auto px-6 py-10">
-      <h1 className="text-2xl font-semibold mb-6">Brand profile</h1>
-      <BrandProfileForm
-        initialName={brand.name}
-        initialSlug={brand.slug}
-        initialInstagramHandle={brand.instagramHandle}
-        initialCoverImageUrl={brand.coverImageUrl}
-        initialCoverImageFocalX={brand.coverImageFocalX}
-        initialCoverImageFocalY={brand.coverImageFocalY}
-        initialShippingDomestic={brand.shippingDomestic}
-        initialShippingInternational={brand.shippingInternational}
-        initialReturnWindowDays={brand.returnWindowDays}
-        initialReturnsPaidBy={brand.returnsPaidBy as any}
-      />
-    </main>
-  );
+ return (
+  <div className="space-y-6">
+    <section className="rounded-[28px] bg-[#7B2D3E] px-6 py-7 md:px-8">
+  <div className="space-y-2">
+    <h1 className="text-3xl font-semibold tracking-tight text-white">
+      Brand profile
+    </h1>
+  </div>
+</section>
+
+    <BrandProfileForm
+      initialName={brand.name}
+      initialSlug={brand.slug}
+      initialInstagramHandle={brand.instagramHandle}
+      initialCoverImageUrl={brand.coverImageUrl}
+      initialCoverImageFocalX={brand.coverImageFocalX}
+      initialCoverImageFocalY={brand.coverImageFocalY}
+      initialShippingDomestic={brand.shippingDomestic}
+      initialShippingInternational={brand.shippingInternational}
+      initialReturnWindowDays={brand.returnWindowDays}
+      initialReturnsPaidBy={brand.returnsPaidBy as any}
+    />
+  </div>
+);
 }

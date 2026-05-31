@@ -29,13 +29,13 @@ export default async function AdminAppLayout({
 
  return (
   <AdminShell fullWidth>
-    <div className="flex min-h-screen bg-[#f7f1e8]">
+    <div className="flex min-h-screen bg-[#faf8f4]">
       <AdminTopBar
         unseenWaitlistCount={unseenWaitlistCount}
         unseenApplicationsCount={unseenApplicationsCount}
       />
 
-      <main className="flex-1 overflow-y-auto px-10 py-12">
+      <main className="flex-1 overflow-y-auto px-8 py-8 bg-[#faf8f4]">
         {children}
       </main>
 

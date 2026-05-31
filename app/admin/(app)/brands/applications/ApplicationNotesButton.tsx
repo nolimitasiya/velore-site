@@ -96,7 +96,7 @@ export default function ApplicationNotesButton({
                 type="button"
                 onClick={addNote}
                 disabled={saving || !text.trim()}
-                className="mt-3 inline-flex h-10 items-center rounded-2xl bg-black px-4 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-10 items-center rounded-2xl bg-[#7B2D3E] px-4 text-sm font-medium text-white transition hover:bg-[#6a2435] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {saving ? "Adding..." : "Add note"}
               </button>

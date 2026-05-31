@@ -1,9 +1,9 @@
 // C:\Users\Asiya\projects\dalra\components\SloganAndContinents.tsx
 "use client";
 
-import { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRef, useState, useEffect } from "react";
 
 type ContinentCard = {
   slug: string;
@@ -20,7 +20,7 @@ export function SloganAndContinents({
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
+  const [canScrollRight, setCanScrollRight] = useState(false);
 
   function updateScrollState() {
     const el = scrollRef.current;
@@ -33,17 +33,24 @@ export function SloganAndContinents({
     if (!scrollRef.current) return;
     scrollRef.current.scrollBy({ left: amount, behavior: "smooth" });
   }
+  useEffect(() => {
+  updateScrollState();
+}, []);
 
   return (
     <section className="bg-white">
       <div className="w-full px-6 pb-12">
 
-        {/* Slogan */}
-        <div className="text-center mt-16 mb-10">
-          <p className="font-display text-2xl uppercase tracking-[0.28em] text-black font-semibold">
-  {slogan}
-</p>
-        </div>
+       {/* Slogan */}
+<div className="mt-16 mb-8">
+  <p className="mb-2 text-[11px] uppercase tracking-[0.22em] text-black/40">
+    Shop by region
+  </p>
+  <h2 className="font-heading text-3xl font-normal tracking-tight text-black md:text-4xl">
+    Discover the world
+  </h2>
+  <div className="mt-3 h-px w-12 bg-black/20" />
+</div>
 
         <div className="relative">
           {/* Scroll area */}

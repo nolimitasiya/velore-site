@@ -273,8 +273,8 @@ export default function BrandRowClient({ b }: { b: BrandRow }) {
             className={[
               "inline-flex h-10 items-center rounded-2xl px-4 text-sm font-medium transition",
               testSourceUrl
-                ? "bg-black text-white hover:opacity-90"
-                : "cursor-not-allowed bg-neutral-200 text-neutral-500",
+              ? "bg-[#7B2D3E] text-white hover:bg-[#6a2435]"
+              : "cursor-not-allowed bg-neutral-200 text-neutral-500",
             ].join(" ")}
           >
             Open test link

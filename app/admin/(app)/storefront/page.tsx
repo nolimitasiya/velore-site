@@ -382,17 +382,19 @@ async function searchBrands(sectionId: string, query: string) {
   }
 
   return (
-    <main className="mx-auto w-full max-w-7xl space-y-6 px-6 py-8">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Storefront</h1>
-          <p className="mt-1 text-sm text-black/60">
-            Manage homepage merchandising sections, country targeting, and campaigns.
-          </p>
-        </div>
-
-        
+    <main className="min-h-screen bg-neutral-50/70">
+  <div className="mx-auto w-full max-w-7xl space-y-6 px-6 py-8">
+  <section className="rounded-[28px] bg-[#7B2D3E] px-6 py-7 md:px-8">
+    <div className="space-y-2">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+        Admin · Content
       </div>
+      <h1 className="text-3xl font-semibold tracking-tight text-white">Storefront</h1>
+      <p className="max-w-2xl text-sm leading-6 text-white/60">
+        Manage homepage merchandising sections, country targeting, and campaigns.
+      </p>
+    </div>
+  </section>
 
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -404,14 +406,13 @@ async function searchBrands(sectionId: string, query: string) {
       <StyleFeedEditor />
 
 
-      <section className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold">Create section</h2>
-          <p className="mt-1 text-sm text-black/60">
-            Create a new campaign, country-targeted section, or fallback section.
-          </p>
-        </div>
-
+      <section className="overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+      <div className="border-b border-[#e8ddd4] bg-[#fdf7f4] px-6 py-4">
+    <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">New</div>
+    <h2 className="mt-0.5 text-base font-semibold text-black">Create section</h2>
+    <p className="mt-1 text-xs text-neutral-500">Create a new campaign, country-targeted section, or fallback section.</p>
+  </div>
+  <div className="p-6">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <label className="space-y-1">
             <span className="text-sm font-medium">Title</span>
@@ -543,10 +544,11 @@ async function searchBrands(sectionId: string, query: string) {
         <button
           onClick={createSection}
           disabled={creating}
-          className="mt-6 rounded-lg border border-black/10 px-4 py-2 text-sm hover:bg-black/5 disabled:opacity-50"
+          className="mt-6 inline-flex items-center rounded-2xl bg-[#7B2D3E] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#6a2435] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {creating ? "Creating..." : "Create section"}
         </button>
+        </div>
       </section>
 
 
@@ -565,52 +567,21 @@ async function searchBrands(sectionId: string, query: string) {
           {sections.map((section) => (
             <section
               key={section.id}
-              className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm"
+              className="overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
             >
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div className="space-y-3">
-                  <div>
-                    <h2 className="text-xl font-semibold">{section.title}</h2>
-                    <p className="text-sm text-black/50">{section.key}</p>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 text-xs">
-                    <span className="rounded-full border border-black/10 bg-black/5 px-3 py-1">
-                      {section.isActive ? "Active" : "Inactive"}
-                    </span>
-
-                    <span className="rounded-full border border-black/10 bg-black/5 px-3 py-1">
-                      Type: {section.type}
-                    </span>
-
-                    <span className="rounded-full border border-black/10 bg-black/5 px-3 py-1">
-                      Country: {section.targetCountryCode ?? "Global"}
-                    </span>
-
-                    {section.type === "CAMPAIGN" && (
-                      <span className="rounded-full border border-black/10 bg-black/5 px-3 py-1">
-                        {section.campaignAppliesToAllCountries
-                          ? "All countries"
-                          : `Targets: ${section.campaignCountries.join(", ") || "None"}`}
-                      </span>
-                    )}
-
-                    <span className="rounded-full border border-black/10 bg-black/5 px-3 py-1">
-                      Max items: {section.maxItems}
-                    </span>
-
-                    <span className="rounded-full border border-black/10 bg-black/5 px-3 py-1">
-                      Sort order: {section.sortOrder}
-                    </span>
-                  </div>
+              <div className="flex items-center justify-between border-b border-[#e8ddd4] bg-[#fdf7f4] px-6 py-4">
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">{section.type}</div>
+                  <h2 className="mt-0.5 text-base font-semibold text-black">{section.title}</h2>
+                  <p className="mt-0.5 text-xs text-neutral-400">{section.key}</p>
                 </div>
-
-                <div className="text-sm text-black/50">
+                <div className="text-sm text-neutral-500">
                   {section.items.length} / {section.maxItems} products
                 </div>
               </div>
-
+              <div className="p-6">
               <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+
                 <label className="space-y-1">
                   <span className="text-sm font-medium">Title</span>
                   <input
@@ -947,7 +918,7 @@ async function searchBrands(sectionId: string, query: string) {
   <button
     onClick={() => saveSection(section)}
     disabled={saving === section.id}
-    className="rounded-lg border border-black/10 px-4 py-2 text-sm hover:bg-black/5 disabled:opacity-50"
+    className="inline-flex items-center rounded-2xl bg-[#7B2D3E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#6a2435] disabled:cursor-not-allowed disabled:opacity-50"
   >
     {saving === section.id ? "Saving..." : "Save section"}
   </button>
@@ -959,11 +930,14 @@ async function searchBrands(sectionId: string, query: string) {
   >
     Delete section
   </button>
-</div>
+  </div>
+  </div>
             </section>
           ))}
         </div>
       )}
+          </div>
+
     </main>
   );
 }

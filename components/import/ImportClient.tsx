@@ -39,17 +39,17 @@ function SectionCard({
 }) {
   return (
     <section className="overflow-hidden rounded-[28px] border border-black/8 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-      <div className="border-b border-black/6 bg-[linear-gradient(180deg,#fff_0%,#fbf8f2_100%)] px-5 py-5 md:px-6">
+      <div className="border-b border-[#e8ddd4] bg-[#fdf7f4] px-5 py-5 md:px-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-2xl">
             {eyebrow ? (
-              <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-400">
-                {eyebrow}
-              </div>
+              <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-[#7B2D3E]/60">
+  {eyebrow}
+</div>
             ) : null}
-            <h2 className="mt-2 text-xl font-semibold tracking-tight text-neutral-950">
-              {title}
-            </h2>
+            <h2 className="mt-1 text-md font-medium tracking-tight text-black">
+  {title}
+</h2>
             {description ? (
               <p className="mt-1 text-sm text-neutral-500">{description}</p>
             ) : null}
@@ -107,9 +107,9 @@ function PrimaryButton({
       onClick={onClick}
       disabled={disabled}
       className={[
-        "rounded-full bg-black px-4 py-2 text-sm text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50",
-        className,
-      ].join(" ")}
+  "rounded-full bg-[#7B2D3E] px-4 py-2 text-sm text-white shadow-sm transition hover:bg-[#6a2435] disabled:cursor-not-allowed disabled:opacity-50",
+  className,
+].join(" ")}
     >
       {children}
     </button>
@@ -385,27 +385,28 @@ export default function ImportClient({
 
   return (
     <main className="mx-auto max-w-6xl space-y-8 bg-[#fcfbf8] p-6 md:p-8">
-      <section className="overflow-hidden rounded-[28px] border border-black/8 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-        <div className="border-b border-black/6 bg-[linear-gradient(180deg,#fff_0%,#fbf8f2_100%)] px-5 py-5 md:px-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="max-w-2xl">
-              <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-400">
-                Catalogue import
-              </div>
-              <h1 className="mt-2 text-2xl font-semibold tracking-tight text-neutral-950">
-                {title}
-              </h1>
-              <p className="mt-1 text-sm text-neutral-500">
-                Upload a CSV or XLSX file, validate it, preview the structure, and import it into the catalogue.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <SoftButton onClick={downloadTemplate}>Download CSV template</SoftButton>
-            </div>
-          </div>
-        </div>
-      </section>
+      <section className="rounded-[28px] bg-[#7B2D3E] px-6 py-7 shadow-sm md:px-8">
+  <div className="flex flex-wrap items-end justify-between gap-6">
+    <div className="space-y-2">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+        Admin catalogue
+      </div>
+      <h1 className="text-3xl font-semibold tracking-tight text-white">
+        {title}
+      </h1>
+      <p className="max-w-2xl text-sm leading-6 text-white/60">
+        Upload a CSV or XLSX file, validate it, preview the structure, and import it into the catalogue.
+      </p>
+    </div>
+    <button
+      type="button"
+      onClick={downloadTemplate}
+      className="inline-flex items-center gap-1.5 rounded-2xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-medium text-white/80 transition hover:bg-white/15"
+    >
+      Download CSV template
+    </button>
+  </div>
+</section>
 
       <SectionCard
         eyebrow="Step 1"
@@ -740,10 +741,10 @@ export default function ImportClient({
             <div className="mt-4 flex flex-wrap gap-2">
               <a
                 href="/brand/products"
-                className="inline-flex items-center rounded-full bg-black px-4 py-2 text-sm text-white shadow-sm transition hover:opacity-90"
-              >
-                Go to products
-              </a>
+  className="inline-flex items-center rounded-full bg-[#7B2D3E] px-4 py-2 text-sm text-white shadow-sm transition hover:bg-[#6a2435]"
+>
+  Go to products
+</a>
 
               <a
                 href="/brand/products"
@@ -806,7 +807,7 @@ export default function ImportClient({
       {confirmOpen && validation?.summary?.willCreate !== undefined ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]">
           <div className="w-full max-w-lg overflow-hidden rounded-[28px] border border-black/8 bg-white shadow-2xl">
-            <div className="border-b border-black/6 bg-[linear-gradient(180deg,#fff_0%,#fbf8f2_100%)] px-5 py-5">
+            <div className="border-b border-[#e8ddd4] bg-[#fdf7f4] px-5 py-5">
               <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-400">
                 Confirm import
               </div>

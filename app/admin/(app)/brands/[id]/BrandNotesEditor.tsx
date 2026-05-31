@@ -55,7 +55,7 @@ export default function BrandNotesEditor({
         <button
           onClick={addNote}
           disabled={saving}
-          className="mt-3 rounded-xl bg-black px-4 py-2 text-sm text-white"
+          className="mt-3 rounded-xl bg-[#7B2D3E] px-4 py-2 text-sm text-white transition hover:bg-[#6a2435]"
         >
           {saving ? "Adding..." : "Add Note"}
         </button>

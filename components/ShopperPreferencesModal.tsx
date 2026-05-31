@@ -99,6 +99,9 @@ export default function ShopperPreferencesModal() {
     } catch {
       // ignore
     }
+    
+  const expires = new Date(Date.now() + 365 * 864e5).toUTCString();
+  document.cookie = `vc_prefs_dismissed=1; path=/; expires=${expires}; SameSite=Lax`;
 
     window.dispatchEvent(new CustomEvent("vc_preferences_modal_closed"));
     setOpen(false);
@@ -123,7 +126,7 @@ export default function ShopperPreferencesModal() {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center px-4">
+    <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center px-4 pb-4 sm:pb-0">
       <button
         type="button"
         aria-label="Close preferences modal"
@@ -132,17 +135,20 @@ export default function ShopperPreferencesModal() {
       />
 
       <div
-        className="relative z-[91] w-full max-w-2xl rounded-3xl border border-black/10 bg-white text-black shadow-2xl"
+        className="relative z-[91] w-full max-w-2xl rounded-3xl border border-[#e8ddd4] bg-[#fdf7f4] text-black shadow-2xl max-h-[90vh] overflow-y-auto"
         role="dialog"
         aria-modal="true"
         aria-label="Choose your country and currency"
       >
-        <div className="flex items-start justify-between gap-4 border-b px-6 py-5">
+        <div className="flex items-start justify-between gap-4 border-b border-[#e8ddd4] px-6 py-5">
           <div>
-            <div className="font-heading text-xl text-black">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60 mb-1">
+             Your location
+             </div>
+             <div className="font-heading text-xl text-[#1a0a0e]">
               Choose your country and currency
-            </div>
-          </div>
+              </div>
+              </div>
 
           <button
             type="button"
@@ -224,7 +230,8 @@ export default function ShopperPreferencesModal() {
               type="button"
               onClick={submit}
               disabled={saving}
-              className="rounded-full bg-black px-5 py-2 text-sm font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-full bg-[#7B2D3E] px-5 py-2 text-sm font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+
             >
               {saving ? "Saving..." : "Save preferences"}
             </button>

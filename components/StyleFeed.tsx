@@ -18,9 +18,17 @@ export function StyleFeed({ posts }: { posts: StyleFeedPost[] }) {
   return (
     <section className="bg-white">
       <div className="mx-auto w-full max-w-[1800px] px-8 pb-6">
-        <div className="pt-0 pb-8 text-center">
-          <h2 className="text-4xl font-semibold text-black">The Style Feed</h2>
-        </div>
+        <div className="mb-8 flex items-end justify-between">
+  <div>
+    <p className="mb-2 text-[11px] uppercase tracking-[0.22em] text-black/40">
+      Inspiration
+    </p>
+    <h2 className="font-heading text-3xl font-normal tracking-tight text-black md:text-4xl">
+      The Style Feed
+    </h2>
+    <div className="mt-3 h-px w-12 bg-black/20" />
+  </div>
+</div>
 
         <div className="grid justify-center gap-6 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
           {posts.map((p) => {
