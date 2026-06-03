@@ -1195,3 +1195,43 @@ model AdminTodo {
 
   @@index([completed])
 }
+
+
+model WellnessJournalEntry {
+  id        String   @id @default(cuid())
+  date      String   // ISO date string "YYYY-MM-DD" — one entry per day
+  text      String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([date])
+  @@index([date])
+}
+
+model WellnessPrayerRecord {
+  id      String   @id @default(cuid())
+  date    String   // ISO date string "YYYY-MM-DD"
+  fajr    Boolean  @default(false)
+  dhuhr   Boolean  @default(false)
+  asr     Boolean  @default(false)
+  maghrib Boolean  @default(false)
+  isha    Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([date])
+  @@index([date])
+}
+
+model WellnessAyatRecord {
+  id    String @id @default(cuid())
+  date  String // ISO date string "YYYY-MM-DD"
+  count Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([date])
+  @@index([date])
+}

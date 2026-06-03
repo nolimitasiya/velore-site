@@ -68,6 +68,7 @@ export function AdminHeader({
     { href: "/admin/personal/calendar", label: "Calendar", icon: "ti-calendar" },
     { href: "/admin/personal/notes", label: "Notes", icon: "ti-notebook" },
     { href: "/admin/personal/todos", label: "To-dos", icon: "ti-checkbox" },
+    { href: "/admin/personal/wellness", label: "Wellness", icon: "ti-heart" },
   ],
 },
     {

@@ -135,25 +135,40 @@ export default function CalendarClient({ initialEvents }: { initialEvents: CalEv
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-neutral-600">Date *</label>
-                    <input
-                      type="date"
-                      value={form.date}
-                      onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                      className="w-full rounded-xl border border-[#e8ddd4] bg-white px-3 py-2 text-sm outline-none focus:border-[#7B2D3E]/40"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-neutral-600">Time</label>
-                    <input
-                      type="time"
-                      value={form.time}
-                      onChange={e => setForm(f => ({ ...f, time: e.target.value }))}
-                      className="w-full rounded-xl border border-[#e8ddd4] bg-white px-3 py-2 text-sm outline-none focus:border-[#7B2D3E]/40"
-                    />
-                  </div>
-                </div>
+  <div>
+    <label
+      htmlFor="event-date"
+      className="mb-1.5 block text-xs font-medium text-neutral-600"
+    >
+      Date *
+    </label>
+    <input
+      id="event-date"
+      type="date"
+      title="Event date"
+      value={form.date}
+      onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+      className="w-full rounded-xl border border-[#e8ddd4] bg-white px-3 py-2 text-sm outline-none focus:border-[#7B2D3E]/40"
+    />
+  </div>
+  <div>
+    <label
+      htmlFor="event-time"
+      className="mb-1.5 block text-xs font-medium text-neutral-600"
+    >
+      Time
+    </label>
+    <input
+      id="event-time"
+      type="time"
+      title="Event time"
+      value={form.time}
+      onChange={e => setForm(f => ({ ...f, time: e.target.value }))}
+      className="w-full rounded-xl border border-[#e8ddd4] bg-white px-3 py-2 text-sm outline-none focus:border-[#7B2D3E]/40"
+    />
+  </div>
+</div>
+
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-neutral-600">Description</label>
                   <textarea
