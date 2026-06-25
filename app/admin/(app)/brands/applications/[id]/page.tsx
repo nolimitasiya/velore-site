@@ -111,9 +111,9 @@ export default async function BrandApplicationDetailPage({
   internalNotes: {
     orderBy: { createdAt: "desc" },
   },
-  brandApplicationActivities: {
-    orderBy: { createdAt: "desc" },
-  },
+  activities: {
+  orderBy: { createdAt: "desc" },
+},
 },
   });
 
@@ -166,7 +166,7 @@ const cityDisplay =
   app.brandCity ||
   "—";
 
-const activities = (application as any).brandApplicationActivities ?? [];
+const activities = application.activities ?? [];
 
 
   return (
