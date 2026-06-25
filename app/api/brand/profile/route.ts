@@ -90,6 +90,7 @@ export async function GET() {
         shippingInternational: true,
         returnWindowDays: true,
         returnsPaidBy: true,
+        shippingCountryCodes: true,
       },
     });
     if (!brand) {
@@ -101,10 +102,17 @@ export async function GET() {
   }
 }
 
+
 export async function POST(req: Request) {
   try {
     const { brandId } = await requireBrandContext();
     const body = await req.json().catch(() => ({}));
+
+    const shippingCountryCodes = Array.isArray(body.shippingCountryCodes)
+  ? body.shippingCountryCodes
+      .map((code: unknown) => String(code).trim().toUpperCase())
+      .filter((code: string) => /^[A-Z]{2}$/.test(code))
+  : [];
 
     const coverImageUrl =
       body.coverImageUrl === "" || body.coverImageUrl == null
@@ -154,6 +162,7 @@ export async function POST(req: Request) {
         contactName,
         contactEmail,
         contactPhone,
+        shippingCountryCodes,
       },
       select: {
         id: true,
@@ -170,6 +179,7 @@ export async function POST(req: Request) {
         contactName: true,
         contactEmail: true,
         contactPhone: true,
+        shippingCountryCodes: true,
       },
     });
 

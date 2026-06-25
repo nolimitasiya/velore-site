@@ -323,10 +323,10 @@ model BrandApplication {
   internalNotes     BrandApplicationNote[]
   applicationSource BrandApplicationSource @default(ORGANIC)
 
-  leadTemperature            LeadTemperature?
-  leadScore                  Int?
-  nextFollowUpAt             DateTime?
-  brandApplicationActivities BrandApplicationActivity[]
+  leadTemperature LeadTemperature?
+  leadScore       Int?
+  nextFollowUpAt  DateTime?
+  activities      BrandApplicationActivity[]
 
   @@index([countryCode])
   @@index([status, createdAt])

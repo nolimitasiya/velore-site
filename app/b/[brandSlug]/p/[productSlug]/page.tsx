@@ -39,6 +39,25 @@ function formatReturnsPaidBy(value: string | null | undefined) {
   return null;
 }
 
+const REGION_COUNTRIES: Record<string, string[]> = {
+  Europe: ["GB", "FR", "DE", "NL", "BE", "IT", "ES", "SE", "NO", "DK", "FI", "IE", "CH", "AT", "PT"],
+  "Middle East": ["AE", "SA", "QA", "KW", "BH", "OM", "JO", "LB", "TR"],
+  Asia: ["MY", "ID", "SG", "PK", "IN", "BD"],
+  Africa: ["MA", "DZ", "TN", "EG", "NG", "ZA", "KE", "SO"],
+  "North America": ["US", "CA"],
+  Oceania: ["AU", "NZ"],
+};
+
+function getShippingToLabel(worldwide: boolean, countryCodes: string[]) {
+  if (worldwide) return ["Worldwide"];
+
+  const selectedRegions = Object.entries(REGION_COUNTRIES)
+    .filter(([, codes]) => codes.some((code) => countryCodes.includes(code)))
+    .map(([region]) => region);
+
+  return selectedRegions.length > 0 ? selectedRegions : countryCodes;
+}
+
 export default async function ProductPage({
   params,
 }: {
@@ -71,6 +90,7 @@ export default async function ProductPage({
           shippingInternational: true,
           returnWindowDays: true,
           returnsPaidBy: true,
+          shippingCountryCodes: true,
         },
       },
       images: { orderBy: { sortOrder: "asc" } },
@@ -152,6 +172,13 @@ export default async function ProductPage({
 
   // Shipping display logic
   const hasShippingInfo = brand.shippingDomestic || brand.shippingInternational;
+  const brandShipsWorldwide =
+  (brand.shippingCountryCodes ?? []).length === 0;
+
+const shippingToLabels = getShippingToLabel(
+  brandShipsWorldwide,
+  brand.shippingCountryCodes ?? []
+);
   const hasReturnsInfo = brand.returnWindowDays != null || brand.returnsPaidBy;
   const returnsLabel = brand.returnsPaidBy === "NO_RETURNS"
     ? "No returns accepted"
@@ -299,8 +326,21 @@ export default async function ProductPage({
                 <div className="space-y-4 text-sm text-black/60">
 
                   {/* Shipping */}
-                  <div>
-                    <p className="font-medium text-black/80 mb-2">Shipping</p>
+<div>
+  <p className="font-medium text-black/80 mb-2">Shipping to</p>
+
+  <div className="mb-4 flex flex-wrap gap-2">
+    {shippingToLabels.map((label) => (
+      <span
+        key={label}
+        className="rounded-full border border-black/10 bg-white px-3 py-1 text-xs text-black/70"
+      >
+        {label}
+      </span>
+    ))}
+  </div>
+
+  <p className="font-medium text-black/80 mb-2">Shipping timeframe</p>
                     {hasShippingInfo ? (
                       <div className="space-y-1.5">
                         {brand.shippingDomestic && (
@@ -316,8 +356,8 @@ export default async function ProductPage({
                           </div>
                         )}
                       </div>
-                    ) : product.worldwideShipping ? (
-                      <p>This product ships worldwide.</p>
+                    ) : brandShipsWorldwide ? (
+                    <p>This product ships worldwide.</p>
                     ) : product.shippingCountries.length > 0 ? (
                       <p>
                         Ships to {product.shippingCountries.slice(0, 6).map((s) => s.countryCode).join(", ")}

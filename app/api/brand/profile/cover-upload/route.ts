@@ -35,15 +35,15 @@ export async function POST(req: Request) {
     const allowed = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
     if (!allowed.includes(file.type)) {
       return NextResponse.json(
-        { ok: false, error: "Please upload a JPG, PNG, or WEBP image." },
+        { ok: false, error: "Please upload a JPG, PNG, or WEBP image up to 20MB.Best results with wide landscape images." },
         { status: 400 }
       );
     }
 
-    const maxBytes = 10 * 1024 * 1024;
+    const maxBytes = 20 * 1024 * 1024;
     if (file.size > maxBytes) {
       return NextResponse.json(
-        { ok: false, error: "Image must be smaller than 10MB." },
+        { ok: false, error: "Image must be smaller than 20MB." },
         { status: 400 }
       );
     }
