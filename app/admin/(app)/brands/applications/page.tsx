@@ -4,6 +4,7 @@ import StatusSelect from "./StatusSelect";
 import ApplicationNotesButton from "./ApplicationNotesButton";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
 import ApplicationsTable from "./ApplicationsTable";
+import AddBrandButton from "./AddBrandButton";
 
 
 export const dynamic = "force-dynamic";
@@ -429,26 +430,26 @@ export default async function Page({
       <h1 className="text-3xl font-semibold tracking-tight text-white">
         Brand Applications
       </h1>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
-                  Review inbound partner interest, move applicants through each
-                  stage, and onboard approved brands into Veilora with a cleaner
-                  pipeline view.
-                </p>
+                
               </div>
 
-              <div className="rounded-2xl border border-black/10 bg-white/80 px-4 py-3 text-sm text-neutral-600 shadow-sm backdrop-blur">
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                  <span>
-                    Showing{" "}
-                    <span className="font-semibold text-neutral-900">
-                      {items.length}
-                    </span>{" "}
-                    application{items.length === 1 ? "" : "s"}
-                  </span>
-                  <span className="hidden h-4 w-px bg-black/10 sm:block" />
-                  <span>{rangeLabel}</span>
-                </div>
-              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+  <AddBrandButton />
+
+  <div className="rounded-2xl border border-black/10 bg-white/80 px-4 py-3 text-sm text-neutral-600 shadow-sm backdrop-blur">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+      <span>
+        Showing{" "}
+        <span className="font-semibold text-neutral-900">
+          {items.length}
+        </span>{" "}
+        application{items.length === 1 ? "" : "s"}
+      </span>
+      <span className="hidden h-4 w-px bg-black/10 sm:block" />
+      <span>{rangeLabel}</span>
+    </div>
+  </div>
+</div>
             </div>
           </div>
 

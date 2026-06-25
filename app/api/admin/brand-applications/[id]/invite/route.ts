@@ -57,6 +57,9 @@ export async function POST(
       companyName: true,
       countryCode: true,
       city: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
     },
   });
 
@@ -73,6 +76,13 @@ export async function POST(
 
   const email = app.email.trim().toLowerCase();
 
+  const contactName = [app.firstName, app.lastName]
+  .map((x) => String(x ?? "").trim())
+  .filter(Boolean)
+  .join(" ") || null;
+
+const contactPhone = String(app.phone ?? "").trim() || null;
+
   const brandName =
     String(app.companyName ?? "").trim() || guessBrandNameFromWebsite(app.website);
 
@@ -88,26 +98,32 @@ export async function POST(
   const websiteUrl = String(app.website ?? "").trim() || null;
 
   const brand = await prisma.brand.upsert({
-    where: { slug: brandSlug },
-    update: {
-      name: brandName,
-      baseCountryCode: countryCode,
-      baseRegion,
-      baseCity: city,
-      websiteUrl,
-      billingEmail: email,
-    },
-    create: {
-      slug: brandSlug,
-      name: brandName,
-      baseCountryCode: countryCode,
-      baseRegion,
-      baseCity: city,
-      websiteUrl,
-      billingEmail: email,
-    },
-    select: { id: true, name: true, slug: true },
-  });
+  where: { slug: brandSlug },
+  update: {
+    name: brandName,
+    baseCountryCode: countryCode,
+    baseRegion,
+    baseCity: city,
+    websiteUrl,
+    billingEmail: email,
+    contactName,
+    contactEmail: email,
+    contactPhone,
+  },
+  create: {
+    slug: brandSlug,
+    name: brandName,
+    baseCountryCode: countryCode,
+    baseRegion,
+    baseCity: city,
+    websiteUrl,
+    billingEmail: email,
+    contactName,
+    contactEmail: email,
+    contactPhone,
+  },
+  select: { id: true, name: true, slug: true },
+});
 
   const rawToken = crypto.randomBytes(32).toString("hex");
   const tokenHash = sha256(rawToken);

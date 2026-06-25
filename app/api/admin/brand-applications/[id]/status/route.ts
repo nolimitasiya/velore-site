@@ -224,6 +224,16 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     },
   });
 
+  
+
+await prisma.brandApplicationActivity.create({
+  data: {
+    applicationId: id,
+    type: "STATUS_CHANGED",
+    message: `Status changed from ${prev} to ${status}`,
+  },
+});
+
   // Emails (best-effort)
   // Emails (best-effort)
 if (sendEmail) {

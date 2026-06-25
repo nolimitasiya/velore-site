@@ -61,8 +61,12 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
         productSizes: { select: { size: { select: { id: true, slug: true, name: true } } } },
         productStyles: { select: { style: { select: { id: true, slug: true, name: true } } } },
         category: { select: { id: true, slug: true, name: true } },
-      },
-    });
+productTypes: {
+  select: {
+    productType: true,
+  },
+},
+  }});
 
     if (!product) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
 
@@ -103,6 +107,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     const stock = toInt(body.stock);
     const note = toStr(body.note);
     const productType = body.productType === undefined ? undefined : body.productType;
+    const productTypes = Array.isArray(body.productTypes) ? body.productTypes : undefined;
     const categoryId = body.categoryId === undefined ? undefined : toStr(body.categoryId);
     const materialIds = Array.isArray(body.materialIds) ? body.materialIds : undefined;
     const occasionIds = Array.isArray(body.occasionIds) ? body.occasionIds : undefined;
@@ -181,6 +186,20 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
           });
         }
       }
+
+      if (productTypes) {
+  await tx.productProductType.deleteMany({ where: { productId: id } });
+
+  if (productTypes.length) {
+    await tx.productProductType.createMany({
+      data: productTypes.map((pt: string) => ({
+        productId: id,
+        productType: pt,
+      })),
+      skipDuplicates: true,
+    });
+  }
+}
             // materials
       if (materialIds) {
         await tx.productMaterial.deleteMany({ where: { productId: id } });

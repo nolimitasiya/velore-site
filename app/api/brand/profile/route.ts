@@ -61,7 +61,7 @@ function normalizePositiveInt(value: unknown): number | null {
 }
 
 function normalizeReturnsPaidBy(value: unknown): ReturnsPaidBy | null {
-  if (value === "BUYER" || value === "BRAND" || value === "NO_RETURNS") {
+  if (value === "BUYER" || value === "BRAND") {
     return value as ReturnsPaidBy;
   }
   return null;
@@ -83,6 +83,9 @@ export async function GET() {
         baseCity: true,
         baseCountryCode: true,
         baseRegion: true,
+        contactName: true,
+        contactEmail: true,
+        contactPhone: true,
         shippingDomestic: true,
         shippingInternational: true,
         returnWindowDays: true,
@@ -133,6 +136,9 @@ export async function POST(req: Request) {
     const shippingInternational = normalizeString(body.shippingInternational);
     const returnWindowDays = normalizePositiveInt(body.returnWindowDays);
     const returnsPaidBy = normalizeReturnsPaidBy(body.returnsPaidBy);
+    const contactName = normalizeString(body.contactName);
+    const contactEmail = normalizeString(body.contactEmail);
+    const contactPhone = normalizeString(body.contactPhone);
 
     const brand = await prisma.brand.update({
       where: { id: brandId },
@@ -145,6 +151,9 @@ export async function POST(req: Request) {
         shippingInternational,
         returnWindowDays,
         returnsPaidBy,
+        contactName,
+        contactEmail,
+        contactPhone,
       },
       select: {
         id: true,
@@ -158,6 +167,9 @@ export async function POST(req: Request) {
         shippingInternational: true,
         returnWindowDays: true,
         returnsPaidBy: true,
+        contactName: true,
+        contactEmail: true,
+        contactPhone: true,
       },
     });
 

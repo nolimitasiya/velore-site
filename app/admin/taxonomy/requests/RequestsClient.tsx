@@ -2,10 +2,44 @@
 
 import { useEffect, useState } from "react";
 
-type ReqType = "MATERIAL" | "COLOUR" | "SIZE";
-type ProductType = "ABAYA" | "DRESS" | "SKIRT" | "TOP" | "HIJAB" | "ACTIVEWEAR";
+type ReqType = "MATERIAL" | "COLOUR" | "SIZE" | "STYLE" | "OCCASION";
+type ProductType =
+  | "ABAYA"
+  | "DRESS"
+  | "SKIRT"
+  | "TOP"
+  | "HIJAB"
+  | "ACTIVEWEAR"
+  | "SETS"
+  | "MATERNITY"
+  | "KHIMAR"
+  | "JILBAB"
+  | "COATS_JACKETS"
+  | "HOODIE_SWEATSHIRT"
+  | "PANTS"
+  | "BLAZER"
+  | "T_SHIRT"
+  | "ACCESSORIES";
 
-const PRODUCT_TYPES: ProductType[] = ["HIJAB", "ABAYA", "DRESS", "TOP", "SKIRT", "ACTIVEWEAR"];
+const PRODUCT_TYPES: ProductType[] = [
+  "HIJAB",
+  "ABAYA",
+  "DRESS",
+  "SETS",
+  "TOP",
+  "SKIRT",
+  "PANTS",
+  "T_SHIRT",
+  "BLAZER",
+  "COATS_JACKETS",
+  "HOODIE_SWEATSHIRT",
+  "ACTIVEWEAR",
+  "MATERNITY",
+  "KHIMAR",
+  "JILBAB",
+  "ACCESSORIES",
+];
+
 
 type Item = {
   id: string;
@@ -97,13 +131,23 @@ function suggestProductTypes(input: { name: string; reason?: string | null }): P
   const text = `${input.name} ${input.reason ?? ""}`.toLowerCase();
 
   const score: Record<ProductType, number> = {
-    HIJAB: 0,
-    ABAYA: 0,
-    DRESS: 0,
-    TOP: 0,
-    SKIRT: 0,
-    ACTIVEWEAR: 0,
-  };
+  HIJAB: 0,
+  ABAYA: 0,
+  DRESS: 0,
+  SETS: 0,
+  TOP: 0,
+  SKIRT: 0,
+  PANTS: 0,
+  T_SHIRT: 0,
+  BLAZER: 0,
+  COATS_JACKETS: 0,
+  HOODIE_SWEATSHIRT: 0,
+  ACTIVEWEAR: 0,
+  MATERNITY: 0,
+  KHIMAR: 0,
+  JILBAB: 0,
+  ACCESSORIES: 0,
+};
 
   const add = (pt: ProductType, n = 1) => (score[pt] += n);
 
@@ -147,10 +191,12 @@ export default function RequestsClient() {
 
   // dupe cache
   const [taxCache, setTaxCache] = useState<Record<ReqType, TaxItem[]>>({
-    MATERIAL: [],
-    COLOUR: [],
-    SIZE: [],
-  });
+  MATERIAL: [],
+  COLOUR: [],
+  SIZE: [],
+  STYLE: [],
+  OCCASION: [],
+});
 
   async function load() {
     setErr(null);
@@ -164,22 +210,26 @@ export default function RequestsClient() {
   }
 
   async function loadTaxCache() {
-    try {
-      const [m, c, s] = await Promise.all([
-        fetch("/api/admin/taxonomy/lookup?type=MATERIAL", { cache: "no-store" }).then((r) => r.json()),
-        fetch("/api/admin/taxonomy/lookup?type=COLOUR", { cache: "no-store" }).then((r) => r.json()),
-        fetch("/api/admin/taxonomy/lookup?type=SIZE", { cache: "no-store" }).then((r) => r.json()),
-      ]);
+  try {
+    const [m, c, s, st, o] = await Promise.all([
+      fetch("/api/admin/taxonomy/lookup?type=MATERIAL", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/admin/taxonomy/lookup?type=COLOUR", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/admin/taxonomy/lookup?type=SIZE", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/admin/taxonomy/lookup?type=STYLE", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/admin/taxonomy/lookup?type=OCCASION", { cache: "no-store" }).then((r) => r.json()),
+    ]);
 
-      setTaxCache({
-        MATERIAL: Array.isArray(m?.items) ? m.items : [],
-        COLOUR: Array.isArray(c?.items) ? c.items : [],
-        SIZE: Array.isArray(s?.items) ? s.items : [],
-      });
-    } catch {
-      // ignore
-    }
+    setTaxCache({
+      MATERIAL: Array.isArray(m?.items) ? m.items : [],
+      COLOUR: Array.isArray(c?.items) ? c.items : [],
+      SIZE: Array.isArray(s?.items) ? s.items : [],
+      STYLE: Array.isArray(st?.items) ? st.items : [],
+      OCCASION: Array.isArray(o?.items) ? o.items : [],
+    });
+  } catch {
+    // ignore
   }
+}
 
   useEffect(() => {
     load();
@@ -239,14 +289,15 @@ export default function RequestsClient() {
   }
 
   function openApprove(item: Item) {
-    if (item.type === "MATERIAL") {
-      setApproveItem(item);
-      setSelectedPTs(suggestProductTypes({ name: item.name, reason: item.reason }));
-      setApproveOpen(true);
-      return;
-    }
-    approveSimple(item.id);
+  if (item.type === "MATERIAL" || item.type === "STYLE") {
+    setApproveItem(item);
+    setSelectedPTs(suggestProductTypes({ name: item.name, reason: item.reason }));
+    setApproveOpen(true);
+    return;
   }
+
+  approveSimple(item.id);
+}
 
   function openReject(item: Item) {
     setRejectItem(item);
@@ -385,8 +436,9 @@ export default function RequestsClient() {
           <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-xl">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="text-base font-semibold">Approve material</div>
-                <div className="text-xs text-black/60">
+<div className="text-base font-semibold">
+  Approve {approveItem.type.toLowerCase()}
+</div>                <div className="text-xs text-black/60">
                   Choose which product types can use: <span className="font-medium">{approveItem.name}</span>
                 </div>
               </div>

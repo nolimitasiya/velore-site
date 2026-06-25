@@ -6,20 +6,18 @@ import { requireAdminSession } from "@/lib/auth/AdminSession";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const TYPE_MAP = {
-  MATERIAL: "material",
-  COLOUR: "colour",
-  SIZE: "size",
-} as const;
+const VALID_TYPES = ["MATERIAL", "COLOUR", "SIZE", "STYLE", "OCCASION"] as const;
+
+type LookupType = (typeof VALID_TYPES)[number];
 
 export async function GET(req: NextRequest) {
   try {
     await requireAdminSession();
 
     const url = new URL(req.url);
-    const type = (url.searchParams.get("type") || "").toUpperCase() as keyof typeof TYPE_MAP;
+    const type = (url.searchParams.get("type") || "").toUpperCase() as LookupType;
 
-    if (!TYPE_MAP[type]) {
+    if (!VALID_TYPES.includes(type)) {
       return NextResponse.json({ ok: false, error: "Invalid type" }, { status: 400 });
     }
 
@@ -28,6 +26,7 @@ export async function GET(req: NextRequest) {
         orderBy: { name: "asc" },
         select: { id: true, name: true, slug: true },
       });
+
       return NextResponse.json({ ok: true, items });
     }
 
@@ -36,14 +35,33 @@ export async function GET(req: NextRequest) {
         orderBy: { name: "asc" },
         select: { id: true, name: true, slug: true },
       });
+
       return NextResponse.json({ ok: true, items });
     }
 
-    // SIZE
-    const items = await prisma.size.findMany({
+    if (type === "SIZE") {
+      const items = await prisma.size.findMany({
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, slug: true },
+      });
+
+      return NextResponse.json({ ok: true, items });
+    }
+
+    if (type === "STYLE") {
+      const items = await prisma.style.findMany({
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, slug: true },
+      });
+
+      return NextResponse.json({ ok: true, items });
+    }
+
+    const items = await prisma.occasion.findMany({
       orderBy: { name: "asc" },
       select: { id: true, name: true, slug: true },
     });
+
     return NextResponse.json({ ok: true, items });
   } catch (e: any) {
     return NextResponse.json(

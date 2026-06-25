@@ -124,11 +124,11 @@ function RequestTaxonomyModal({
 }: {
   open: boolean;
   onClose: () => void;
-  defaultType: "MATERIAL" | "COLOUR" | "SIZE" | "STYLE";
+  defaultType: "MATERIAL" | "COLOUR" | "SIZE" | "STYLE" | "OCCASION";
   onSubmitted: () => void;
   contextProductType?: string | null;
 }) {
-  const [type, setType] = useState<"MATERIAL" | "COLOUR" | "SIZE" | "STYLE">(defaultType);
+  const [type, setType] = useState<"MATERIAL" | "COLOUR" | "SIZE" | "STYLE" | "OCCASION">(defaultType);
   const [name, setName] = useState("");
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -215,6 +215,7 @@ function RequestTaxonomyModal({
                 <option value="COLOUR">Colour</option>
                 <option value="SIZE">Size</option>
                 <option value="STYLE">Style</option>
+                <option value="OCCASION">Occasion</option>
               </select>
             </InputShell>
           </label>
@@ -298,6 +299,7 @@ type Product = {
   status: Status;
   worldwideShipping: boolean;
   shippingCountries: { countryCode: string }[];
+  productTypes?: { productType: string }[];
   badges: string[];
   images: { url: string; sortOrder: number }[];
   publishedAt: string | null;
@@ -312,7 +314,7 @@ type Product = {
 
 type BrandTaxRequest = {
   id: string;
-  type: "MATERIAL" | "COLOUR" | "SIZE" | "STYLE";
+  type: "MATERIAL" | "COLOUR" | "SIZE" | "STYLE" | "OCCASION";
   name: string;
   reason: string | null;
   status: "PENDING" | "APPROVED" | "REJECTED";
@@ -365,6 +367,7 @@ function uniqStr(xs: string[]) {
 
 function snapshotForDirtyCheck(
   prod: Product,
+  selectedProductTypes: string[],
   selectedMaterialIds: string[],
   selectedOccasionIds: string[],
   selectedColourIds: string[],
@@ -389,6 +392,7 @@ function snapshotForDirtyCheck(
     images: Array.isArray(prod.images)
       ? [...prod.images].sort((a, b) => a.sortOrder - b.sortOrder).map((x) => x.url)
       : [],
+    productTypes: [...selectedProductTypes].sort(),
     materialIds: [...selectedMaterialIds].sort(),
     occasionIds: [...selectedOccasionIds].sort(),
     colourIds: [...selectedColourIds].sort(),
@@ -427,8 +431,8 @@ export default function ProductEditClient({ id }: { id: string }) {
   const [accessoryCategories, setAccessoryCategories] = useState<TaxItem[]>([]);
 
   const [reqOpen, setReqOpen] = useState(false);
-  const [reqDefaultType, setReqDefaultType] = useState<"MATERIAL" | "COLOUR" | "SIZE" | "STYLE">("MATERIAL");
-
+  const [reqDefaultType, setReqDefaultType] = useState<"MATERIAL" | "COLOUR" | "SIZE" | "STYLE" | "OCCASION">("MATERIAL");
+  const [selectedProductTypes, setSelectedProductTypes] = useState<string[]>([]);
   const [selectedMaterialIds, setSelectedMaterialIds] = useState<string[]>([]);
   const [selectedOccasionIds, setSelectedOccasionIds] = useState<string[]>([]);
   const [selectedColourIds, setSelectedColourIds] = useState<string[]>([]);
@@ -450,6 +454,7 @@ export default function ProductEditClient({ id }: { id: string }) {
     return (
       snapshotForDirtyCheck(
         p,
+        selectedProductTypes,
         selectedMaterialIds,
         selectedOccasionIds,
         selectedColourIds,
@@ -468,6 +473,17 @@ export default function ProductEditClient({ id }: { id: string }) {
     const has = current.includes(id);
     setter(has ? current.filter((x) => x !== id) : [...current, id]);
   }
+
+  async function loadMyTaxonomyRequests() {
+  try {
+    const rr = await fetch("/api/brand/taxonomy/requests?status=ALL", { cache: "no-store" });
+    const rj = await rr.json().catch(() => ({}));
+
+    if (rr.ok && rj.ok) {
+      setMyReqs(Array.isArray(rj.items) ? rj.items : []);
+    }
+  } catch {}
+}
 
   async function loadAll() {
     setError(null);
@@ -508,15 +524,22 @@ export default function ProductEditClient({ id }: { id: string }) {
       productColours: Array.isArray(prod.productColours) ? prod.productColours : [],
       productSizes: Array.isArray(prod.productSizes) ? prod.productSizes : [],
       productStyles: Array.isArray(prod.productStyles) ? prod.productStyles : [],
+      productTypes: Array.isArray(prod.productTypes) ? prod.productTypes : [],
     };
+
+    const productTypeValues = uniqStr(
+  Array.isArray(prod.productTypes) && prod.productTypes.length
+    ? prod.productTypes.map((x: any) => x.productType).filter(Boolean)
+    : prod.productType
+    ? [prod.productType]
+    : []
+);
+
+setSelectedProductTypes(productTypeValues);
 
     setP(nextP);
 
-    try {
-      const rr = await fetch("/api/brand/taxonomy/requests?status=ALL", { cache: "no-store" });
-      const rj = await rr.json().catch(() => ({}));
-      if (rr.ok && rj.ok) setMyReqs(Array.isArray(rj.items) ? rj.items : []);
-    } catch {}
+    await loadMyTaxonomyRequests();
 
     const matIds = uniqStr(
       (nextP.productMaterials ?? [])
@@ -555,27 +578,51 @@ export default function ProductEditClient({ id }: { id: string }) {
     setSelectedStyleIds(styIds);
 
     try {
-            const [m, o, c, s, st, accessoryCats] = await Promise.all([
-        nextP.productType
-          ? fetchTaxonomy(`/api/brand/taxonomy/materials?productType=${encodeURIComponent(String(nextP.productType))}`)
-          : Promise.resolve([]),
-        fetchTaxonomy("/api/brand/taxonomy/occasions"),
-        fetchTaxonomy("/api/brand/taxonomy/colours"),
-        nextP.productType === "ACCESSORIES"
-  ? Promise.resolve([])
-  : fetchTaxonomy("/api/brand/taxonomy/sizes"),
-        nextP.productType
-          ? fetchTaxonomy(`/api/brand/taxonomy/styles?productType=${encodeURIComponent(String(nextP.productType))}`)
-          : Promise.resolve([]),
-        nextP.productType === "ACCESSORIES"
-          ? fetchTaxonomy("/api/brand/taxonomy/categories?parent=accessories")
-          : Promise.resolve([]),
-      ]);
+            const primaryProductType = productTypeValues[0] ?? null;
+
+const [m, o, c, s, st, accessoryCats] = await Promise.all([
+  productTypeValues.length
+    ? Promise.all(
+        productTypeValues.map((pt) =>
+          fetchTaxonomy(`/api/brand/taxonomy/materials?productType=${encodeURIComponent(pt)}`)
+        )
+      ).then((groups) => {
+        const map = new Map<string, TaxItem>();
+        groups.flat().forEach((item) => map.set(item.id, item));
+        return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+      })
+    : Promise.resolve([]),
+
+  fetchTaxonomy("/api/brand/taxonomy/occasions"),
+
+  fetchTaxonomy("/api/brand/taxonomy/colours"),
+
+  productTypeValues.includes("ACCESSORIES")
+    ? Promise.resolve([])
+    : fetchTaxonomy("/api/brand/taxonomy/sizes"),
+
+  productTypeValues.length
+    ? Promise.all(
+        productTypeValues.map((pt) =>
+          fetchTaxonomy(`/api/brand/taxonomy/styles?productType=${encodeURIComponent(pt)}`)
+        )
+      ).then((groups) => {
+        const map = new Map<string, TaxItem>();
+        groups.flat().forEach((item) => map.set(item.id, item));
+        return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+      })
+    : Promise.resolve([]),
+
+  productTypeValues.includes("ACCESSORIES")
+    ? fetchTaxonomy("/api/brand/taxonomy/categories?parent=accessories")
+    : Promise.resolve([]),
+]);
 
       setMaterials(m);
 setOccasions(o);
 setColours(
-  nextP.productType === "ACCESSORIES" ? filterAccessoryColours(c) : c);
+  productTypeValues.includes("ACCESSORIES") ? filterAccessoryColours(c) : c
+);
 setSizes(s);
 setStyles(st);
 setAccessoryCategories(accessoryCats);
@@ -583,7 +630,15 @@ setAccessoryCategories(accessoryCats);
       setError((prev) => prev ?? e?.message ?? "Failed to load taxonomy");
     }
 
-    savedRef.current = snapshotForDirtyCheck(nextP, matIds, occIds, colIds, sizIds, styIds);
+  savedRef.current = snapshotForDirtyCheck(
+  nextP,
+  productTypeValues,
+  matIds,
+  occIds,
+  colIds,
+  sizIds,
+  styIds
+);
     setJustSaved(false);
   }
 
@@ -593,71 +648,79 @@ setAccessoryCategories(accessoryCats);
   }, [id]);
 
   useEffect(() => {
-    if (!p?.productType) {
-  setMaterials([]);
-  setStyles([]);
-  setColours([]);
-  setAccessoryCategories([]);
-  setSelectedMaterialIds([]);
-  setSelectedStyleIds([]);
-  setSelectedColourIds([]);
-  return;
-}
+  if (!selectedProductTypes.length) {
+    setMaterials([]);
+    setStyles([]);
+    setColours([]);
+    setAccessoryCategories([]);
+    setSelectedMaterialIds([]);
+    setSelectedStyleIds([]);
+    setSelectedColourIds([]);
+    return;
+  }
 
-    (async () => {
-      try {
-        const pt = p.productType;
-        if (!pt) {
-  setMaterials([]);
-  setStyles([]);
-  setColours([]);
-  setAccessoryCategories([]);
-  setSelectedMaterialIds([]);
-  setSelectedStyleIds([]);
-  setSelectedColourIds([]);
-  return;
-}
+  (async () => {
+    try {
+      const [materialGroups, styleGroups, c, accessoryCats] = await Promise.all([
+        Promise.all(
+          selectedProductTypes.map((pt) =>
+            fetchTaxonomy(`/api/brand/taxonomy/materials?productType=${encodeURIComponent(pt)}`)
+          )
+        ),
+        Promise.all(
+          selectedProductTypes.map((pt) =>
+            fetchTaxonomy(`/api/brand/taxonomy/styles?productType=${encodeURIComponent(pt)}`)
+          )
+        ),
+        fetchTaxonomy("/api/brand/taxonomy/colours"),
+        selectedProductTypes.includes("ACCESSORIES")
+          ? fetchTaxonomy("/api/brand/taxonomy/categories?parent=accessories")
+          : Promise.resolve([]),
+      ]);
 
-          const [m, st, c, accessoryCats] = await Promise.all([
-  fetchTaxonomy(`/api/brand/taxonomy/materials?productType=${encodeURIComponent(pt)}`),
-  fetchTaxonomy(`/api/brand/taxonomy/styles?productType=${encodeURIComponent(pt)}`),
-  fetchTaxonomy("/api/brand/taxonomy/colours"),
-  pt === "ACCESSORIES"
-    ? fetchTaxonomy("/api/brand/taxonomy/categories?parent=accessories")
-    : Promise.resolve([]),
-]);
+      const materialMap = new Map<string, TaxItem>();
+      materialGroups.flat().forEach((item) => materialMap.set(item.id, item));
+      const nextMaterials = Array.from(materialMap.values()).sort((a, b) =>
+        a.name.localeCompare(b.name)
+      );
 
-const nextColours =
-  pt === "ACCESSORIES" ? filterAccessoryColours(c) : c;
+      const styleMap = new Map<string, TaxItem>();
+      styleGroups.flat().forEach((item) => styleMap.set(item.id, item));
+      const nextStyles = Array.from(styleMap.values()).sort((a, b) =>
+        a.name.localeCompare(b.name)
+      );
 
-setMaterials(m);
-setStyles(st);
-setColours(nextColours);
-setAccessoryCategories(accessoryCats);
+      const nextColours = selectedProductTypes.includes("ACCESSORIES")
+        ? filterAccessoryColours(c)
+        : c;
 
-setSelectedMaterialIds((prev) =>
-  prev.filter((id) => m.some((x: TaxItem) => x.id === id))
-);
+      setMaterials(nextMaterials);
+      setStyles(nextStyles);
+      setColours(nextColours);
+      setAccessoryCategories(accessoryCats);
 
-setSelectedStyleIds((prev) =>
-  prev.filter((id) => st.some((x: TaxItem) => x.id === id))
-);
+      setSelectedMaterialIds((prev) =>
+        prev.filter((id) => nextMaterials.some((x) => x.id === id))
+      );
 
-setSelectedColourIds((prev) =>
-  prev.filter((id) => nextColours.some((x: TaxItem) => x.id === id))
-);
+      setSelectedStyleIds((prev) =>
+        prev.filter((id) => nextStyles.some((x) => x.id === id))
+      );
 
-if (pt === "ACCESSORIES") {
-  setSelectedSizeIds([]);
-}
-      } catch (e: any) {
-        setError((prev) => prev ?? e?.message ?? "Failed to load materials/styles");
-        setMaterials([]);
-        setStyles([]);
+      setSelectedColourIds((prev) =>
+        prev.filter((id) => nextColours.some((x) => x.id === id))
+      );
+
+      if (selectedProductTypes.includes("ACCESSORIES")) {
+        setSelectedSizeIds([]);
       }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [p?.productType]);
+    } catch (e: any) {
+      setError((prev) => prev ?? e?.message ?? "Failed to load materials/styles");
+      setMaterials([]);
+      setStyles([]);
+    }
+  })();
+}, [selectedProductTypes]);
 
   function toggleBadge(b: string) {
     if (!p) return;
@@ -702,7 +765,8 @@ if (pt === "ACCESSORIES") {
         price: p.price,
         stock: p.stock,
         note: p.note,
-        productType: p.productType,
+        productType: selectedProductTypes[0] ?? null,
+        productTypes: selectedProductTypes,
         categoryId: p.categoryId,
         badges: p.badges,
         worldwideShipping: p.worldwideShipping,
@@ -761,8 +825,8 @@ if (pt === "ACCESSORIES") {
         open={reqOpen}
         onClose={() => setReqOpen(false)}
         defaultType={reqDefaultType}
-        onSubmitted={loadAll}
-        contextProductType={p?.productType ?? null}
+        onSubmitted={loadMyTaxonomyRequests}
+        contextProductType={selectedProductTypes[0] ?? null}
       />
 
       <section className="overflow-hidden rounded-[28px] border border-black/8 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
@@ -896,39 +960,38 @@ if (pt === "ACCESSORIES") {
       >
         <div className="flex flex-wrap gap-2">
           {PRODUCT_TYPES.map((t) => (
-            <Chip
-  key={t}
-  active={p.productType === t}
-  onClick={() => {
-  setP({
-    ...p,
-    productType: t,
-    categoryId: t === "ACCESSORIES" ? p.categoryId : null,
-  });
+  <Chip
+    key={t}
+    active={selectedProductTypes.includes(t)}
+    onClick={() => {
+      setSelectedProductTypes((prev) => {
+        const exists = prev.includes(t);
+        const next = exists ? prev.filter((x) => x !== t) : [...prev, t];
 
-  if (t === "ACCESSORIES") {
-    setSelectedMaterialIds([]);
-    setSelectedSizeIds([]);
-  }
-}}
->
-              {formatProductTypeLabel(t)}
-            </Chip>
-          ))}
+        setP({
+          ...p,
+          productType: next[0] ?? null,
+          categoryId: next.includes("ACCESSORIES") ? p.categoryId : null,
+        });
 
-          <Chip active={p.productType === null} onClick={() => setP({ ...p, productType: null, categoryId: null })}>
-            Clear
-          </Chip>
-        </div>
+        if (next.includes("ACCESSORIES")) {
+          setSelectedMaterialIds([]);
+          setSelectedSizeIds([]);
+        }
 
-        <div className="mt-4 text-sm text-neutral-500">
-          Current: <span className="font-medium text-neutral-900">{p.productType ?? "—"}</span>
+        return next;
+      });
+    }}
+  >
+    {formatProductTypeLabel(t)}
+  </Chip>
+))}
         </div>
       </SectionCard>
 
       
 
-            {p.productType === "ACCESSORIES" && (
+      {selectedProductTypes.includes("ACCESSORIES") && (
         <SectionCard
           eyebrow="Classification"
           title="Accessory category"
@@ -964,12 +1027,7 @@ if (pt === "ACCESSORIES") {
             </div>
           )}
 
-          <div className="mt-4 text-sm text-neutral-500">
-            Current:{" "}
-            <span className="font-medium text-neutral-900">
-              {accessoryCategories.find((cat) => cat.id === p.categoryId)?.name ?? "—"}
-            </span>
-          </div>
+          
         </SectionCard>
       )}
 
@@ -996,7 +1054,7 @@ if (pt === "ACCESSORIES") {
           </>
         }
       >
-        {!p.productType ? (
+        {!selectedProductTypes.length ? (
           <div className="rounded-[22px] border border-black/8 bg-[#fcfbf8] px-4 py-4 text-sm text-neutral-500">
             Select a <span className="font-medium text-neutral-900">product type</span> first to choose materials.
           </div>
@@ -1024,7 +1082,19 @@ if (pt === "ACCESSORIES") {
         eyebrow="Taxonomy"
         title="Occasions"
         description="Add the occasions this product is suitable for."
-        actions={<SoftButton onClick={() => setSelectedOccasionIds([])}>Clear</SoftButton>}
+        actions={
+  <>
+    <SoftButton onClick={() => setSelectedOccasionIds([])}>Clear</SoftButton>
+    <SoftButton
+      onClick={() => {
+        setReqDefaultType("OCCASION");
+        setReqOpen(true);
+      }}
+    >
+      Request new
+    </SoftButton>
+  </>
+}
       >
         <div className="flex flex-wrap gap-2">
           {occasions.map((o) => (
@@ -1065,7 +1135,7 @@ if (pt === "ACCESSORIES") {
           </>
         }
       >
-        {!p.productType ? (
+        {!selectedProductTypes.length? (
           <div className="rounded-[22px] border border-black/8 bg-[#fcfbf8] px-4 py-4 text-sm text-neutral-500">
             Select a <span className="font-medium text-neutral-900">product type</span> first to choose styles.
           </div>
@@ -1214,55 +1284,7 @@ if (pt === "ACCESSORIES") {
   </div>
 </SectionCard>
 
-      <SectionCard
-        eyebrow="Logistics"
-        title="Shipping"
-        description="Mark whether the product ships worldwide or select supported countries."
-      >
-        <div className="flex items-center justify-between gap-4 rounded-[22px] border border-black/8 bg-[#fcfbf8] px-4 py-4">
-          <div>
-            <div className="font-medium text-neutral-900">Worldwide shipping</div>
-            <div className="mt-1 text-sm text-neutral-500">
-              Turn this on if the product can be shipped globally.
-            </div>
-          </div>
-
-          <label className="flex items-center gap-2 text-sm text-neutral-700">
-            <input
-              type="checkbox"
-              checked={p.worldwideShipping}
-              onChange={(e) => setP({ ...p, worldwideShipping: e.target.checked })}
-            />
-            Worldwide
-          </label>
-        </div>
-
-        {!p.worldwideShipping ? (
-          <div className="mt-4 space-y-3">
-            <div className="text-sm text-neutral-500">Select countries (ISO-2). Leave empty if unknown.</div>
-
-            <div className="max-h-80 overflow-auto rounded-[22px] border border-black/8 bg-[#fcfbf8] p-3">
-              {countryOptions.map((c) => {
-                const checked = p.shippingCountries.some((x) => x.countryCode === c.code);
-                return (
-                  <label
-                    key={c.code}
-                    className="flex items-center gap-3 rounded-xl px-2 py-2 text-sm transition hover:bg-white"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={(e) => setShippingCountry(c.code, e.target.checked)}
-                    />
-                    <span className="w-10 text-neutral-400">{c.code}</span>
-                    <span className="text-neutral-800">{c.name}</span>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-        ) : null}
-      </SectionCard>
+    
 
       <SectionCard
         eyebrow="Requests"

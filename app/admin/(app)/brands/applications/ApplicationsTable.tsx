@@ -15,6 +15,7 @@ type Item = {
 
 import StatusSelect from "./StatusSelect";
 import ApplicationNotesButton from "./ApplicationNotesButton";
+import Link from "next/link";
 
 function statusBadge(status: string) {
   const s = String(status || "").toLowerCase();
@@ -90,8 +91,13 @@ export default function ApplicationsTable({ items }: { items: Item[] }) {
                   className={["border-t border-black/5 align-top transition-colors hover:bg-black/[0.02]", rowHighlight(a.status)].join(" ")}
                 >
                   <td className="px-6 py-4">
-                    <div className="font-medium text-neutral-950">{name}</div>
-                  </td>
+  <Link
+    href={`/admin/brands/applications/${a.id}`}
+    className="font-medium text-neutral-950 underline decoration-transparent underline-offset-4 transition hover:text-[#7B2D3E] hover:decoration-[#7B2D3E]/40"
+  >
+    {name}
+  </Link>
+</td>
                   <td className="px-6 py-4">
                     <a className="break-all text-neutral-700 underline decoration-black/20 underline-offset-4 transition hover:text-neutral-950" href={`mailto:${a.email}`}>
                       {a.email}

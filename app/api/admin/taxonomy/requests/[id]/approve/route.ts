@@ -54,44 +54,74 @@ export async function POST(
     }
 
     if (tr.type === "COLOUR") {
-      await prisma.colour.upsert({
-        where: { slug: tr.slug },
-        update: { name: tr.name },
-        create: { slug: tr.slug, name: tr.name },
-      });
-    } else if (tr.type === "SIZE") {
-      await prisma.size.upsert({
-        where: { slug: tr.slug },
-        update: { name: tr.name },
-        create: { slug: tr.slug, name: tr.name },
-      });
-    } else if (tr.type === "MATERIAL") {
-      const mat = await prisma.material.upsert({
-        where: { slug: tr.slug },
-        update: { name: tr.name },
-        create: { slug: tr.slug, name: tr.name },
-        select: { id: true },
-      });
+  await prisma.colour.upsert({
+    where: { slug: tr.slug },
+    update: { name: tr.name },
+    create: { slug: tr.slug, name: tr.name },
+  });
+} else if (tr.type === "SIZE") {
+  await prisma.size.upsert({
+    where: { slug: tr.slug },
+    update: { name: tr.name },
+    create: { slug: tr.slug, name: tr.name },
+  });
+} else if (tr.type === "OCCASION") {
+  await prisma.occasion.upsert({
+    where: { slug: tr.slug },
+    update: { name: tr.name },
+    create: { slug: tr.slug, name: tr.name },
+  });
+} else if (tr.type === "MATERIAL") {
+  const mat = await prisma.material.upsert({
+    where: { slug: tr.slug },
+    update: { name: tr.name },
+    create: { slug: tr.slug, name: tr.name },
+    select: { id: true },
+  });
 
-      const finalPTs: ProductType[] = bodyPTs.length ? bodyPTs : tr.productTypes;
+  const finalPTs: ProductType[] = bodyPTs.length ? bodyPTs : tr.productTypes;
 
-      if (!finalPTs.length) {
-        return NextResponse.json(
-          { ok: false, error: "Material must have at least one product type" },
-          { status: 400 }
-        );
-      }
+  if (!finalPTs.length) {
+    return NextResponse.json(
+      { ok: false, error: "Material must have at least one product type" },
+      { status: 400 }
+    );
+  }
 
-      await prisma.materialAllowedProductType.createMany({
-        data: finalPTs.map((pt) => ({
-          materialId: mat.id,
-          productType: pt,
-        })),
-        skipDuplicates: true,
-      });
-    } else {
-      return NextResponse.json({ ok: false, error: "Unsupported type" }, { status: 400 });
-    }
+  await prisma.materialAllowedProductType.createMany({
+    data: finalPTs.map((pt) => ({
+      materialId: mat.id,
+      productType: pt,
+    })),
+    skipDuplicates: true,
+  });
+} else if (tr.type === "STYLE") {
+  const style = await prisma.style.upsert({
+    where: { slug: tr.slug },
+    update: { name: tr.name },
+    create: { slug: tr.slug, name: tr.name },
+    select: { id: true },
+  });
+
+  const finalPTs: ProductType[] = bodyPTs.length ? bodyPTs : tr.productTypes;
+
+  if (!finalPTs.length) {
+    return NextResponse.json(
+      { ok: false, error: "Style must have at least one product type" },
+      { status: 400 }
+    );
+  }
+
+  await prisma.styleAllowedProductType.createMany({
+    data: finalPTs.map((pt) => ({
+      styleId: style.id,
+      productType: pt,
+    })),
+    skipDuplicates: true,
+  });
+} else {
+  return NextResponse.json({ ok: false, error: "Unsupported type" }, { status: 400 });
+}
 
     await prisma.taxonomyRequest.update({
       where: { id },

@@ -20,18 +20,23 @@ export default async function BrandProfilePage() {
   const brand = await prisma.brand.findUnique({
     where: { id: brandId },
     select: {
-      id: true,
-      name: true,
-      slug: true,
-      instagramHandle: true,
-      coverImageUrl: true,
-      coverImageFocalX: true,
-      coverImageFocalY: true,
-      shippingDomestic: true,
-      shippingInternational: true,
-      returnWindowDays: true,
-      returnsPaidBy: true,
-    },
+  id: true,
+  name: true,
+  slug: true,
+  instagramHandle: true,
+  coverImageUrl: true,
+  coverImageFocalX: true,
+  coverImageFocalY: true,
+
+  contactName: true,
+  contactEmail: true,
+  contactPhone: true,
+
+  shippingDomestic: true,
+  shippingInternational: true,
+  returnWindowDays: true,
+  returnsPaidBy: true,
+},
   });
 
   if (!brand) redirect("/brand/login");
@@ -47,17 +52,20 @@ export default async function BrandProfilePage() {
 </section>
 
     <BrandProfileForm
-      initialName={brand.name}
-      initialSlug={brand.slug}
-      initialInstagramHandle={brand.instagramHandle}
-      initialCoverImageUrl={brand.coverImageUrl}
-      initialCoverImageFocalX={brand.coverImageFocalX}
-      initialCoverImageFocalY={brand.coverImageFocalY}
-      initialShippingDomestic={brand.shippingDomestic}
-      initialShippingInternational={brand.shippingInternational}
-      initialReturnWindowDays={brand.returnWindowDays}
-      initialReturnsPaidBy={brand.returnsPaidBy as any}
-    />
+  initialName={brand.name}
+  initialSlug={brand.slug}
+  initialInstagramHandle={brand.instagramHandle}
+  initialCoverImageUrl={brand.coverImageUrl}
+  initialCoverImageFocalX={brand.coverImageFocalX}
+  initialCoverImageFocalY={brand.coverImageFocalY}
+  contactName={brand.contactName}
+  contactEmail={brand.contactEmail}
+  contactPhone={brand.contactPhone}
+  initialShippingDomestic={brand.shippingDomestic}
+  initialShippingInternational={brand.shippingInternational}
+  initialReturnWindowDays={brand.returnWindowDays}
+  initialReturnsPaidBy={brand.returnsPaidBy as any}
+/>
   </div>
 );
 }
