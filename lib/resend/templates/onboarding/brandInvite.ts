@@ -8,29 +8,60 @@ export async function sendBrandInviteEmail(opts: {
   inviteLink: string;
   senderName?: string;
 }) {
-  const sender = opts.senderName ?? "Asiya";
-  const subject = `You’ve been invited to list ${opts.brandName} on Veilora Club`;
+  const subject = "Welcome to Veilora Club | Let's get started ✨";
 
   const html = veiloraEmailTemplate({
-    preheader: `You’ve been invited to list ${opts.brandName} on Veilora Club.`,
-    heading: `${opts.brandName}, welcome`,
-    intro: `${sender} has invited you to join Veilora Club 👋`,
+    preheader: `Welcome to Veilora Club. Your onboarding journey starts here.`,
+
+    heading: "Welcome to Veilora Club",
+
+    intro: "Hi there,",
+
     bodyHtml: `
-      <p style="margin:0 0 12px 0;">
-        You can now create your brand account on <strong>Veilora Club</strong>, the platform connecting global Muslim and modest brands in one place.
-      </p>
+      <div style="text-align:center; max-width:520px; margin:0 auto;">
 
-      <p style="margin:0 0 12px 0;">
-        Once your account is set up, you’ll be able to access your brand portal and begin preparing your profile and product information for review.
-      </p>
+        <p>
+          Congratulations and welcome to Veilora Club.
+        </p>
 
-      <p style="margin:0; color:#6b6b6b; font-size:13px;">
-        This link is personal to your brand, so please do not forward it.
-      </p>
+        <p>
+          We're delighted to invite ${opts.brandName}to join our growing community of modest fashion brands from around the world.
+        </p>
+
+        <p>
+          Your invitation gives you access to your dedicated Brand Portal, where you'll be able to complete your profile, upload your collections and begin your onboarding journey.
+        </p>
+
+        <p>
+          The onboarding process only takes a few minutes, and we'll guide you through every step along the way.
+        </p>
+
+        <p>
+          Once your profile has been submitted, our team will review everything before your brand goes live on Veilora Club.
+        </p>
+
+        <p style="margin-top:24px;">
+          We can't wait to welcome you.
+        </p>
+
+        <p style="
+          margin:4px 0 0 0;
+          font-family:'Abril Fatface', Georgia, 'Times New Roman', serif;
+          font-size:16px;
+        ">
+          Asiya 🤍
+        </p>
+
+      </div>
     `,
-    cta: { label: "Create brand account", href: opts.inviteLink },
+
+    cta: {
+      label: "Begin onboarding",
+      href: opts.inviteLink,
+    },
+
     footerNote:
-      "If you have any questions during onboarding, simply reply to this email and we’ll be happy to help.",
+      "Your invitation is unique to your brand. If you have any questions before getting started, simply reply to this email and we'll be happy to help.",
   });
 
   return sendEmail({

@@ -10,7 +10,7 @@ export function brandInvitedZoomEmail(params: {
   brandName?: string;
   schedulerUrl?: string; // Calendly/Cal.com link (optional)
 }) {
-  const subject = "Let’s book a quick call ✨ Veilora Club";
+  const subject = "Let's book a quick call | Veilora Club";
 
   const formattedName = capitalizeFirstLetter(params.firstName);
 
@@ -22,33 +22,57 @@ const nameLine = formattedName ? `Hi ${formattedName},` : "Hi there,";
     intro: nameLine,
     bodyHtml: `
       <p style="margin:0 0 12px 0;">
-        Thank you again for applying to join <strong>Veilora Club</strong>${params.brandName ? ` with <strong>${params.brandName}</strong>` : ""}.
+        Thank you again for applying to join Veilora Club${params.brandName ? ` with <strong>${params.brandName}</strong>` : ""}.
       </p>
 
       <p style="margin:0 0 12px 0;">
-        We’d love to invite you to a short Zoom call to learn more about your brand, your best-sellers, and how we can work together.
+        We’d love to invite you to a short Zoom call to learn more about your brand.
       </p>
-<div style="color:#ffffff;">
-  <p style="margin:0 0 10px 0;">
-    <strong>On the call, we’ll cover:</strong>
+<div style="color:#444444; max-width:420px; margin:18px auto; text-align:left;">
+  
+
+  <div style="color:#444444; max-width:470px; margin:22px auto; text-align:left;">
+
+  <p style="text-align:center; margin:0 0 18px 0;">
+    <strong>During our conversation, we'll cover:</strong>
   </p>
 
-  <ul style="margin:0 0 12px 18px; padding:0;">
-    <li style="margin:0 0 6px 0;">Your products and positioning</li>
-    <li style="margin:0 0 6px 0;">How listing & visibility works on Veilora Club</li>
-    <li style="margin:0;">Next steps if we move forward</li>
+  <ul style="
+      margin:0;
+      padding-left:22px;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Inter,Arial,sans-serif;
+      font-size:16px;
+      line-height:1.8;
+      color:#444444;
+  ">
+
+    <li style="margin-bottom:10px;">
+      Discover your brand.
+    </li>
+
+    <li style="margin-bottom:10px;">
+      Explore the platform and showcase how brands are featured.
+    </li>
+
+    <li>
+      Walk through the next steps should we decide to move forward together.
+    </li>
+
   </ul>
+
+</div>
 </div>
 
-      <p style="margin:0;">
-        ${params.schedulerUrl ? "Use the button below to choose a time that works for you:" : "Reply to this email with a few times that work for you, and we’ll confirm."}
+      ${params.schedulerUrl
+? "Please choose a time that works best for you.:"
+: "Simply reply to this email with a few dates and times that work for you, and we'll be happy to arrange the call."}
       </p>
     `,
     cta: params.schedulerUrl
       ? { label: "Choose a time", href: params.schedulerUrl }
       : null,
     footerNote:
-      "If you have anything you’d like us to review ahead of the call (lookbook, website, socials), feel free to reply and share it.",
+  "If there's anything you'd like us to look at before, please don't hesitate to reply to this email.",
   });
 
   return { subject, html };

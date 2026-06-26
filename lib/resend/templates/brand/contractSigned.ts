@@ -8,7 +8,7 @@ function cap(name?: string | null) {
 
 export function brandContractSignedEmail(params: { firstName?: string }) {
   const firstName = cap(params.firstName);
-  const subject = "Contract received — you’re officially in ✨";
+  const subject = "Contract received | you’re officially in";
 
   const html = veiloraEmailTemplate({
     preheader: "We’ve received your signed contract. Next: onboarding access.",

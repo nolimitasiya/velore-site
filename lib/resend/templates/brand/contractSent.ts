@@ -22,9 +22,9 @@ export function brandContractSentEmail(params: { firstName?: string; contractUrl
 
       <p style="margin:0 0 16px 0;">
         <a href="${params.contractUrl}" target="_blank" rel="noreferrer"
-           style="display:inline-block;background:#000;color:#fff;text-decoration:none;padding:10px 14px;border-radius:10px;font-size:14px;">
-          Review & sign contract
-        </a>
+   style="display:inline-block;background:#6E2233;color:#ffffff;text-decoration:none;padding:14px 30px;border-radius:999px;font-size:15px;font-weight:600;">
+  Review & sign contract
+</a>
       </p>
 
       <p style="margin:0 0 12px 0; color:#6b6b6b; font-size:13px;">
