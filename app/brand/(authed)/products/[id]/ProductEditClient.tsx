@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useMemo, useState, useRef } from "react";
-import countries from "world-countries";
 import { BRAND_CURRENCY_OPTIONS } from "@/lib/currency/codes";
 import { PRODUCT_TYPES } from "@/lib/taxonomy/productTypes";
 
@@ -297,8 +296,6 @@ type Product = {
   productType: string | null;
   categoryId: string | null;
   status: Status;
-  worldwideShipping: boolean;
-  shippingCountries: { countryCode: string }[];
   productTypes?: { productType: string }[];
   badges: string[];
   images: { url: string; sortOrder: number }[];
@@ -385,8 +382,6 @@ function snapshotForDirtyCheck(
     note: prod.note ?? null,
     productType: prod.productType ?? null,
     categoryId: prod.categoryId ?? null,
-    worldwideShipping: !!prod.worldwideShipping,
-    shippingCountries: (prod.shippingCountries ?? []).map((x) => x.countryCode).sort(),
     badges: Array.isArray(prod.badges) ? [...prod.badges].sort() : [],
     polyesterFree: !!prod.polyesterFree,
     images: Array.isArray(prod.images)
@@ -442,12 +437,7 @@ export default function ProductEditClient({ id }: { id: string }) {
   const savedRef = useRef<string>("");
   const [justSaved, setJustSaved] = useState(false);
 
-  const countryOptions = useMemo(() => {
-    return countries
-      .map((c) => ({ code: c.cca2, name: c.name.common }))
-      .filter((x) => x.code && x.name)
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, []);
+  
 
   const dirty = useMemo(() => {
     if (!p) return false;
@@ -496,7 +486,6 @@ export default function ProductEditClient({ id }: { id: string }) {
     }
 
     const prod = j.product as any;
-    const shippingCountries = (prod.shippingCountries ?? []).map((x: any) => x.countryCode);
 
     const nextP: Product = {
       id: prod.id,
@@ -510,9 +499,7 @@ export default function ProductEditClient({ id }: { id: string }) {
       note: prod.note ?? null,
       productType: prod.productType ?? null,
       categoryId: prod.category?.id ?? null,
-      status: prod.status,
-      worldwideShipping: Boolean(prod.worldwideShipping),
-      shippingCountries: shippingCountries.map((cc: string) => ({ countryCode: cc })),
+      status: prod.status,  
       badges: Array.isArray(prod.badges)
   ? prod.badges.filter((b: string) => b !== "next_day")
   : [],
@@ -729,13 +716,7 @@ setAccessoryCategories(accessoryCats);
     setP({ ...p, badges: next });
   }
 
-  function setShippingCountry(code: string, checked: boolean) {
-    if (!p) return;
-    const set = new Set(p.shippingCountries.map((x) => x.countryCode));
-    if (checked) set.add(code);
-    else set.delete(code);
-    setP({ ...p, shippingCountries: Array.from(set).map((cc) => ({ countryCode: cc })) });
-  }
+ 
 
   function formatProductTypeLabel(value: string) {
   if (value === "COATS_JACKETS") return "Coats & Jackets";
@@ -769,8 +750,6 @@ setAccessoryCategories(accessoryCats);
         productTypes: selectedProductTypes,
         categoryId: p.categoryId,
         badges: p.badges,
-        worldwideShipping: p.worldwideShipping,
-        shippingCountries: p.shippingCountries.map((x) => x.countryCode),
         images: p.images.map((x) => x.url),
         materialIds: selectedMaterialIds,
         occasionIds: selectedOccasionIds,

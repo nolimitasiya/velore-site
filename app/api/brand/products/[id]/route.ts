@@ -46,14 +46,12 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
         status: true,
         isActive: true,
         publishedAt: true,
-        worldwideShipping: true,
         badges: true,
         submittedAt: true,
         reviewNote: true,
         lastApprovedAt: true,
         polyesterFree: true, // ← ADD THIS LINE
         images: { orderBy: { sortOrder: "asc" }, select: { url: true, sortOrder: true } },
-        shippingCountries: { select: { countryCode: true } },
         productTags : { select: { tag: { select: { id: true, slug: true, name: true } } } },
         productMaterials: { select: { material: { select: { id: true, slug: true, name: true } } } },
         productOccasions: { select: { occasion: { select: { id: true, slug: true, name: true } } } },
@@ -117,9 +115,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
 
     const badges = Array.isArray(body.badges) ? body.badges : undefined; // Badge[]
     const tags = Array.isArray(body.tags) ? body.tags : undefined; // string[] (legacy)
-    const worldwideShipping = body.worldwideShipping !== undefined ? toBool(body.worldwideShipping) : undefined;
-    const shippingCountries = Array.isArray(body.shippingCountries) ? body.shippingCountries : undefined; // ["GB","FR"]
-
+    
     const imageUrls = Array.isArray(body.images) ? body.images : undefined; // ["https://..."]
     const polyesterFree = body.polyesterFree !== undefined ? toBool(body.polyesterFree) : undefined;
 
@@ -151,7 +147,6 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
           ...(categoryId !== undefined ? { categoryId } : {}),
           ...(badges !== undefined ? { badges } : {}),
           ...(tags !== undefined ? { tags } : {}),
-          ...(worldwideShipping !== undefined ? { worldwideShipping } : {}),
           ...(polyesterFree !== undefined ? { polyesterFree } : {}),
           ...(shouldDemote
             ? {
@@ -167,16 +162,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
         select: { id: true, status: true, publishedAt: true },
       });
 
-      // shipping countries
-      if (shippingCountries) {
-        await tx.productShippingCountry.deleteMany({ where: { productId: id } });
-        if (shippingCountries.length) {
-          await tx.productShippingCountry.createMany({
-            data: shippingCountries.map((cc: string) => ({ productId: id, countryCode: cc })),
-          });
-        }
-      }
-
+      
       // images
       if (imageUrls) {
         await tx.productImage.deleteMany({ where: { productId: id } });
