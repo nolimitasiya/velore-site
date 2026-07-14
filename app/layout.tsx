@@ -34,16 +34,20 @@ const display = Cormorant_Garamond({
   display: "swap",
 });
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.startsWith("http")
-    ? process.env.NEXT_PUBLIC_SITE_URL
-    : "http://localhost:3000";
+const SITE_URL = "https://www.veiloraclub.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
+
   title: "Veilora Club | Home of Global Modest Fashion",
+
   description:
     "Discover curated modest fashion brands from around the world, all in one destination.",
+
+  alternates: {
+    canonical: "/",
+  },
+
   openGraph: {
     title: "Veilora Club | Home of Global Modest Fashion",
     description:
@@ -51,6 +55,13 @@ export const metadata: Metadata = {
     url: SITE_URL,
     siteName: "Veilora Club",
     type: "website",
+  },
+
+  twitter: {
+    card: "summary",
+    title: "Veilora Club | Home of Global Modest Fashion",
+    description:
+      "Discover curated modest fashion brands from around the world, all in one destination.",
   },
 };
 
