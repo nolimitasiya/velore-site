@@ -357,22 +357,22 @@ export default function Gate() {
           <div className="font-heading text-2xl font-semibold text-[#1a0a0e]">
             Veilora Club
           </div>
-          <div className="text-sm text-[#a89280]">The Home of Global Modest Fashion</div>
+          <div className="text-md text-[#7A2A3A]">The Home of Global Modest Fashion</div>
 
           <div className="mt-1.5 flex items-center gap-5">
-            <a href="https://www.instagram.com/veiloraclub/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="text-[#6b5c4e] transition hover:text-[#7A2A3A]">
+            <a href="https://www.instagram.com/veiloraclub/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="text-[#7A2A3A] transition hover:text-[#7A2A3A]">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} className="h-[19px] w-[19px]">
                 <rect x="3" y="3" width="18" height="18" rx="5" />
                 <circle cx="12" cy="12" r="4" />
                 <circle cx="17.5" cy="6.5" r="1" />
               </svg>
             </a>
-            <a href="https://www.tiktok.com/@veiloraclub" target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="text-[#6b5c4e] transition hover:text-[#7A2A3A]">
+            <a href="https://www.tiktok.com/@veiloraclub" target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="text-[#7A2A3A] transition hover:text-[#7A2A3A]">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} className="h-[19px] w-[19px]">
                 <path d="M14 3v10.5a3.5 3.5 0 11-3.5-3.5c.35 0 .68.04 1 .12V7.2A6.5 6.5 0 1017.5 13.5V9.2c1.06.72 2.34 1.14 3.5 1.14V7.3c-1.9 0-3.5-1.62-3.5-3.3h-3.5z" />
               </svg>
             </a>
-            <a href="https://www.linkedin.com/company/veilora-club/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="text-[#6b5c4e] transition hover:text-[#7A2A3A]">
+            <a href="https://www.linkedin.com/company/veilora-club/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="text-[#7A2A3A] transition hover:text-[#7A2A3A]">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} className="h-[19px] w-[19px]">
                 <rect x="3" y="3" width="18" height="18" rx="3" />
                 <line x1="7.5" y1="10.5" x2="7.5" y2="16.5" />
