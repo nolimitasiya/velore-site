@@ -17,7 +17,7 @@ export default function ContactPage() {
           </h1>
 
           <p className="mt-6 mx-auto max-w-2xl text-base leading-8 text-black/70 md:text-lg">
-            Have a question about a product, or anything else?
+            Have a question about a product or anything else?
             Our team is here to support you.
           </p>
 
@@ -31,9 +31,7 @@ export default function ContactPage() {
   </a>
 </p>
 
-<p className="mt-3 text-base md:text-lg text-black/70 leading-7">
-  We aim to respond within 24–48 hours.
-</p>
+
         </div>
 
         {/* Form */}
@@ -41,15 +39,7 @@ export default function ContactPage() {
           <ContactForm />
         </div>
 
-        {/* Footer signature (optional but very on-brand) */}
-        <div className="mt-20 border-t border-black/10 pt-12 text-center">
-          <div className="mx-auto max-w-3xl">
-            <p className="text-black/60 italic">With care,</p>
-            <p className="mt-1 font-heading text-lg tracking-[0.08em] uppercase">
-              Veilora Club
-            </p>
-          </div>
-        </div>
+      
       </section>
     </SiteShell>
   );

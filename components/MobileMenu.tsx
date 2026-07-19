@@ -183,9 +183,13 @@ useEffect(() => {
 
   // Shared row styling
   const rowBase =
-    "group flex items-center justify-between border-b p-4 text-lg transition-colors duration-200";
-  const rowHover = "hover:bg-black/[0.03]";
-  const activeRow = "bg-black/[0.02]";
+  "group flex items-center justify-between border-b border-black/5 px-5 py-4 transition-all duration-200";
+
+const rowHover =
+  "hover:bg-[#7B2D3E]/[0.035]";
+
+const activeRow =
+  "bg-[#7B2D3E]/[0.05]";
 
   const leftAccent =
     "relative before:absolute before:left-0 before:top-0 before:h-full before:w-[3px] before:bg-[var(--accent)]";
@@ -198,99 +202,180 @@ useEffect(() => {
         aria-label="Open menu"
         className="flex flex-col gap-1"
       >
-        <span className="h-0.5 w-6 bg-white" />
-        <span className="h-0.5 w-6 bg-white" />
-        <span className="h-0.5 w-6 bg-white" />
+        <span className="h-px w-6 bg-black" />
+        <span className="h-px w-6 bg-black" />
+        <span className="h-px w-6 bg-black" />
       </button>
 
       {/* Overlay */}
       {open && (
-        <div className="fixed inset-0 z-40 bg-black/40" onClick={closeMenu} />
-      )}
+  <div
+    className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px]"
+    onClick={closeMenu}
+  />
+)}
 
       {/* Slide-out menu */}
       <div
-        className={`fixed left-0 top-0 z-50 h-full w-[85vw] max-w-sm bg-white shadow-2xl transition-transform duration-300 ease-in-out ${
-          open ? "translate-x-0" : "-translate-x-full"
-        }`}
-        role="dialog"
-        aria-modal="true"
-      >
+  className={`fixed left-0 top-0 z-50 flex h-full w-[88vw] max-w-[390px] flex-col
+    border-r border-black/10 bg-[#fcfbf8]
+    shadow-[20px_0_70px_rgba(0,0,0,0.14)]
+    transition-transform duration-300 ease-out ${
+      open ? "translate-x-0" : "-translate-x-full"
+    }`}
+  role="dialog"
+  aria-modal="true"
+>
         {/* Top bar */}
-        <div className="flex items-center justify-between border-b border-black/8 p-4 bg-white">
-          <div className="flex items-center gap-3">
-            {!isRoot && (
-              <button
-                onClick={() => setScreen({ type: "root" })}
-                aria-label="Back"
-                className="rounded-lg px-2 py-1 text-lg transition-colors hover:bg-black/[0.04]"
-              >
-                ←
-              </button>
-            )}
+<div className="flex min-h-[76px] items-center justify-between border-b border-black/10 px-5">
+  <div className="flex items-center gap-3">
+    {!isRoot && (
+      <button
+        type="button"
+        onClick={() => setScreen({ type: "root" })}
+        aria-label="Back"
+        className="
+          flex h-9 w-9 items-center justify-center rounded-full
+          text-black/50 transition
+          hover:bg-black/[0.04] hover:text-black
+        "
+      >
+        <svg
+          width="19"
+          height="19"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        >
+          <path
+            d="M19 12H5M11 18l-6-6 6-6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+    )}
 
-            <span className="font-heading text-lg tracking-[0.02em] text-black">{title}</span>
-          </div>
+    <span className="font-heading text-2xl tracking-[0.02em] text-[#7B2D3E]">
+      {isRoot ? "Veilora Club" : title}
+    </span>
+  </div>
+
+  <button
+    type="button"
+    onClick={closeMenu}
+    aria-label="Close menu"
+    className="
+      flex h-10 w-10 items-center justify-center rounded-full
+      text-black/45 transition
+      hover:bg-black/[0.04] hover:text-black
+    "
+  >
+    <svg
+      width="19"
+      height="19"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    >
+      <path
+        d="M6 6l12 12M18 6 6 18"
+        strokeLinecap="round"
+      />
+    </svg>
+  </button>
+</div>
+
+        {/* Search inside menu — root only */}
+{isRoot && (
+  <div className="border-b border-black/10 px-5 py-5">
+    <form onSubmit={onSearchSubmit}>
+      <div className="relative">
+        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-black/40">
+          <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="m16 16 5 5" strokeLinecap="round" />
+          </svg>
+        </span>
+
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search products and brands"
+          className="
+            w-full rounded-full border border-black/10 bg-white
+            py-3 pl-11 pr-20
+            font-body text-sm text-black
+            placeholder:text-black/35
+            outline-none transition
+            hover:border-black/20
+            focus:border-[#7B2D3E]/40
+            focus:ring-2 focus:ring-[#7B2D3E]/10
+          "
+        />
+
+        <button
+          type="submit"
+          className="
+            absolute right-1.5 top-1/2 -translate-y-1/2
+            rounded-full bg-[#7B2D3E] px-4 py-2
+            font-body text-xs font-medium text-white
+            transition hover:bg-[#692536]
+          "
+        >
+          Search
+        </button>
+      </div>
+    </form>
+
+    {recentSearches.length > 0 && (
+      <div className="mt-5">
+        <div className="mb-3 flex items-center justify-between">
+          <span className="font-body text-[11px] font-medium uppercase tracking-[0.16em] text-black/40">
+            Recent searches
+          </span>
 
           <button
-            onClick={closeMenu}
-            aria-label="Close menu"
-            className="text-xl text-black/60 transition-colors hover:text-black"
+            type="button"
+            onClick={clearRecents}
+            className="font-body text-xs text-black/45 transition hover:text-[#7B2D3E]"
           >
-            ✕
+            Clear
           </button>
         </div>
 
-        {/* Search inside menu (root only) */}
-        {isRoot && (
-          <div className="border-b border-black/8 p-4 bg-white">
-            <form onSubmit={onSearchSubmit} className="flex gap-2">
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search products, brands…"
-                className="w-full rounded-xl border border-black/15 bg-black/[0.03] px-3 py-2 text-sm text-black outline-none placeholder:text-black/40 focus:border-black/30"
-              />
-              <button
-                type="submit"
-                className="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm text-white transition-opacity hover:opacity-90"
-              >
-                Search
-              </button>
-            </form>
-
-            {/* Recent searches */}
-            {recentSearches.length > 0 && (
-              <div className="mt-4">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-xs font-medium text-black/60">
-                    Recent searches
-                  </span>
-                  <button
-                    type="button"
-                    onClick={clearRecents}
-                    className="text-xs text-black/60 underline transition-colors hover:text-[var(--accent)]"
-                  >
-                    Clear
-                  </button>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {recentSearches.map((term) => (
-                    <button
-                      key={term}
-                      type="button"
-                      onClick={() => goSearch(term)}
-                      className="rounded-full bg-black/[0.04] px-3 py-1 text-xs text-black/80 transition-colors hover:bg-black/[0.07]"
-                    >
-                      {term}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {recentSearches.map((term) => (
+            <button
+              key={term}
+              type="button"
+              onClick={() => goSearch(term)}
+              className="
+                rounded-full border border-black/10 bg-white
+                px-3 py-1.5 font-body text-xs text-black/65
+                transition
+                hover:border-[#7B2D3E]/20
+                hover:bg-[#7B2D3E]/5
+                hover:text-[#7B2D3E]
+              "
+            >
+              {term}
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+)}
 
         {/* Content */}
         <nav className="flex flex-col bg-white flex-1">
@@ -369,15 +454,24 @@ useEffect(() => {
                   ].join(" ")}
                   onClick={closeMenu}
                 >
-                  <span className={active ? "font-medium text-black" : "text-black"}>
+                  <span
+  className={[
+    "font-body text-[15px] tracking-[0.02em] transition-colors",
+    active
+      ? "font-medium text-[#7B2D3E]"
+      : "text-black/75 group-hover:text-[#7B2D3E]",
+  ].join(" ")}
+>
                 
                     {item.label}
                   </span>
                   <span
                     className={[
-                      "text-black/30 transition-colors duration-200",
-                      active ? "text-[var(--accent)]" : "group-hover:text-black/50",
-                    ].join(" ")}>
+  "text-lg transition-all duration-200",
+  active
+    ? "text-[#7B2D3E]"
+    : "text-black/25 group-hover:translate-x-1 group-hover:text-[#7B2D3E]/50",
+].join(" ")}>
                     ›
                   </span>
                 </Link>

@@ -276,14 +276,15 @@ export default async function ClothingPage({
     <SiteShell>
       <main className="min-h-screen w-full bg-white">
         <div className="mx-auto w-full max-w-[1800px] space-y-8 px-8 py-10">
-          <header className="text-center">
-            <h1 className="font-display text-4xl tracking-[0.12em] md:text-5xl">
-              {pageTitle}
-            </h1>
-            <p className="mt-3 text-sm md:text-base text-black/60">
-              Discover clothing designed for you.
-            </p>
-          </header>
+          <header className="py-5 text-center md:py-8">
+  <h1 className="font-display text-[60px] font-normal leading-[0.95] tracking-normal text-black md:text-[72px]">
+    {pageTitle}
+  </h1>
+
+  <p className="mt-4 font-body text-[16px] text-black/55">
+    Discover clothing designed for you.
+  </p>
+</header>
 
           <ContinentFilters
             brands={brandOptions}

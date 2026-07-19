@@ -90,18 +90,26 @@ const navItemWrapper = "flex items-center h-[48px] pb-3";
 
 const navLink = (active: boolean) =>
   [
-    "relative py-2 text-[15px] md:text-[16px] tracking-[0.08em] uppercase leading-none transition-colors duration-200",
-    active ? "text-white" : "text-white/82 hover:text-white",
+    "relative py-2 font-display text-[20px] md:text-[21px] font-medium tracking-[0.01em] leading-none transition-colors duration-200",
+
+    active
+      ? "text-[#7B2D3E]"
+      : "text-black/75 hover:text-black",
+
     "after:absolute after:left-0 after:right-0 after:-bottom-1 after:h-px",
-    "after:bg-white after:origin-center after:transition-transform after:duration-200",
-    active ? "after:scale-x-100" : "after:scale-x-0 hover:after:scale-x-100",
+    "after:bg-[#7B2D3E]",
+    "after:origin-center after:transition-transform after:duration-200",
+
+    active
+      ? "after:scale-x-100"
+      : "after:scale-x-0 hover:after:scale-x-100",
   ].join(" ");
 
 const dropdownEyebrow =
-  "text-[11px] uppercase tracking-[0.18em] text-black/45";
+  "font-body text-[12px] uppercase tracking-[0.14em] text-[#7B2D3E]/70";
 const dropdownGrid = "mt-5 grid grid-cols-2 gap-x-10 gap-y-3";
 const dropdownItem =
-  "text-[15px] text-black/78 transition-colors duration-200 hover:text-black";
+  "font-display text-[18px] font-medium tracking-[0.01em] text-black/80 transition-colors duration-200 hover:text-[#7B2D3E]";
 const dropdownAside = "border-l border-black/10 pl-8 flex flex-col";
 const dropdownImageWrap =
   "relative mb-5 aspect-[4/5] w-full overflow-hidden bg-black/5";
@@ -203,9 +211,9 @@ function DropdownMenu({
       <Link href={href} className={navLink(active)} aria-controls={menuId}>
         <span className="inline-flex items-center gap-2">
           {label}
-          <span className="text-[10px] text-white/45 transition-transform duration-200 group-hover:rotate-180">
-            ▾
-          </span>
+          <span className="text-[10px] text-black/35 transition-transform duration-200 group-hover:rotate-180">
+  ▾
+</span>
         </span>
       </Link>
 
@@ -219,7 +227,7 @@ function DropdownMenu({
                 <Link
   key={item.href}
   href={item.href}
-  className="whitespace-nowrap"
+  className={`${dropdownItem} whitespace-nowrap`}
 >
   {item.label}
 </Link>
@@ -294,7 +302,7 @@ export default function HeaderNavClient({
       />
 
       <DropdownMenu
-        label="Shop by Brands"
+        label="Brands"
         href="/brands"
         items={brandItems}
         active={pathname === "/brands" || pathname.startsWith("/brands/")}

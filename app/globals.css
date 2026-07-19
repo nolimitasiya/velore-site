@@ -3,16 +3,17 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  /* DALRA brand accent */
-  --accent: #6b1f2b; /* rich burgundy */
+  --accent: #6b1f2b;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+
+  --font-sans: var(--font-body);
   --font-mono: var(--font-geist-mono);
 }
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -21,18 +22,75 @@
   }
 }
 
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-body);
+@layer base {
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-body);
+    text-rendering: geometricPrecision;
+  }
 }
 
+@layer utilities {
+  .font-heading {
+    font-family: var(--font-heading);
+  }
+
+  .font-body {
+    font-family: var(--font-body);
+  }
+
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-script {
+    font-family: var(--font-script);
+  }
+
+  .emoji {
+    font-family:
+      "Apple Color Emoji",
+      "Segoe UI Emoji",
+      "Noto Color Emoji",
+      "Twemoji Mozilla",
+      sans-serif;
+  }
+
+  .row--new > td {
+    background: transparent;
+  }
+
+  .row--contacted > td {
+    background: #ecfdf5;
+  }
+
+  .row--invited > td {
+    background: #eff6ff;
+  }
+
+  .row--onboarded > td {
+    background: #f5f3ff;
+  }
+
+  .row--rejected > td {
+    background: #8f1a0a;
+  }
+
+  .row--contract_sent > td {
+    background: #dcbe18;
+  }
+
+  .row--contract_signed > td {
+    background: #08b110;
+  }
+}
 
 @keyframes marquee {
   0% {
     transform: translateX(0%);
   }
+
   100% {
     transform: translateX(-50%);
   }
@@ -42,7 +100,7 @@ body {
   animation: marquee 18s linear infinite;
 }
 
-/* Hide scrollbar but keep scroll */
+/* Hide scrollbar while keeping scroll functionality */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -51,57 +109,21 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
-@layer utilities {
-  .emoji {
-    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji",
-      "Twemoji Mozilla", sans-serif;
-  }
-
-  .font-heading { font-family: var(--font-heading); }
-  .font-body { font-family: var(--font-body); }
-  .font-display {font-family: var(--font-display); }/* alias */
-  .font-script {
-  font-family: var(--font-script);
-}
-}
-
-
-
-
-
-@layer utilities {
-  .row--new > td { background: transparent; }
-  .row--contacted > td { background: #ecfdf5; } /* emerald-50 */
-  .row--invited > td { background: #eff6ff; }   /* blue-50 */
-  .row--onboarded > td { background: #f5f3ff; } /* violet-50 */
-  .row--rejected > td { background: #8f1a0a; }  /* red-50 */
-  .row--contract_sent > td { background: #dcbe18; }  /* yellow-50 */
-  .row--contract_signed > td { background: #08b110; }  /* green-50 */
-}
-@layer base {
-  body {
-    text-rendering: geometricPrecision;
-    font-family: var(--font-body);
-  }
-
-  h1, h2, h3, h4 {
-  font-family: var(--font-heading);
-  letter-spacing: 0.01em;
-}
-}
 
 /* Styled scrollbar for admin tables */
 .scrollbar-thin::-webkit-scrollbar {
   height: 6px;
 }
+
 .scrollbar-thin::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .scrollbar-thin::-webkit-scrollbar-thumb {
   background-color: #e8ddd4;
   border-radius: 99px;
 }
+
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background-color: #c4a898;
 }
-

@@ -1,4 +1,5 @@
 // C:\Users\Asiya\projects\dalra\components\BrandMosaic.tsx
+
 import Image from "next/image";
 import Link from "next/link";
 
@@ -12,65 +13,103 @@ export type StorefrontBrandTile = {
 export function BrandMosaic({ tiles }: { tiles: StorefrontBrandTile[] }) {
   if (!tiles.length) return null;
 
+  const visibleTiles = tiles.slice(0, 7);
+
+  const tileClasses = [
+    "md:col-span-5 md:row-span-1",
+    "md:col-span-4 md:row-span-1",
+    "md:col-span-3 md:row-span-2",
+    "md:col-span-3 md:row-span-1",
+    "md:col-span-3 md:row-span-1",
+    "md:col-span-3 md:row-span-1",
+    "md:col-span-3 md:row-span-1",
+  ];
+
   return (
-    <section className="bg-white">
-      <div className="mx-auto w-full max-w-[1800px] px-8 pt-8 pb-14">
-
+    <section className="bg-[#fcfbf8]">
+      <div className="mx-auto w-full max-w-[1800px] px-5 py-14 md:px-8 md:py-20">
         {/* Header */}
-<div className="mb-8 flex items-end justify-between">
-  <div>
-    <p className="mb-2 text-[11px] uppercase tracking-[0.22em] text-black/40">
-      Discover
-    </p>
-    <h2 className="font-heading text-3xl font-normal tracking-tight text-black md:text-4xl">
-      Emerging Brands
-    </h2>
-    <div className="mt-3 h-px w-12 bg-black/20" />
-  </div>
-  <Link
-    href="/brands"
-    className="text-[11px] uppercase tracking-[0.18em] text-black/50 underline underline-offset-4 hover:text-black transition-colors"
-  >
-    View all
-  </Link>
-</div>
+        <div className="mb-8 flex items-end justify-between gap-6 md:mb-10">
+          <div>
+            <p className="mb-3 font-body text-[11px] uppercase tracking-[0.24em] text-black/45">
+              Discover
+            </p>
 
-        {/* Mosaic grid */}
-        <div className="grid grid-cols-2 gap-2 md:gap-3">
-          {tiles.slice(0, 4).map((t, i) => (
+            <h2 className="font-display text-[44px] font-normal leading-none tracking-[-0.02em] text-black md:text-[64px]">
+              Emerging Brands
+            </h2>
+
+            <div className="mt-5 h-px w-20 bg-black/20" />
+
+            
+          </div>
+
+          <Link
+            href="/brands"
+            className="group hidden items-center gap-5 pb-1 font-body text-[11px] uppercase tracking-[0.2em] text-black/55 transition-colors hover:text-[#7B2D3E] md:flex"
+          >
+            <span className="border-b border-black/25 pb-1">
+              View all
+            </span>
+            <span className="text-xl transition-transform duration-300 group-hover:translate-x-1">
+              →
+            </span>
+          </Link>
+        </div>
+
+        {/* Editorial mosaic */}
+        <div className="grid auto-rows-[260px] grid-cols-1 gap-[2px] md:grid-cols-12 md:auto-rows-[330px]">
+          {visibleTiles.map((tile, index) => (
             <Link
-              key={t.id}
-              href={`/brands/${t.slug}`}
-              className="group relative overflow-hidden rounded-2xl bg-black/5"
+              key={tile.id}
+              href={`/brands/${tile.slug}`}
+              className={`group relative overflow-hidden bg-black/5 ${
+                tileClasses[index] ?? "md:col-span-4"
+              }`}
             >
-              <div className="relative aspect-[16/7]">
-                <Image
-                  src={t.imageUrl}
-                  alt={t.name}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                />
-                {/* Gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/5 to-transparent" />
+              <Image
+                src={tile.imageUrl}
+                alt={tile.name}
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035]"
+              />
 
-                {/* Brand name — bottom left */}
-                <div className="absolute bottom-0 left-0 right-0 p-5">
-                  
-                  <p className="text-white text-base font-medium tracking-wide">
-                    {t.name}
-                  </p>
-                </div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
 
-                {/* Hover arrow */}
-                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div className="rounded-full bg-white/20 backdrop-blur-sm border border-white/30 w-8 h-8 flex items-center justify-center text-white text-sm">
+              <div className="absolute inset-x-0 bottom-0 p-6 text-white md:p-7">
+                <h3 className="font-display text-[30px] font-normal leading-none tracking-[-0.01em] md:text-[38px]">
+                  {tile.name}
+                </h3>
+
+                <div className="mt-4 h-px w-7 bg-white/65" />
+
+                <div className="mt-5 flex items-center gap-5 font-body text-[10px] uppercase tracking-[0.2em] text-white/90">
+                  <span className="border-b border-white/50 pb-1">
+                    Discover
+                  </span>
+
+                  <span className="text-base transition-transform duration-300 group-hover:translate-x-1">
                     →
-                  </div>
+                  </span>
                 </div>
               </div>
             </Link>
           ))}
         </div>
+
+        {/* Mobile view-all */}
+        <div className="mt-7 md:hidden">
+          <Link
+            href="/brands"
+            className="flex items-center justify-between border-b border-black/15 pb-3 font-body text-[11px] uppercase tracking-[0.2em] text-black/60"
+          >
+            <span>View all brands</span>
+            <span className="text-lg">→</span>
+          </Link>
+        </div>
+
+       
       </div>
     </section>
   );
