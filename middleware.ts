@@ -119,7 +119,8 @@ function isLaunchPublicApi(pathname: string) {
     pathname.startsWith("/api/account/") ||
     pathname.startsWith("/api/diary/")||
     pathname.startsWith("/api/newsletter/") ||
-    pathname.startsWith("/api/clicks/")
+    pathname.startsWith("/api/clicks/")||
+    pathname.startsWith("/api/out/") 
   );
 }
 
