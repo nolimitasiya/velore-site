@@ -17,23 +17,28 @@ export type StyleFeedPost = {
 export function StyleFeed({ posts }: { posts: StyleFeedPost[] }) {
   return (
     <section className="bg-white">
-      <div className="mx-auto w-full max-w-[1800px] px-8 pb-6">
-        <div className="mb-8 flex items-end justify-between">
-  <div>
-    <p className="mb-2 text-[11px] uppercase tracking-[0.22em] text-black/40">
-      Inspiration
-    </p>
-    <h2 className="font-heading text-3xl font-normal tracking-tight text-black md:text-4xl">
-      The Style Feed
-    </h2>
-    <div className="mt-3 h-px w-12 bg-black/20" />
-  </div>
-</div>
+      <div className="mx-auto w-full max-w-[1800px] px-8 pb-10">
+        {/* Section header */}
+        <div className="mb-10 flex items-end justify-between">
+          <div>
+            <p className="mb-3 font-body text-[11px] uppercase tracking-[0.24em] text-black/45">
+              Inspiration
+            </p>
 
-        <div className="grid justify-center gap-6 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
-          {posts.map((p) => {
-            const href = p.permalink || p.brandInstagramUrl || null;
+            <h2 className="font-display text-[36px] font-normal leading-none tracking-[-0.02em] text-black md:text-[56px]">
+              The Style Feed
+            </h2>
+
+            <div className="mt-5 h-px w-20 bg-black/20" />
+          </div>
+        </div>
+
+        {/* Feed */}
+        <div className="grid justify-center gap-5 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))] md:gap-6">
+          {posts.map((post) => {
+            const href = post.permalink || post.brandInstagramUrl || null;
             const Wrapper: any = href ? "a" : "div";
+
             const wrapperProps = href
               ? {
                   href,
@@ -43,46 +48,85 @@ export function StyleFeed({ posts }: { posts: StyleFeedPost[] }) {
               : {};
 
             const focalX =
-              typeof p.imageFocalX === "number" ? p.imageFocalX : 50;
+              typeof post.imageFocalX === "number" ? post.imageFocalX : 50;
+
             const focalY =
-              typeof p.imageFocalY === "number" ? p.imageFocalY : 50;
+              typeof post.imageFocalY === "number" ? post.imageFocalY : 50;
 
             return (
               <Wrapper
-                key={p.id}
+                key={post.id}
                 {...wrapperProps}
-                className="block border border-black/10 bg-white/60 transition-colors hover:bg-white/80"
+                className="group block"
               >
-                <div className="relative aspect-[4/5] overflow-hidden bg-black/5">
-                  <Image
-                    src={p.imageUrl}
-                    alt={
-                      p.imageAlt ||
-                      (p.brandName ? `${p.brandName} style post` : "Style post")
-                    }
-                    fill
-                    className="object-cover"
-                    style={{
-                      objectPosition: `${focalX}% ${focalY}%`,
-                    }}
-                  />
-                </div>
+                <article>
+                  <div className="relative aspect-[4/5] overflow-hidden bg-black/5">
+                    <Image
+                      src={post.imageUrl}
+                      alt={
+                        post.imageAlt ||
+                        (post.brandName
+                          ? `${post.brandName} style post`
+                          : "Style post")
+                      }
+                      fill
+                      className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035]"
+                      style={{
+                        objectPosition: `${focalX}% ${focalY}%`,
+                      }}
+                    />
 
-                <div className="space-y-2 p-3">
-                  {p.brandName ? (
-                    <div className="text-xs font-medium uppercase tracking-[0.14em] text-black/55">
-                      {p.brandName}
-                    </div>
-                  ) : null}
+                    {/* Desktop hover overlay */}
+                    <div className="absolute inset-0 hidden bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 md:block" />
 
-                  {p.caption ? (
-                    <div className="line-clamp-2 text-xs text-black/90">
-                      {p.caption}
+                    <div className="absolute inset-x-0 bottom-0 hidden translate-y-4 p-6 text-white opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100 md:block">
+                      {post.brandName ? (
+                        <h3 className="font-display text-[28px] font-normal leading-none">
+                          {post.brandName}
+                        </h3>
+                      ) : null}
+
+                      {post.caption ? (
+                        <p className="mt-3 line-clamp-3 font-body text-[13px] leading-5 text-white/85">
+                          {post.caption}
+                        </p>
+                      ) : null}
+
+                      <div className="mt-5 flex items-center gap-4 font-body text-[10px] uppercase tracking-[0.2em] text-white/90">
+                        <span className="border-b border-white/50 pb-1">
+                          View post
+                        </span>
+
+                        <span className="text-base transition-transform duration-300 group-hover:translate-x-1">
+                          →
+                        </span>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="text-xs text-black/60" />
-                  )}
-                </div>
+                  </div>
+
+                  {/* Mobile details */}
+                  <div className="pt-4 md:hidden">
+                    {post.brandName ? (
+                      <h3 className="font-display text-[24px] font-normal leading-none text-black">
+                        {post.brandName}
+                      </h3>
+                    ) : null}
+
+                    {post.caption ? (
+                      <p className="mt-2 line-clamp-2 font-body text-[14px] leading-6 text-black/65">
+                        {post.caption}
+                      </p>
+                    ) : null}
+
+                    <div className="mt-4 flex items-center gap-3">
+                      <span className="font-body text-[10px] uppercase tracking-[0.18em] text-black/50">
+                        View post
+                      </span>
+
+                      <span className="text-black/40">→</span>
+                    </div>
+                  </div>
+                </article>
               </Wrapper>
             );
           })}

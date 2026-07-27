@@ -20,13 +20,15 @@ export function DalrasDiary({ posts = [] }: { posts?: DiaryCardItem[] }) {
         {/* Section header */}
         <div className="mb-10 flex items-end justify-between">
           <div>
-            <p className="mb-2 text-[11px] uppercase tracking-[0.22em] text-black/40">
-              Editorial
-            </p>
-            <h2 className="font-heading text-3xl font-normal tracking-tight text-black md:text-4xl">
-              Veilora Diary
-            </h2>
-            <div className="mt-3 h-px w-12 bg-black/20" />
+            <p className="mb-3 font-body text-[11px] uppercase tracking-[0.24em] text-black/45">
+  Editorial
+</p>
+
+<h2 className="font-display text-[36px] font-normal leading-none tracking-[-0.02em] text-black md:text-[56px]">
+  Veilora Diary
+</h2>
+
+<div className="mt-5 h-px w-20 bg-black/20" />
           </div>
           <Link
             href="/diary"
@@ -40,9 +42,9 @@ export function DalrasDiary({ posts = [] }: { posts?: DiaryCardItem[] }) {
           <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-14">
             <div className="order-1 flex items-center lg:order-1 lg:col-span-5">
               <div className="text-center lg:text-left">
-                <h3 className="font-display text-4xl leading-[0.98] tracking-tight text-black sm:text-5xl xl:text-6xl">
-                  {post.title}
-                </h3>
+                <h3 className="font-display text-[34px] font-normal leading-[0.96] tracking-[-0.015em] text-black sm:text-[44px] xl:text-[52px]">
+  {post.title}
+</h3>
                 <p className="mt-4 text-sm uppercase tracking-[0.18em] text-black/60">
                   Modesty takes the spotlight in a new era of style
                 </p>

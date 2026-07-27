@@ -110,9 +110,9 @@ export function Hero({
               onMouseDown={textDraggable ? onTextMouseDown : undefined}
             >
               {hero.title ? (
-                <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl">
-                  {hero.title}
-                </h1>
+                <h1 className="font-heading text-[40px] font-normal leading-[0.95] tracking-[-0.02em] sm:text-[64px]">
+  {hero.title}
+</h1>
               ) : null}
 
               {hero.subtitle ? (

@@ -43,13 +43,15 @@ export function SloganAndContinents({
 
        {/* Slogan */}
 <div className="mt-16 mb-8">
-  <p className="mb-2 text-[11px] uppercase tracking-[0.22em] text-black/40">
-    Shop by region
-  </p>
-  <h2 className="font-heading text-3xl font-normal tracking-tight text-black md:text-4xl">
-    Discover the world
-  </h2>
-  <div className="mt-3 h-px w-12 bg-black/20" />
+  <p className="mb-3 font-body text-[11px] uppercase tracking-[0.24em] text-black/45">
+  Shop by Region
+</p>
+
+<h2 className="font-display text-[36px] font-normal leading-none tracking-[-0.02em] text-black md:text-[56px]">
+  Discover the World
+</h2>
+
+<div className="mt-5 h-px w-20 bg-black/20" />
 </div>
 
         <div className="relative">
@@ -73,7 +75,7 @@ export function SloganAndContinents({
                     className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                   />
                   {/* Gradient overlay — bottom heavy */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
                   
                   {/* Name — bottom left, editorial style */}
                   <div className="absolute bottom-0 left-0 right-0 p-5">

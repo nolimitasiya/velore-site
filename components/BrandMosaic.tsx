@@ -35,7 +35,7 @@ export function BrandMosaic({ tiles }: { tiles: StorefrontBrandTile[] }) {
               Discover
             </p>
 
-            <h2 className="font-display text-[44px] font-normal leading-none tracking-[-0.02em] text-black md:text-[64px]">
+            <h2 className="font-display text-[36px] font-normal leading-none tracking-[-0.02em] text-black md:text-[56px]">
               Emerging Brands
             </h2>
 

@@ -109,6 +109,23 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
               <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.79 1.54V6.78a4.85 4.85 0 0 1-1.02-.09Z" />
             </svg>
           </a>
+
+          <a
+  href="https://linkedin.com/company/veiloraclub"
+  target="_blank"
+  rel="noopener noreferrer"
+  aria-label="Veilora Club on LinkedIn"
+  className="text-black/60 transition hover:text-[#7B2D3E]"
+>
+  <svg
+    width="22"
+    height="22"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+  >
+    <path d="M4.98 3.5A1.48 1.48 0 1 1 3.5 5a1.48 1.48 0 0 1 1.48-1.5ZM3.75 8.25h2.5v12h-2.5v-12Zm6.25 0h2.4v1.64h.03c.34-.64 1.16-1.32 2.39-1.32 2.56 0 3.03 1.68 3.03 3.87v7.81h-2.5v-6.92c0-1.65-.03-3.77-2.3-3.77-2.3 0-2.65 1.8-2.65 3.65v7.04H10v-12Z" />
+  </svg>
+</a>
         </div>
       </div>
 
