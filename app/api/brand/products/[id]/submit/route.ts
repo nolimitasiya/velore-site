@@ -24,9 +24,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
         productType: true,
         price: true,
         currency: true,
-        worldwideShipping: true,
         images: { select: { id: true } },
-        shippingCountries: { select: { countryCode: true } },
       },
     });
 
@@ -56,11 +54,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     // Must have at least 1 image
     if (!product.images?.length) problems.push("Add at least 1 image.");
 
-    // Shipping rule: either worldwide OR at least one country selected
-    const hasCountries = (product.shippingCountries?.length ?? 0) > 0;
-    if (!product.worldwideShipping && !hasCountries) {
-      problems.push("Set shipping (Worldwide or select at least 1 shipping country).");
-    }
+    
 
     if (problems.length) {
       return NextResponse.json(
