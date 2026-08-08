@@ -236,9 +236,10 @@ model Product {
   submittedAt DateTime?
   reviewNote  String?
 
-  diaryPosts           DiaryPostProduct[]
-  collectionMerchItems CollectionMerchItem[]
-  wishlistItems        WishlistItem[]
+  diaryPosts              DiaryPostProduct[]
+  collectionMerchItems    CollectionMerchItem[]
+  wishlistItems           WishlistItem[]
+  categoryMerchPlacements CategoryMerchPlacement[]
 
   @@unique([brandId, sourceUrl], name: "brandId_sourceUrl")
   @@index([brandId, slug])
@@ -1275,4 +1276,35 @@ model BrandApplicationActivity {
   application BrandApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   @@index([applicationId])
+}
+
+enum MerchandisingScopeType {
+  PRODUCT_TYPE
+  OCCASION
+}
+
+enum MerchandisingVersion {
+  DRAFT
+  LIVE
+}
+
+model CategoryMerchPlacement {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  scopeType MerchandisingScopeType
+  scopeKey  String
+
+  productId String  @db.Uuid
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  position Int
+  version  MerchandisingVersion @default(DRAFT)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([scopeType, scopeKey, version, productId])
+  @@unique([scopeType, scopeKey, version, position])
+  @@index([scopeType, scopeKey, version, position])
+  @@index([productId])
 }

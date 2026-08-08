@@ -7,6 +7,8 @@ import {
   Cormorant_Garamond,
 } from "next/font/google";
 
+import localFont from "next/font/local";
+
 const heading = Abril_Fatface({
   weight: "400",
   subsets: ["latin"],
@@ -31,6 +33,12 @@ const display = Cormorant_Garamond({
   subsets: ["latin"],
   weight: ["400", "500"],
   variable: "--font-display",
+  display: "swap",
+});
+
+const celandine = localFont({
+  src: "../public/fonts/celindine.otf",
+  variable: "--font-celandine",
   display: "swap",
 });
 
@@ -73,7 +81,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${heading.variable} ${body.variable} ${display.variable} ${script.variable}`}
+      className={`${heading.variable} ${body.variable} ${display.variable} ${script.variable} ${celandine.variable}`}
     >
       <body className="min-h-screen w-full bg-white font-body text-black">
         {children}

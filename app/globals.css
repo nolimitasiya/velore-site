@@ -48,6 +48,10 @@
     font-family: var(--font-script);
   }
 
+  .font-celandine {
+  font-family: var(--font-celandine);
+}
+
   .emoji {
     font-family:
       "Apple Color Emoji",

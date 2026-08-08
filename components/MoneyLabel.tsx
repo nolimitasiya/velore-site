@@ -29,20 +29,37 @@ export default function MoneyLabel({
   className?: string;
 }) {
   const [rates, setRates] = useState<Rates | null>(null);
-  const [chosen, setChosen] = useState<string>(() => chosenCurrencyFromCookies());
+  const [chosen, setChosen] = useState("GBP");
 
   useEffect(() => {
-    const syncChosen = () => setChosen(chosenCurrencyFromCookies());
+  const syncChosen = () => {
+    setChosen(chosenCurrencyFromCookies());
+  };
 
-    syncChosen();
-    window.addEventListener("vc_preferences_changed", syncChosen);
-    window.addEventListener("vc_currency_changed", syncChosen);
+  syncChosen();
 
-    return () => {
-      window.removeEventListener("vc_preferences_changed", syncChosen);
-      window.removeEventListener("vc_currency_changed", syncChosen);
-    };
-  }, []);
+  window.addEventListener(
+    "vc_preferences_changed",
+    syncChosen
+  );
+
+  window.addEventListener(
+    "vc_currency_changed",
+    syncChosen
+  );
+
+  return () => {
+    window.removeEventListener(
+      "vc_preferences_changed",
+      syncChosen
+    );
+
+    window.removeEventListener(
+      "vc_currency_changed",
+      syncChosen
+    );
+  };
+}, []);
 
   useEffect(() => {
     let cancelled = false;

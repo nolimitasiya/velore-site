@@ -15,7 +15,10 @@ import { getAvailableStyles } from "@/lib/storefront/getAvailableStyles";
 import { buildStorefrontWhere } from "@/lib/storefront/buildStorefrontWhere";
 import { countryNameFromIso2 } from "@/lib/geo/countries";
 import { getStorefrontPaginationState } from "@/lib/storefront/pagination";
-
+import {
+  getCategoryMerchProducts,
+  getCategoryMerchLiveIds,
+} from "@/lib/storefront/getCategoryMerchProducts";
 
 
 type Opt = { value: string; label: string };
@@ -70,6 +73,21 @@ export default async function OccasionSlugPage({
   const sp = (await searchParams) ?? {};
   const filters = parseStorefrontFilters(sp);
   const { types, sort } = filters;
+  const hasActiveFilters =
+  filters.brands.length > 0 ||
+  filters.countries.length > 0 ||
+  filters.types.length > 0 ||
+  filters.styles.length > 0 ||
+  filters.colors.length > 0 ||
+  filters.sizes.length > 0 ||
+  filters.min != null ||
+  filters.max != null ||
+  filters.saleOn ||
+  filters.polyesterFree;
+
+const shouldUseOccasionMerch =
+  !hasActiveFilters &&
+  sort === "new";
 
   const pagination = getStorefrontPaginationState(sp);
   const { currentPage, isExpandedPageOne, take } = pagination;
@@ -153,47 +171,119 @@ export default async function OccasionSlugPage({
 
   const totalCount = await prisma.product.count({ where });
 
+  let mapped: GridProduct[] = [];
+
+if (
+  shouldUseOccasionMerch &&
+  currentPage === 1
+) {
+  mapped = await getCategoryMerchProducts({
+    scopeType: "OCCASION",
+    scopeKey: occasion.slug,
+    visibleCount: isExpandedPageOne ? 48 : 24,
+  });
+} else {
+  let whereForPage = where;
   let skip = 0;
 
-  if (currentPage === 1) {
+  if (
+    shouldUseOccasionMerch &&
+    currentPage >= 2
+  ) {
+    const protectedIds =
+      await getCategoryMerchLiveIds({
+        scopeType: "OCCASION",
+        scopeKey: occasion.slug,
+      });
+
+    whereForPage = {
+      ...where,
+      id: {
+        notIn: protectedIds,
+      },
+    };
+
+    skip = (currentPage - 2) * 24;
+  } else if (currentPage === 1) {
     skip = 0;
   } else {
-    skip = 48 + (currentPage - 2) * 24;
+    skip =
+      48 +
+      (currentPage - 2) * 24;
   }
 
-  const products = await prisma.product.findMany({
-    where,
-    orderBy,
-    skip,
-    take,
-    select: {
-      id: true,
-      slug: true, // ← ADDED
-      title: true,
-      price: true,
-      currency: true,
-      badges: true,
-      brand: { select: { name: true, slug: true } }, // ← slug ADDED
-      images: {
-        orderBy: { sortOrder: "asc" },
-        take: 1,
-        select: { url: true },
+  const products =
+    await prisma.product.findMany({
+      where: whereForPage,
+      orderBy,
+      skip,
+      take,
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        price: true,
+        currency: true,
+        badges: true,
+        brand: {
+          select: {
+            name: true,
+            slug: true,
+          },
+        },
+        images: {
+          orderBy: {
+            sortOrder: "asc",
+          },
+          take: 1,
+          select: {
+            url: true,
+          },
+        },
       },
-    },
-  });
+    });
 
-  const mapped: GridProduct[] = products.map((p) => ({
-    id: p.id,
-    title: p.title,
-    brandName: p.brand?.name ?? null,
-    brandSlug: p.brand?.slug ?? null, // ← ADDED
-    productSlug: p.slug ?? null,       // ← ADDED
-    imageUrl: p.images?.[0]?.url ?? null,
-    price: p.price ? p.price.toString() : null,
-    currency: String(p.currency),
-    buyUrl: `/out/${p.id}`,
-    badges: (p.badges ?? []) as string[],
-  }));
+  mapped = products.map(
+    (p, index) => ({
+      id: p.id,
+      title: p.title,
+      brandName:
+        p.brand?.name ?? null,
+      brandSlug:
+        p.brand?.slug ?? null,
+      productSlug:
+        p.slug ?? null,
+      imageUrl:
+        p.images?.[0]?.url ?? null,
+      price: p.price
+        ? p.price.toString()
+        : null,
+      currency: String(
+        p.currency
+      ),
+      buyUrl: `/out/${p.id}`,
+      badges:
+        (p.badges ?? []) as string[],
+      analytics: {
+        sourcePage: "SEARCH" as const,
+        sectionKey: `occasion_${occasion.slug}_grid`,
+        position: index + 1,
+        pageNumber: currentPage,
+        isExpandedPageOne:
+          currentPage === 1
+            ? isExpandedPageOne
+            : false,
+        contextType:
+          shouldUseOccasionMerch &&
+          currentPage >= 2
+            ? "GRID_AFTER_MERCH"
+            : "GRID",
+      },
+    })
+  );
+}
+
+  
 
   return (
     <SiteShell>

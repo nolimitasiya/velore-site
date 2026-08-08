@@ -36,7 +36,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
   href="/"
   className="font-heading text-4xl leading-none tracking-[0.03em] text-[#7B2D3E] md:text-5xl"
 >
-                Veilora Club
+                VEILORA CLUB
               </Link>
             </div>
 
@@ -58,7 +58,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
           href="/"
           className="font-heading text-4xl tracking-[0.03em] text-[#7B2D3E] md:text-5xl"
         >
-          Veilora Club
+          VEILORA CLUB
         </Link>
 
         <p className="mt-5 max-w-xs font-display text-xl leading-8 text-black/60">

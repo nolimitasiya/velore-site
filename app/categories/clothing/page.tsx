@@ -20,6 +20,12 @@ import { countryNameFromIso2 } from "@/lib/geo/countries";
 import { getMerchPageOneProducts } from "@/lib/storefront/getMerchPageOneProducts";
 import { getStorefrontPaginationState } from "@/lib/storefront/pagination";
 
+import {
+  getCategoryMerchProducts,
+  getCategoryMerchLiveIds,
+} from "@/lib/storefront/getCategoryMerchProducts";
+
+
 type Opt = { value: string; label: string };
 
 function titleCaseLabel(s: string) {
@@ -89,7 +95,29 @@ export default async function ClothingPage({
     filters.max != null ||
     filters.saleOn;
 
-  const shouldUseMerchPageOne = !hasActiveFilters && sort === "new";
+  const hasNonTypeFilters =
+  filters.brands.length > 0 ||
+  filters.countries.length > 0 ||
+  filters.styles.length > 0 ||
+  filters.colors.length > 0 ||
+  filters.sizes.length > 0 ||
+  filters.min != null ||
+  filters.max != null ||
+  filters.saleOn ||
+  filters.polyesterFree;
+
+const selectedMerchType =
+  types.length === 1 ? types[0] : null;
+
+const shouldUseCategoryMerch =
+  Boolean(selectedMerchType) &&
+  !hasNonTypeFilters &&
+  sort === "new";
+
+const shouldUseLegacyClothingMerch =
+  types.length === 0 &&
+  !hasNonTypeFilters &&
+  sort === "new";
 
   const pagination = getStorefrontPaginationState(sp);
   const { currentPage, isExpandedPageOne, pageOneVisibleCount, take } =
@@ -202,31 +230,80 @@ export default async function ClothingPage({
 
   let mapped: GridProduct[] = [];
 
-  if (shouldUseMerchPageOne && currentPage === 1) {
-    mapped = await getMerchPageOneProducts("CLOTHING", pageOneVisibleCount);
-  } else {
-    let whereForPage = where;
-    let skip = 0;
+  if (
+  shouldUseCategoryMerch &&
+  selectedMerchType &&
+  currentPage === 1
+) {
+  mapped = await getCategoryMerchProducts({
+    scopeType: "PRODUCT_TYPE",
+    scopeKey: selectedMerchType,
+    visibleCount: pageOneVisibleCount,
+  });
+} else if (
+  shouldUseLegacyClothingMerch &&
+  currentPage === 1
+) {
+  mapped = await getMerchPageOneProducts(
+    "CLOTHING",
+    pageOneVisibleCount
+  );
 
-    if (shouldUseMerchPageOne && currentPage >= 2) {
-      const protectedPageOneProducts = await getMerchPageOneProducts(
+  } else {
+  let whereForPage = where;
+  let skip = 0;
+
+  if (
+    shouldUseCategoryMerch &&
+    selectedMerchType &&
+    currentPage >= 2
+  ) {
+    const protectedIds =
+      await getCategoryMerchLiveIds({
+        scopeType: "PRODUCT_TYPE",
+        scopeKey: selectedMerchType,
+      });
+
+    whereForPage = {
+      ...where,
+      id: {
+        notIn: protectedIds,
+      },
+    };
+
+    skip = (currentPage - 2) * 24;
+  } else if (
+    shouldUseLegacyClothingMerch &&
+    currentPage >= 2
+  ) {
+    const protectedPageOneProducts =
+      await getMerchPageOneProducts(
         "CLOTHING",
         48
       );
 
-      const protectedIds = protectedPageOneProducts.map((p) => p.id);
+    const protectedIds =
+      protectedPageOneProducts.map(
+        (product) => product.id
+      );
 
-      whereForPage = {
-        ...where,
-        id: { notIn: protectedIds },
-      };
+    whereForPage = {
+      ...where,
+      id: {
+        notIn: protectedIds,
+      },
+    };
 
-      skip = (currentPage - 2) * 24;
-    } else if (currentPage === 1) {
-      skip = 0;
-    } else {
-      skip = 48 + (currentPage - 2) * 24;
-    }
+    skip = (currentPage - 2) * 24;
+  } else if (currentPage === 1) {
+    skip = 0;
+  } else {
+    skip =
+      48 +
+      (currentPage - 2) * 24;
+  }
+
+
 
     const products = await prisma.product.findMany({
       where: whereForPage,
@@ -267,7 +344,11 @@ export default async function ClothingPage({
     pageNumber: currentPage,
     isExpandedPageOne: currentPage === 1 ? isExpandedPageOne : false,
     contextType:
-      shouldUseMerchPageOne && currentPage >= 2 ? "GRID_AFTER_MERCH" : "GRID",
+  (shouldUseCategoryMerch ||
+    shouldUseLegacyClothingMerch) &&
+  currentPage >= 2
+    ? "GRID_AFTER_MERCH"
+    : "GRID",
   },
 }));
   }
