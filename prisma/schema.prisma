@@ -241,6 +241,9 @@ model Product {
   wishlistItems           WishlistItem[]
   categoryMerchPlacements CategoryMerchPlacement[]
 
+  completeTheLook        ProductCompleteTheLook[] @relation("CompleteTheLookSource")
+  completeTheLookFor     ProductCompleteTheLook[] @relation("CompleteTheLookTarget")
+
   @@unique([brandId, sourceUrl], name: "brandId_sourceUrl")
   @@index([brandId, slug])
   @@index([categoryId])
@@ -1307,4 +1310,20 @@ model CategoryMerchPlacement {
   @@unique([scopeType, scopeKey, version, position])
   @@index([scopeType, scopeKey, version, position])
   @@index([productId])
+}
+
+
+model ProductCompleteTheLook {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId        String   @db.Uuid
+  linkedProductId  String   @db.Uuid
+  position         Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  product       Product @relation("CompleteTheLookSource", fields: [productId], references: [id], onDelete: Cascade)
+  linkedProduct Product @relation("CompleteTheLookTarget", fields: [linkedProductId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, linkedProductId])
+  @@index([productId, position])
+  @@index([linkedProductId])
 }

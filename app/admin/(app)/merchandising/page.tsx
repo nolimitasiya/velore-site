@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
 import { ProductType } from "@prisma/client";
-import CategoryMerchandisingClient from "./CategoryMerchandisingClient";
+import MerchandisingTabs from "./MerchandisingTabs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,9 +55,9 @@ export default async function MerchandisingPage() {
     }));
 
   return (
-    <CategoryMerchandisingClient
-      productTypes={productTypes}
-      occasions={occasions}
-    />
-  );
+  <MerchandisingTabs
+    productTypes={productTypes}
+    occasions={occasions}
+  />
+);
 }

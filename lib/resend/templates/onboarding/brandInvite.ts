@@ -25,7 +25,7 @@ export async function sendBrandInviteEmail(opts: {
         </p>
 
         <p>
-          We're delighted to invite ${opts.brandName}to join our growing community of modest fashion brands from around the world.
+          We're delighted to invite ${opts.brandName} to join our growing community of modest fashion brands from around the world.
         </p>
 
         <p>

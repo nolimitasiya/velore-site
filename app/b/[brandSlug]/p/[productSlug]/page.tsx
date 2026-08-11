@@ -91,8 +91,49 @@ export default async function ProductPage({
           returnWindowDays: true,
           returnsPaidBy: true,
           shippingCountryCodes: true,
+
+          
         },
       },
+
+      completeTheLook: {
+  orderBy: {
+    position: "asc",
+  },
+  include: {
+    linkedProduct: {
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        price: true,
+        currency: true,
+        badges: true,
+        isActive: true,
+        publishedAt: true,
+        status: true,
+        brand: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            accountStatus: true,
+            affiliateStatus: true,
+          },
+        },
+        images: {
+          orderBy: {
+            sortOrder: "asc",
+          },
+          take: 1,
+          select: {
+            url: true,
+          },
+        },
+      },
+    },
+  },
+},
       images: { orderBy: { sortOrder: "asc" } },
       productColours: { include: { colour: true } },
       productSizes: { include: { size: true } },
@@ -169,6 +210,17 @@ export default async function ProductPage({
   const publishedDiaryPosts = product.diaryPosts
     .filter((d) => d.diaryPost.status === "PUBLISHED")
     .map((d) => d.diaryPost);
+
+  const completeTheLookProducts = product.completeTheLook
+  .map((item) => item.linkedProduct)
+  .filter(
+    (linkedProduct) =>
+      linkedProduct.isActive &&
+      linkedProduct.publishedAt !== null &&
+      linkedProduct.status === "APPROVED" &&
+      linkedProduct.brand.accountStatus === BrandAccountStatus.ACTIVE &&
+      linkedProduct.brand.affiliateStatus === AffiliateStatus.ACTIVE
+  );
 
   // Shipping display logic
   const hasShippingInfo = brand.shippingDomestic || brand.shippingInternational;
@@ -384,6 +436,67 @@ const shippingToLabels = getShippingToLabel(
                 </div>
               </Accordion>
             </div>
+            {/* Complete the Look */}
+{completeTheLookProducts.length > 0 && (
+  <div className="border-t border-black/8 pt-5">
+    <div className="mb-4">
+      
+
+      <h2 className="mt-1 text-base font-semibold tracking-tight text-black">
+        Complete the Look
+      </h2>
+    </div>
+
+    <div className="grid grid-cols-2 gap-3">
+      {completeTheLookProducts.map((p) => (
+        <Link
+          key={p.id}
+          href={`/b/${p.brand.slug}/p/${p.slug}`}
+          className="group"
+        >
+          <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-black/[0.03]">
+            {p.images[0]?.url ? (
+              <Image
+                src={p.images[0].url}
+                alt={p.title}
+                fill
+                className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                sizes="200px"
+              />
+            ) : (
+              <div className="absolute inset-0 grid place-items-center text-[10px] text-black/30">
+                No image
+              </div>
+            )}
+
+            {p.badges.includes("sale") && (
+              <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[9px] font-medium">
+                SALE
+              </span>
+            )}
+          </div>
+
+          <div className="pt-2.5">
+            <p className="text-[9px] font-medium uppercase tracking-[0.14em] text-black/40">
+              {p.brand.name}
+            </p>
+
+            <p className="mt-0.5 line-clamp-1 text-xs font-medium text-black">
+              {p.title}
+            </p>
+
+            <p className="mt-1 text-xs text-black/60">
+              <MoneyLabel
+                amount={p.price?.toString() ?? null}
+                currency={p.currency}
+              />
+            </p>
+          </div>
+        </Link>
+      ))}
+    </div>
+  </div>
+)}
 
             {/* As seen in Diary */}
             {publishedDiaryPosts.length > 0 && (
@@ -409,9 +522,11 @@ const shippingToLabels = getShippingToLabel(
           </div>
         </div>
 
+        
+
         {/* You might also like */}
         {relatedDb.length > 0 && (
-          <section className="mt-16">
+          <section className="mt-20 border-t border-black/8 pt-12">
             <h2 className="mb-6 text-lg font-semibold tracking-tight">You might also like</h2>
             <div className="grid gap-5 grid-cols-2 sm:grid-cols-4">
               {relatedDb.map((p, index) => {
