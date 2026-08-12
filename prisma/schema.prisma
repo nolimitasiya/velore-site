@@ -219,7 +219,10 @@ model Product {
   status          ProductStatus    @default(DRAFT)
   lastApprovedAt  DateTime?
   productSizes    ProductSize[]
+  lengths         String[]         @default([])
   polyesterFree   Boolean          @default(false)
+
+
 
   worldwideShipping Boolean                  @default(false)
   shippingCountries ProductShippingCountry[]

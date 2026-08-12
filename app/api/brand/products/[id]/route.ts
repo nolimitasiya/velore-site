@@ -50,7 +50,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
         submittedAt: true,
         reviewNote: true,
         lastApprovedAt: true,
-        polyesterFree: true, // ← ADD THIS LINE
+        polyesterFree: true, 
+        lengths: true,
         images: { orderBy: { sortOrder: "asc" }, select: { url: true, sortOrder: true } },
         productTags : { select: { tag: { select: { id: true, slug: true, name: true } } } },
         productMaterials: { select: { material: { select: { id: true, slug: true, name: true } } } },
@@ -111,7 +112,10 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     const occasionIds = Array.isArray(body.occasionIds) ? body.occasionIds : undefined;
     const colourIds = Array.isArray(body.colourIds) ? body.colourIds : undefined;
     const sizeIds = Array.isArray(body.sizeIds) ? body.sizeIds : undefined;
-    const styleIds = Array.isArray(body.styleIds) ? body.styleIds : undefined;
+    const lengths = Array.isArray(body.lengths)
+  ? body.lengths.map((value: unknown) => String(value).trim()).filter(Boolean)
+  : undefined;
+  const styleIds = Array.isArray(body.styleIds) ? body.styleIds : undefined;
 
     const badges = Array.isArray(body.badges) ? body.badges : undefined; // Badge[]
     const tags = Array.isArray(body.tags) ? body.tags : undefined; // string[] (legacy)
@@ -148,6 +152,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
           ...(badges !== undefined ? { badges } : {}),
           ...(tags !== undefined ? { tags } : {}),
           ...(polyesterFree !== undefined ? { polyesterFree } : {}),
+          ...(lengths !== undefined ? { lengths } : {}),
           ...(shouldDemote
             ? {
                 status: ProductStatus.DRAFT,

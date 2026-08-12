@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, } from "@/lib/prisma";
 import { requireBrandContext } from "@/lib/auth/BrandSession";
-import { ProductType } from "@prisma/client";
+import {ProductType,  TaxonomyType,} from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,14 +17,20 @@ function slugify(name: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-const ALLOWED_TYPES = new Set(["MATERIAL", "COLOUR", "SIZE"] as const);
+const ALLOWED_TYPES = new Set<TaxonomyType>(
+  Object.values(TaxonomyType)
+);
 
 export async function POST(req: NextRequest) {
   try {
     const { userId, brandId } = await requireBrandContext();
 
     const body = await req.json().catch(() => ({}));
-    const type = String(body?.type ?? "").toUpperCase();
+    const rawType = String(
+  body?.type ?? ""
+).toUpperCase();
+
+const type = rawType as TaxonomyType;
     const name = String(body?.name ?? "").trim();
     const reason = body?.reason ? String(body.reason).trim() : null;
 
@@ -34,9 +40,17 @@ export async function POST(req: NextRequest) {
     )
   : [];
 
-  if (!ALLOWED_TYPES.has(type as any)) {
-      return NextResponse.json({ ok: false, error: "Invalid type" }, { status: 400 });
+  if (!ALLOWED_TYPES.has(type)) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "Invalid type",
+    },
+    {
+      status: 400,
     }
+  );
+}
 
 if (type === "MATERIAL") {
   if (!productTypes.length) {
@@ -56,7 +70,11 @@ if (type === "MATERIAL") {
     // ✅ prevent duplicate pending requests for same slug/type (nice UX)
     // ✅ prevent duplicate requests (matches @@unique([brandId, type, slug]))
 const existing = await prisma.taxonomyRequest.findFirst({
-  where: { brandId, type: type as any, slug },
+  where: {
+  brandId,
+  type,
+  slug,
+},
   select: { id: true, status: true },
 });
 
@@ -71,7 +89,7 @@ if (existing) {
   data: {
     brandId,
     userId,
-    type: type as any,
+    type,
     name,
     slug,
     reason,

@@ -134,6 +134,47 @@ export default async function ProductPage({
     },
   },
 },
+
+completeTheLookFor: {
+  orderBy: {
+    position: "asc",
+  },
+  include: {
+    product: {
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        price: true,
+        currency: true,
+        badges: true,
+        isActive: true,
+        publishedAt: true,
+        status: true,
+
+        brand: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            accountStatus: true,
+            affiliateStatus: true,
+          },
+        },
+
+        images: {
+          orderBy: {
+            sortOrder: "asc",
+          },
+          take: 1,
+          select: {
+            url: true,
+          },
+        },
+      },
+    },
+  },
+},
       images: { orderBy: { sortOrder: "asc" } },
       productColours: { include: { colour: true } },
       productSizes: { include: { size: true } },
@@ -211,15 +252,32 @@ export default async function ProductPage({
     .filter((d) => d.diaryPost.status === "PUBLISHED")
     .map((d) => d.diaryPost);
 
-  const completeTheLookProducts = product.completeTheLook
-  .map((item) => item.linkedProduct)
+  const completeTheLookProducts = [
+  ...product.completeTheLook.map(
+    (item) => item.linkedProduct
+  ),
+
+  ...product.completeTheLookFor.map(
+    (item) => item.product
+  ),
+]
+  // Prevent duplicates
+  .filter(
+    (linkedProduct, index, array) =>
+      array.findIndex(
+        (item) => item.id === linkedProduct.id
+      ) === index
+  )
+  // Only show live products
   .filter(
     (linkedProduct) =>
       linkedProduct.isActive &&
       linkedProduct.publishedAt !== null &&
       linkedProduct.status === "APPROVED" &&
-      linkedProduct.brand.accountStatus === BrandAccountStatus.ACTIVE &&
-      linkedProduct.brand.affiliateStatus === AffiliateStatus.ACTIVE
+      linkedProduct.brand.accountStatus ===
+        BrandAccountStatus.ACTIVE &&
+      linkedProduct.brand.affiliateStatus ===
+        AffiliateStatus.ACTIVE
   );
 
   // Shipping display logic
@@ -307,20 +365,52 @@ const shippingToLabels = getShippingToLabel(
               </div>
             )}
 
-            {/* Sizes */}
-            {sortedSizes.length > 0 && (
-              <div>
-                <p className="mb-2 text-xs font-medium uppercase tracking-[0.14em] text-black/50">Sizes available</p>
-                <div className="flex flex-wrap gap-2">
-                  {sortedSizes.map(({ size }) => (
-                    <span key={size.id} className="rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs text-black/70">
-                      {formatSizeLabel(size.name)}
-                    </span>
-                  ))}
-                </div>
-                <p className="mt-2 text-[11px] text-black/40">Select your size on the brand's website</p>
-              </div>
-            )}
+            {/* Sizes + Length */}
+{(sortedSizes.length > 0 || product.lengths.length > 0) && (
+  <div>
+    {sortedSizes.length > 0 && (
+      <>
+        <p className="mb-2 text-xs font-medium uppercase tracking-[0.14em] text-black/50">
+          Sizes available
+        </p>
+
+        <div className="flex flex-wrap gap-2">
+          {sortedSizes.map(({ size }) => (
+            <span
+              key={size.id}
+              className="rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs text-black/70"
+            >
+              {formatSizeLabel(size.name)}
+            </span>
+          ))}
+        </div>
+      </>
+    )}
+
+    {product.lengths.length > 0 && (
+      <div className={sortedSizes.length > 0 ? "mt-4" : ""}>
+        <p className="mb-2 text-xs font-medium uppercase tracking-[0.14em] text-black/50">
+          Length
+        </p>
+
+        <div className="flex flex-wrap gap-2">
+          {product.lengths.map((length) => (
+            <span
+              key={length}
+              className="rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs text-black/70"
+            >
+              {length}&quot;
+            </span>
+          ))}
+        </div>
+      </div>
+    )}
+
+    <p className="mt-2 text-[11px] text-black/40">
+      Select your size on the brand's website
+    </p>
+  </div>
+)}
 
             {/* CTA */}
 <div className="flex flex-col gap-3">

@@ -1,0 +1,2 @@
+ALTER TABLE "Product"
+ADD COLUMN "lengths" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

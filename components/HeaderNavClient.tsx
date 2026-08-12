@@ -21,12 +21,9 @@ type PromoMap = Record<PromoKey, HeaderPromo>;
 const occasionLinks: NavItem[] = [
   { label: "Everyday", href: "/categories/occasion/everyday" },
   { label: "Workwear", href: "/categories/occasion/workwear" },
-  { label: "Wedding Guest", href: "/categories/occasion/wedding_guest" },
   { label: "Wedding", href: "/categories/occasion/wedding" },
   { label: "Graduation", href: "/categories/occasion/graduation" },
-  { label: "Eid", href: "/categories/occasion/eid" },
-  { label: "Party", href: "/categories/occasion/party" },
-  { label: "Formal", href: "/categories/occasion/formal" },
+  { label: "Evening", href: "/categories/occasion/evening" },
 ];
 
 const saleLinks: NavItem[] = [

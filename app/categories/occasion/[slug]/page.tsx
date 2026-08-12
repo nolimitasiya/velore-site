@@ -40,6 +40,14 @@ const OCCASION_PRODUCT_TYPES: ProductType[] = [
   ProductType.T_SHIRT,
 ];
 
+const PUBLIC_OCCASION_SLUGS = [
+  "everyday",
+  "workwear",
+  "wedding",
+  "graduation",
+  "evening",
+] as const;
+
 
 function titleCaseLabel(s: string) {
   if (s === "COATS_JACKETS") return "Coats & Jackets";
@@ -62,6 +70,10 @@ export default async function OccasionSlugPage({
 }) {
   const { slug } = await params;
   const key = String(slug).trim().toLowerCase();
+
+  if (!PUBLIC_OCCASION_SLUGS.includes(key as any)) {
+  return notFound();
+}
 
   const occasion = await prisma.occasion.findUnique({
     where: { slug: key },

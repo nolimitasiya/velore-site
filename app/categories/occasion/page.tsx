@@ -35,6 +35,14 @@ const OCCASION_PRODUCT_TYPES: ProductType[] = [
   ProductType.T_SHIRT,
 ];
 
+const PUBLIC_OCCASION_SLUGS = [
+  "everyday",
+  "workwear",
+  "wedding",
+  "graduation",
+  "evening",
+] as const;
+
 function titleCaseLabel(s: string) {
   if (s === "COATS_JACKETS") return "Coats & Jackets";
   if (s === "HOODIE_SWEATSHIRT") return "Hoodie & Sweatshirt";
@@ -92,10 +100,16 @@ export default async function OccasionPage({
 
         AND: [
           {
-            productOccasions: {
-              some: {},
-            },
-          },
+  productOccasions: {
+    some: {
+      occasion: {
+        slug: {
+          in: [...PUBLIC_OCCASION_SLUGS],
+        },
+      },
+    },
+  },
+},
           {
             productOccasions: {
               none: {
@@ -165,10 +179,16 @@ export default async function OccasionPage({
   }),
   AND: [
     {
-      productOccasions: {
-        some: {},
+  productOccasions: {
+    some: {
+      occasion: {
+        slug: {
+          in: [...PUBLIC_OCCASION_SLUGS],
+        },
       },
     },
+  },
+},
     {
       productOccasions: {
         none: {

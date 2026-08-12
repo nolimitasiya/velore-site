@@ -301,6 +301,7 @@ type Product = {
   images: { url: string; sortOrder: number }[];
   publishedAt: string | null;
   polyesterFree: boolean;
+  lengths: string[];
 
   productMaterials?: { material: TaxItem }[];
   productOccasions?: { occasion: TaxItem }[];
@@ -321,6 +322,16 @@ type BrandTaxRequest = {
 };
 
 const BADGES = ["sale"] as const;
+
+const GARMENT_LENGTHS = [
+  "50",
+  "52",
+  "54",
+  "56",
+  "58",
+  "60",
+  "62",
+] as const;
 
 const ACCESSORY_COLOUR_SLUGS = [
   "gold",
@@ -369,7 +380,8 @@ function snapshotForDirtyCheck(
   selectedOccasionIds: string[],
   selectedColourIds: string[],
   selectedSizeIds: string[],
-  selectedStyleIds: string[]
+  selectedStyleIds: string[],
+  selectedLengths: string[]
 ) {
   return JSON.stringify({
     title: prod.title ?? "",
@@ -393,6 +405,7 @@ function snapshotForDirtyCheck(
     colourIds: [...selectedColourIds].sort(),
     sizeIds: [...selectedSizeIds].sort(),
     styleIds: [...selectedStyleIds].sort(),
+    lengths: [...selectedLengths].sort(),
   });
 }
 
@@ -432,6 +445,7 @@ export default function ProductEditClient({ id }: { id: string }) {
   const [selectedOccasionIds, setSelectedOccasionIds] = useState<string[]>([]);
   const [selectedColourIds, setSelectedColourIds] = useState<string[]>([]);
   const [selectedSizeIds, setSelectedSizeIds] = useState<string[]>([]);
+  const [selectedLengths, setSelectedLengths] = useState<string[]>([]);
   const [selectedStyleIds, setSelectedStyleIds] = useState<string[]>([]);
 
   const savedRef = useRef<string>("");
@@ -449,7 +463,8 @@ export default function ProductEditClient({ id }: { id: string }) {
         selectedOccasionIds,
         selectedColourIds,
         selectedSizeIds,
-        selectedStyleIds
+        selectedStyleIds,
+        selectedLengths
       ) !== savedRef.current
     );
   }, [p, selectedMaterialIds, selectedOccasionIds, selectedColourIds, selectedSizeIds, selectedStyleIds]);
@@ -506,6 +521,7 @@ export default function ProductEditClient({ id }: { id: string }) {
       images: Array.isArray(prod.images) ? prod.images : [],
       publishedAt: prod.publishedAt ?? null,
       polyesterFree: Boolean(prod.polyesterFree),
+      lengths: Array.isArray(prod.lengths) ? prod.lengths.map(String) : [],
       productMaterials: Array.isArray(prod.productMaterials) ? prod.productMaterials : [],
       productOccasions: Array.isArray(prod.productOccasions) ? prod.productOccasions : [],
       productColours: Array.isArray(prod.productColours) ? prod.productColours : [],
@@ -558,10 +574,21 @@ setSelectedProductTypes(productTypeValues);
         .filter(Boolean) as string[]
     );
 
+    const lengthValues = Array.isArray(prod.lengths)
+  ? prod.lengths.map(String)
+  : [];
+
+setSelectedLengths(lengthValues);
+
+    
+
     setSelectedMaterialIds(matIds);
     setSelectedOccasionIds(occIds);
     setSelectedColourIds(colIds);
     setSelectedSizeIds(sizIds);
+    setSelectedLengths(
+  Array.isArray(prod.lengths) ? prod.lengths.map(String) : []
+);
     setSelectedStyleIds(styIds);
 
     try {
@@ -624,7 +651,9 @@ setAccessoryCategories(accessoryCats);
   occIds,
   colIds,
   sizIds,
-  styIds
+  styIds,
+  lengthValues
+
 );
     setJustSaved(false);
   }
@@ -755,6 +784,7 @@ setAccessoryCategories(accessoryCats);
         occasionIds: selectedOccasionIds,
         colourIds: selectedColourIds,
         sizeIds: selectedSizeIds,
+        lengths: selectedLengths,
         styleIds: selectedStyleIds,
         polyesterFree: p.polyesterFree,
       };
@@ -1210,6 +1240,47 @@ setAccessoryCategories(accessoryCats);
         No sizes yet (seed them first).
       </div>
     ) : null}
+
+    {selectedProductTypes.some(
+  (type) => type === "DRESS" || type === "ABAYA"
+) && (
+  <div className="mt-6 border-t border-black/8 pt-5">
+    <div className="mb-3 flex items-center justify-between gap-3">
+      <div>
+        <div className="text-sm font-medium text-neutral-900">
+          Length
+        </div>
+        <div className="mt-1 text-xs text-neutral-500">
+          Select all garment lengths available for this product.
+        </div>
+      </div>
+
+      {selectedLengths.length > 0 ? (
+        <SoftButton onClick={() => setSelectedLengths([])}>
+          Clear
+        </SoftButton>
+      ) : null}
+    </div>
+
+    <div className="flex flex-wrap gap-2">
+      {GARMENT_LENGTHS.map((length) => (
+        <Chip
+          key={length}
+          active={selectedLengths.includes(length)}
+          onClick={() =>
+            toggleSelected(
+              setSelectedLengths,
+              selectedLengths,
+              length
+            )
+          }
+        >
+          {length}&quot;
+        </Chip>
+      ))}
+    </div>
+  </div>
+)}
   </SectionCard>
 )}
 
