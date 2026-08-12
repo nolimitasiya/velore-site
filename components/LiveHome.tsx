@@ -149,6 +149,40 @@ const homepageStyleFeedDb = await prisma.homepageStyleFeedItem.findMany({
     sortOrder: true,
     title: true,
     instagramHandle: true,
+
+    products: {
+      orderBy: {
+        position: "asc",
+      },
+      select: {
+        product: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            price: true,
+            currency: true,
+
+            brand: {
+              select: {
+                name: true,
+                slug: true,
+              },
+            },
+
+            images: {
+              orderBy: {
+                sortOrder: "asc",
+              },
+              take: 1,
+              select: {
+                url: true,
+              },
+            },
+          },
+        },
+      },
+    },
   },
 });
 
@@ -158,14 +192,31 @@ const liveStyleFeed: StyleFeedPost[] = homepageStyleFeedDb.map((p) => ({
   imageAlt: p.imageAlt ?? null,
   imageFocalX: p.imageFocalX,
   imageFocalY: p.imageFocalY,
+
   brandName: p.title ?? null,
-brandInstagramHandle: p.instagramHandle ?? null,
-brandInstagramUrl: p.instagramHandle
-  ? `https://instagram.com/${p.instagramHandle.replace(/^@/, "")}`
-  : null,
+
+  brandInstagramHandle: p.instagramHandle ?? null,
+
+  brandInstagramUrl: p.instagramHandle
+    ? `https://instagram.com/${p.instagramHandle.replace(/^@/, "")}`
+    : null,
+
   caption: p.caption,
   permalink: p.postUrl ?? null,
   postedAt: null,
+
+  products: p.products.map(({ product }) => ({
+    id: product.id,
+    title: product.title,
+    slug: product.slug,
+    price: product.price ? product.price.toString() : null,
+    currency: product.currency,
+
+    brandName: product.brand.name,
+    brandSlug: product.brand.slug,
+
+    imageUrl: product.images[0]?.url ?? null,
+  })),
 }));
 
 const styleFeedToShow =

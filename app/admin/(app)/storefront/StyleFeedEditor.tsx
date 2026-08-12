@@ -2,7 +2,28 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+type FeedProduct = {
+  id: string;
+  title: string;
+  slug: string;
+  price: string | null;
+  currency: string;
 
+  brand: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+
+  imageUrl: string | null;
+};
+
+type BrandSearchResult = {
+  id: string;
+  name: string;
+  slug: string;
+  baseCountryCode?: string | null;
+};
 
 type FeedItem = {
   localId: string;
@@ -21,6 +42,8 @@ type FeedItem = {
   caption: string;
   sortOrder: number;
   isActive: boolean;
+
+  products: FeedProduct[];
 
   isUploading: boolean;
   uploadError: string | null;
@@ -132,6 +155,20 @@ export default function StyleFeedEditor() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [brandSearch, setBrandSearch] = useState<Record<string, string>>({});
+  const [brandResults, setBrandResults] = useState<
+  Record<string, BrandSearchResult[]>
+>({});
+
+const [selectedBrand, setSelectedBrand] = useState<
+  Record<string, BrandSearchResult | null>
+>({});
+
+const [productSearch, setProductSearch] = useState<Record<string, string>>({});
+const [productResults, setProductResults] = useState<
+  Record<string, FeedProduct[]>
+>({});
+
 
   const hasUploadingItem = useMemo(
     () => items.some((item) => item.isUploading),
@@ -174,6 +211,26 @@ export default function StyleFeedEditor() {
       sortOrder: typeof item.sortOrder === "number" ? item.sortOrder : index,
       isActive: item.isActive !== false,
 
+      products: (item.products ?? []).map((entry: any) => ({
+        id: entry.product.id,
+        title: entry.product.title,
+        slug: entry.product.slug,
+        price:
+        entry.product.price !== null &&
+        entry.product.price !== undefined
+      ? String(entry.product.price)
+      : null,
+    currency: entry.product.currency ?? "GBP",
+
+  brand: {
+    id: entry.product.brand?.id ?? "",
+    name: entry.product.brand?.name ?? "",
+    slug: entry.product.brand?.slug ?? "",
+  },
+
+  imageUrl: entry.product.images?.[0]?.url ?? null,
+})),
+
       isUploading: false,
       uploadError: null,
     }));
@@ -210,6 +267,8 @@ export default function StyleFeedEditor() {
         caption: "",
         sortOrder: prev.length,
         isActive: true,
+
+        products: [],
 
         isUploading: false,
         uploadError: null,
@@ -293,6 +352,163 @@ export default function StyleFeedEditor() {
     }
   }
 
+
+  async function searchBrands(localId: string, query: string) {
+  if (!query.trim()) {
+    setBrandResults((prev) => ({
+      ...prev,
+      [localId]: [],
+    }));
+    return;
+  }
+
+  try {
+    const res = await fetch(
+      `/api/admin/brands/search?q=${encodeURIComponent(query)}&take=8`,
+      {
+        cache: "no-store",
+      }
+    );
+
+    const json = await res.json().catch(() => ({}));
+
+    if (!res.ok || !json.ok) return;
+
+    setBrandResults((prev) => ({
+      ...prev,
+      [localId]: json.brands ?? [],
+    }));
+  } catch {
+    // Keep the editor usable even if search fails.
+  }
+}
+
+async function searchProducts(localId: string, query: string) {
+  if (!query.trim()) {
+    setProductResults((prev) => ({
+      ...prev,
+      [localId]: [],
+    }));
+    return;
+  }
+
+  const brand = selectedBrand[localId];
+
+  const url =
+    `/api/storefront/products?q=${encodeURIComponent(query)}&take=8` +
+    (brand?.id
+      ? `&brandId=${encodeURIComponent(brand.id)}`
+      : "");
+
+  try {
+    const res = await fetch(url, {
+      cache: "no-store",
+    });
+
+    const json = await res.json().catch(() => ({}));
+
+    if (!res.ok || !json.ok) return;
+
+    const products: FeedProduct[] = (json.products ?? []).map((p: any) => ({
+      id: p.id,
+      title: p.title ?? "",
+      slug: p.slug ?? "",
+      price:
+        p.price !== null && p.price !== undefined
+          ? String(p.price)
+          : null,
+      currency: p.currency ?? "GBP",
+
+      brand: {
+        id: p.brand?.id ?? "",
+        name: p.brand?.name ?? "",
+        slug: p.brand?.slug ?? "",
+      },
+
+      imageUrl:
+        p.imageUrl ??
+        p.images?.[0]?.url ??
+        null,
+    }));
+
+    setProductResults((prev) => ({
+      ...prev,
+      [localId]: products,
+    }));
+  } catch {
+    // Ignore transient search errors.
+  }
+}
+
+function addProduct(localId: string, product: FeedProduct) {
+  updateItem(localId, (item) => {
+    if (item.products.some((p) => p.id === product.id)) {
+      return item;
+    }
+
+    if (item.products.length >= 4) {
+      return item;
+    }
+
+    return {
+      ...item,
+      products: [...item.products, product],
+    };
+  });
+
+  setProductSearch((prev) => ({
+    ...prev,
+    [localId]: "",
+  }));
+
+  setProductResults((prev) => ({
+    ...prev,
+    [localId]: [],
+  }));
+}
+
+function removeProduct(localId: string, productId: string) {
+  updateItem(localId, (item) => ({
+    ...item,
+    products: item.products.filter(
+      (product) => product.id !== productId
+    ),
+  }));
+}
+
+function moveProduct(
+  localId: string,
+  productIndex: number,
+  direction: "up" | "down"
+) {
+  updateItem(localId, (item) => {
+    const products = [...item.products];
+
+    const nextIndex =
+      direction === "up"
+        ? productIndex - 1
+        : productIndex + 1;
+
+    if (
+      nextIndex < 0 ||
+      nextIndex >= products.length
+    ) {
+      return item;
+    }
+
+    [products[productIndex], products[nextIndex]] = [
+      products[nextIndex],
+      products[productIndex],
+    ];
+
+    return {
+      ...item,
+      products,
+    };
+  });
+}
+
+
   async function save() {
     try {
       setSaving(true);
@@ -316,6 +532,7 @@ export default function StyleFeedEditor() {
           caption: item.caption,
           sortOrder: item.sortOrder,
           isActive: item.isActive,
+          productIds: item.products.map((product) => product.id),
         })),
       };
 
@@ -561,6 +778,303 @@ export default function StyleFeedEditor() {
                         className="mt-2 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
                       />
                     </div>
+
+                    <div className="rounded-2xl border border-black/10 bg-white p-4">
+  <div className="flex items-start justify-between gap-4">
+    <div>
+      <div className="text-sm font-medium">
+        Shop the Look
+      </div>
+
+      <p className="mt-1 text-xs text-black/50">
+        Attach up to 4 Veilora products to this inspiration post.
+      </p>
+    </div>
+
+    <div className="text-xs text-black/40">
+      {item.products.length} / 4
+    </div>
+  </div>
+
+  <div className="mt-4 space-y-3">
+    {/* Brand search */}
+    <div>
+      <div className="flex items-center justify-between">
+  <label className="text-xs font-medium text-black/60">
+    Brand
+  </label>
+
+  {selectedBrand[item.localId] ? (
+    <button
+      type="button"
+      onClick={() => {
+        setSelectedBrand((prev) => ({
+          ...prev,
+          [item.localId]: null,
+        }));
+
+        setBrandSearch((prev) => ({
+          ...prev,
+          [item.localId]: "",
+        }));
+
+        setBrandResults((prev) => ({
+          ...prev,
+          [item.localId]: [],
+        }));
+
+        setProductSearch((prev) => ({
+          ...prev,
+          [item.localId]: "",
+        }));
+
+        setProductResults((prev) => ({
+          ...prev,
+          [item.localId]: [],
+        }));
+      }}
+      className="text-xs text-black/45 underline underline-offset-4 transition hover:text-black"
+    >
+      Clear
+    </button>
+  ) : null}
+</div>
+
+      <input
+        type="text"
+        value={brandSearch[item.localId] ?? ""}
+        onChange={(e) => {
+          const value = e.target.value;
+
+          setBrandSearch((prev) => ({
+            ...prev,
+            [item.localId]: value,
+          }));
+
+          setSelectedBrand((prev) => ({
+            ...prev,
+            [item.localId]: null,
+          }));
+
+          void searchBrands(item.localId, value);
+        }}
+        placeholder="Search brands..."
+        className="mt-2 w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+      />
+
+      {brandResults[item.localId]?.length > 0 ? (
+        <div className="mt-2 overflow-hidden rounded-xl border border-black/10 bg-white">
+          {brandResults[item.localId].map((brand) => (
+            <button
+              key={brand.id}
+              type="button"
+              onClick={() => {
+                setSelectedBrand((prev) => ({
+                  ...prev,
+                  [item.localId]: brand,
+                }));
+
+                setBrandSearch((prev) => ({
+                  ...prev,
+                  [item.localId]: brand.name,
+                }));
+
+                setBrandResults((prev) => ({
+                  ...prev,
+                  [item.localId]: [],
+                }));
+
+                setProductSearch((prev) => ({
+                  ...prev,
+                  [item.localId]: "",
+                }));
+
+                setProductResults((prev) => ({
+                  ...prev,
+                  [item.localId]: [],
+                }));
+              }}
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-black/[0.03]"
+            >
+              <span>{brand.name}</span>
+
+              <span className="text-xs text-black/40">
+                {brand.baseCountryCode ?? brand.slug}
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+
+    {/* Product search */}
+    <div>
+      <label className="text-xs font-medium text-black/60">
+        Product
+      </label>
+
+      <input
+        type="text"
+        value={productSearch[item.localId] ?? ""}
+        onChange={(e) => {
+          const value = e.target.value;
+
+          setProductSearch((prev) => ({
+            ...prev,
+            [item.localId]: value,
+          }));
+
+          void searchProducts(
+            item.localId,
+            value
+          );
+        }}
+        placeholder={
+          selectedBrand[item.localId]
+            ? `Search ${selectedBrand[item.localId]?.name} products...`
+            : "Search products..."
+        }
+        disabled={item.products.length >= 4}
+        className="mt-2 w-full rounded-lg border border-black/10 px-3 py-2 text-sm disabled:bg-black/[0.03] disabled:text-black/30"
+      />
+
+      {productResults[item.localId]?.length > 0 ? (
+        <div className="mt-2 overflow-hidden rounded-xl border border-black/10 bg-white">
+          {productResults[item.localId].map((product) => (
+            <button
+              key={product.id}
+              type="button"
+              onClick={() =>
+                addProduct(
+                  item.localId,
+                  product
+                )
+              }
+              className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-black/[0.03]"
+            >
+              <div className="relative h-14 w-11 shrink-0 overflow-hidden rounded-md bg-black/5">
+                {product.imageUrl ? (
+                  <img
+                    src={product.imageUrl}
+                    alt={product.title}
+                    className="h-full w-full object-cover"
+                  />
+                ) : null}
+              </div>
+
+              <div className="min-w-0">
+                <div className="truncate text-sm font-medium">
+                  {product.title}
+                </div>
+
+                <div className="mt-0.5 text-xs text-black/45">
+                  {product.brand.name}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  </div>
+
+  {/* Selected products */}
+  {item.products.length > 0 ? (
+    <div className="mt-5 grid grid-cols-2 gap-3">
+      {item.products.map((product, productIndex) => (
+        <div
+          key={product.id}
+          className="overflow-hidden rounded-xl border border-black/10 bg-neutral-50"
+        >
+          <div className="aspect-[3/4] bg-black/5">
+            {product.imageUrl ? (
+              <img
+                src={product.imageUrl}
+                alt={product.title}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-xs text-black/30">
+                No image
+              </div>
+            )}
+          </div>
+
+          <div className="p-3">
+            <div className="text-[10px] uppercase tracking-[0.12em] text-black/40">
+              {product.brand.name}
+            </div>
+
+            <div className="mt-1 line-clamp-2 text-xs font-medium">
+              {product.title}
+            </div>
+
+            {product.price ? (
+  <div className="mt-1 text-xs text-black/55">
+    {new Intl.NumberFormat("en-GB", {
+      style: "currency",
+      currency: product.currency,
+    }).format(Number(product.price))}
+  </div>
+) : null}
+
+            <div className="mt-3 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  moveProduct(
+                    item.localId,
+                    productIndex,
+                    "up"
+                  )
+                }
+                disabled={productIndex === 0}
+                className="text-xs disabled:opacity-25"
+              >
+                ←
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  moveProduct(
+                    item.localId,
+                    productIndex,
+                    "down"
+                  )
+                }
+                disabled={
+                  productIndex ===
+                  item.products.length - 1
+                }
+                className="text-xs disabled:opacity-25"
+              >
+                →
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  removeProduct(
+                    item.localId,
+                    product.id
+                  )
+                }
+                className="ml-auto text-xs text-red-600"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <div className="mt-4 rounded-xl border border-dashed border-black/10 px-4 py-5 text-center text-xs text-black/40">
+      No products attached yet.
+    </div>
+  )}
+</div>
 
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>

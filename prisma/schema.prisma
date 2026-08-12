@@ -222,8 +222,6 @@ model Product {
   lengths         String[]         @default([])
   polyesterFree   Boolean          @default(false)
 
-
-
   worldwideShipping Boolean                  @default(false)
   shippingCountries ProductShippingCountry[]
 
@@ -243,9 +241,10 @@ model Product {
   collectionMerchItems    CollectionMerchItem[]
   wishlistItems           WishlistItem[]
   categoryMerchPlacements CategoryMerchPlacement[]
+  homepageStyleFeedItems  HomepageStyleFeedItemProduct[]
 
-  completeTheLook        ProductCompleteTheLook[] @relation("CompleteTheLookSource")
-  completeTheLookFor     ProductCompleteTheLook[] @relation("CompleteTheLookTarget")
+  completeTheLook    ProductCompleteTheLook[] @relation("CompleteTheLookSource")
+  completeTheLookFor ProductCompleteTheLook[] @relation("CompleteTheLookTarget")
 
   @@unique([brandId, sourceUrl], name: "brandId_sourceUrl")
   @@index([brandId, slug])
@@ -754,10 +753,27 @@ model HomepageStyleFeedItem {
   sortOrder Int     @default(0)
   isActive  Boolean @default(true)
 
+  products HomepageStyleFeedItemProduct[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([isActive, sortOrder])
+}
+
+model HomepageStyleFeedItemProduct {
+  id         String @id @default(cuid())
+  feedItemId String
+  productId  String @db.Uuid
+  position   Int    @default(0)
+
+  feedItem HomepageStyleFeedItem @relation(fields: [feedItemId], references: [id], onDelete: Cascade)
+  product  Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([feedItemId, productId])
+  @@unique([feedItemId, position])
+  @@index([feedItemId, position])
+  @@index([productId])
 }
 
 model StyleFeedPost {
@@ -1315,13 +1331,12 @@ model CategoryMerchPlacement {
   @@index([productId])
 }
 
-
 model ProductCompleteTheLook {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  productId        String   @db.Uuid
-  linkedProductId  String   @db.Uuid
-  position         Int      @default(0)
-  createdAt        DateTime @default(now())
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId       String   @db.Uuid
+  linkedProductId String   @db.Uuid
+  position        Int      @default(0)
+  createdAt       DateTime @default(now())
 
   product       Product @relation("CompleteTheLookSource", fields: [productId], references: [id], onDelete: Cascade)
   linkedProduct Product @relation("CompleteTheLookTarget", fields: [linkedProductId], references: [id], onDelete: Cascade)

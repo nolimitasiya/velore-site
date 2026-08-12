@@ -39,54 +39,55 @@ export function SloganAndContinents({
 
   return (
     <section className="bg-white">
-      <div className="w-full px-6 pb-12">
+      <div className="mx-auto w-full max-w-[1800px] px-8 pb-12">
 
-       {/* Slogan */}
-<div className="mt-16 mb-8">
+       {/* Section heading */}
+<div className="mt-16 mb-10">
   <p className="mb-3 font-body text-[11px] uppercase tracking-[0.24em] text-black/45">
-  Shop by Region
-</p>
+    Shop by Region
+  </p>
 
-<h2 className="font-display text-[36px] font-normal leading-none tracking-[-0.02em] text-black md:text-[56px]">
-  Discover the World
-</h2>
+  <h2 className="font-display text-[36px] font-normal leading-none tracking-[-0.02em] text-black md:text-[56px]">
+    Discover the World
+  </h2>
 
-<div className="mt-5 h-px w-20 bg-black/20" />
+  <div className="mt-5 h-px w-20 bg-black/20" />
 </div>
 
         <div className="relative">
           {/* Scroll area */}
           <div
-            ref={scrollRef}
-            onScroll={updateScrollState}
-            className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide"
-          >
-            {continents.map((c) => (
-              <Link
-                key={c.slug}
-                href={`/continent/${c.slug}`}
-                className="group relative shrink-0 w-[220px] sm:w-[260px] lg:w-[300px]"
-              >
-                <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-black/5">
-                  <Image
-                    src={c.imageUrl}
-                    alt={c.name}
-                    fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                  />
-                  {/* Gradient overlay — bottom heavy */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
-                  
-                  {/* Name — bottom left, editorial style */}
-                  <div className="absolute bottom-0 left-0 right-0 p-5">
-                    <span className="text-white text-sm uppercase tracking-[0.2em] font-medium">
-                      {c.name}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
+  ref={scrollRef}
+  onScroll={updateScrollState}
+  className="overflow-x-auto pb-4 scrollbar-hide"
+>
+  <div className="mx-auto flex w-max gap-3 snap-x snap-mandatory">
+    {continents.map((c) => (
+      <Link
+        key={c.slug}
+        href={`/continent/${c.slug}`}
+        className="group relative w-[220px] shrink-0 snap-start sm:w-[260px] lg:w-[300px]"
+      >
+        <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-black/5">
+          <Image
+            src={c.imageUrl}
+            alt={c.name}
+            fill
+            className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+          />
+
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+
+          <div className="absolute bottom-0 left-0 right-0 p-5">
+            <span className="text-sm font-medium uppercase tracking-[0.2em] text-white">
+              {c.name}
+            </span>
           </div>
+        </div>
+      </Link>
+    ))}
+  </div>
+</div>
 
           {/* Left arrow */}
           {canScrollLeft && (
