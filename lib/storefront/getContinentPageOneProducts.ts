@@ -1,6 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import type { GridProduct } from "@/components/ProductGrid";
-import type { Region } from "@prisma/client";
+import {
+  MerchandisingScopeType,
+  MerchandisingVersion,
+  type Region,
+} from "@prisma/client";
 
 type CandidateProduct = {
   id: string;
@@ -11,11 +15,13 @@ type CandidateProduct = {
   badges: string[];
   affiliateUrl: string | null;
   publishedAt: Date | null;
+
   brand: {
-  name: string;
-  slug: string; // ← add
-  baseCountryCode: string | null;
-} | null;
+    name: string;
+    slug: string;
+    baseCountryCode: string | null;
+  } | null;
+
   images: Array<{
     url: string;
   }>;
@@ -24,7 +30,8 @@ type CandidateProduct = {
 function mapToGridProduct(
   product: CandidateProduct,
   index: number,
-  isExpandedPageOne: boolean
+  isExpandedPageOne: boolean,
+  contextType: "CURATED" | "BALANCED"
 ): GridProduct {
   return {
     id: product.id,
@@ -33,17 +40,21 @@ function mapToGridProduct(
     brandSlug: product.brand?.slug ?? null,
     productSlug: product.slug,
     imageUrl: product.images[0]?.url ?? null,
-    price: product.price == null ? null : String(product.price),
+    price:
+      product.price == null
+        ? null
+        : String(product.price),
     currency: String(product.currency),
     buyUrl: `/out/${product.id}`,
     badges: (product.badges ?? []) as string[],
+
     analytics: {
       sourcePage: "SEARCH",
       sectionKey: "continent_grid",
       position: index + 1,
       pageNumber: 1,
       isExpandedPageOne,
-      contextType: "BALANCED",
+      contextType,
     },
   };
 }
@@ -52,127 +63,331 @@ export async function getContinentPageOneProducts(
   region: Region,
   visibleCount = 24
 ): Promise<GridProduct[]> {
-  const targetCount = Math.max(1, Math.min(visibleCount, 48));
-  const isExpandedPageOne = targetCount > 24;
+  const targetCount = Math.max(
+    1,
+    Math.min(visibleCount, 48)
+  );
 
-  const products = await prisma.product.findMany({
-    where: {
-      status: "APPROVED",
-      isActive: true,
-      publishedAt: { not: null },
-      affiliateUrl: { not: null },
-      brand: {
-        is: {
-          baseRegion: region,
-          accountStatus: "ACTIVE",
-          affiliateStatus: "ACTIVE",
+  const isExpandedPageOne =
+    targetCount > 24;
+
+  /*
+   * 1. Load all eligible products for
+   *    this continent.
+   */
+  const products =
+    await prisma.product.findMany({
+      where: {
+        status: "APPROVED",
+        isActive: true,
+        publishedAt: {
+          not: null,
+        },
+        affiliateUrl: {
+          not: null,
+        },
+
+        brand: {
+          is: {
+            baseRegion: region,
+            accountStatus: "ACTIVE",
+            affiliateStatus: "ACTIVE",
+          },
         },
       },
-    },
-    orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
-    take: 240,
-    select: {
-      id: true,
-      slug: true, // ← after id: true
-      title: true,
-      price: true,
-      currency: true,
-      badges: true,
-      affiliateUrl: true,
-      publishedAt: true,
-      brand: {
-        select: {
-          name: true,
-          slug: true, // ← add
-         baseCountryCode: true,
+
+      orderBy: [
+        {
+          publishedAt: "desc",
+        },
+        {
+          updatedAt: "desc",
+        },
+      ],
+
+      take: 240,
+
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        price: true,
+        currency: true,
+        badges: true,
+        affiliateUrl: true,
+        publishedAt: true,
+
+        brand: {
+          select: {
+            name: true,
+            slug: true,
+            baseCountryCode: true,
+          },
+        },
+
+        images: {
+          orderBy: {
+            sortOrder: "asc",
+          },
+          take: 1,
+          select: {
+            url: true,
+          },
         },
       },
-      images: {
-        orderBy: { sortOrder: "asc" },
-        take: 1,
-        select: { url: true },
-      },
-    },
-  });
+    });
 
-  const validProducts = products.filter(
-    (p) => p.brand?.baseCountryCode && p.affiliateUrl
-  ) as CandidateProduct[];
+  const validProducts =
+    products.filter(
+      (product) =>
+        product.brand?.baseCountryCode &&
+        product.affiliateUrl
+    ) as CandidateProduct[];
 
-  const byCountry = new Map<string, CandidateProduct[]>();
-
-  for (const product of validProducts) {
-    const cc = product.brand?.baseCountryCode?.toUpperCase();
-    if (!cc) continue;
-
-    const arr = byCountry.get(cc) ?? [];
-    arr.push(product);
-    byCountry.set(cc, arr);
+  if (validProducts.length === 0) {
+    return [];
   }
 
-  const countryGroups = Array.from(byCountry.entries())
-    .map(([countryCode, items]) => ({
-      countryCode,
-      items,
-    }))
-    .sort((a, b) => a.countryCode.localeCompare(b.countryCode));
+  /*
+   * 2. Load the LIVE visual merchandising
+   *    arrangement for this continent.
+   *
+   * Example:
+   * scopeType = CONTINENT
+   * scopeKey  = ASIA
+   */
+  const livePlacements =
+    await prisma.categoryMerchPlacement.findMany({
+      where: {
+        scopeType:
+          MerchandisingScopeType.CONTINENT,
 
-  const countryCount = countryGroups.length;
+        scopeKey: region,
 
-  if (countryCount < 1) {
-    return validProducts
+        version:
+          MerchandisingVersion.LIVE,
+      },
+
+      orderBy: {
+        position: "asc",
+      },
+
+      take: 48,
+
+      select: {
+        productId: true,
+        position: true,
+      },
+    });
+
+  const productsById = new Map(
+    validProducts.map((product) => [
+      product.id,
+      product,
+    ])
+  );
+
+  /*
+   * Only keep curated products that are
+   * still genuinely eligible/live.
+   */
+  const curatedProducts =
+    livePlacements
+      .map((placement) =>
+        productsById.get(
+          placement.productId
+        )
+      )
+      .filter(
+        (
+          product
+        ): product is CandidateProduct =>
+          Boolean(product)
+      );
+
+  /*
+   * If merchandising already fills the
+   * requested page, return it immediately.
+   */
+  if (
+    curatedProducts.length >= targetCount
+  ) {
+    return curatedProducts
       .slice(0, targetCount)
       .map((product, index) =>
-        mapToGridProduct(product, index, isExpandedPageOne)
+        mapToGridProduct(
+          product,
+          index,
+          isExpandedPageOne,
+          "CURATED"
+        )
       );
   }
 
-  const picked: CandidateProduct[] = [];
-  const usedIds = new Set<string>();
-
-  // Pass 1: one per country
-  for (const group of countryGroups) {
-    const next = group.items.find((item) => !usedIds.has(item.id));
-    if (!next) continue;
-
-    picked.push(next);
-    usedIds.add(next.id);
-
-    if (picked.length >= targetCount) {
-      return picked.map((product, index) =>
-        mapToGridProduct(product, index, isExpandedPageOne)
-      );
-    }
-  }
-
-  // Pass 2: second pass across countries
-  for (const group of countryGroups) {
-    const next = group.items.find((item) => !usedIds.has(item.id));
-    if (!next) continue;
-
-    picked.push(next);
-    usedIds.add(next.id);
-
-    if (picked.length >= targetCount) {
-      return picked.map((product, index) =>
-        mapToGridProduct(product, index, isExpandedPageOne)
-      );
-    }
-  }
-
-  // Pass 3: fill remaining
-  const remaining = countryGroups
-    .flatMap((group) => group.items)
-    .filter((item) => !usedIds.has(item.id));
-
-  for (const item of remaining) {
-    picked.push(item);
-    usedIds.add(item.id);
-
-    if (picked.length >= targetCount) break;
-  }
-
-  return picked.map((product, index) =>
-    mapToGridProduct(product, index, isExpandedPageOne)
+  /*
+   * 3. Exclude products already manually
+   *    curated before doing the automatic
+   *    balancing.
+   */
+  const curatedIds = new Set(
+    curatedProducts.map(
+      (product) => product.id
+    )
   );
+
+  const automaticCandidates =
+    validProducts.filter(
+      (product) =>
+        !curatedIds.has(product.id)
+    );
+
+  /*
+   * 4. Group remaining products by country.
+   *
+   * This preserves your original balancing
+   * behaviour.
+   */
+  const byCountry = new Map<
+    string,
+    CandidateProduct[]
+  >();
+
+  for (
+    const product of automaticCandidates
+  ) {
+    const countryCode =
+      product.brand?.baseCountryCode?.toUpperCase();
+
+    if (!countryCode) continue;
+
+    const current =
+      byCountry.get(countryCode) ?? [];
+
+    current.push(product);
+
+    byCountry.set(
+      countryCode,
+      current
+    );
+  }
+
+  const countryGroups =
+    Array.from(byCountry.entries())
+      .map(
+        ([countryCode, items]) => ({
+          countryCode,
+          items,
+        })
+      )
+      .sort((a, b) =>
+        a.countryCode.localeCompare(
+          b.countryCode
+        )
+      );
+
+  /*
+   * Start page 1 with your manually
+   * curated products.
+   */
+  const picked: CandidateProduct[] = [
+    ...curatedProducts,
+  ];
+
+  const usedIds = new Set(
+    picked.map((product) => product.id)
+  );
+
+  /*
+   * Pass 1:
+   * one product from each country.
+   */
+  for (const group of countryGroups) {
+    const next =
+      group.items.find(
+        (item) =>
+          !usedIds.has(item.id)
+      );
+
+    if (!next) continue;
+
+    picked.push(next);
+    usedIds.add(next.id);
+
+    if (
+      picked.length >= targetCount
+    ) {
+      break;
+    }
+  }
+
+  /*
+   * Pass 2:
+   * another product from each country.
+   */
+  if (picked.length < targetCount) {
+    for (const group of countryGroups) {
+      const next =
+        group.items.find(
+          (item) =>
+            !usedIds.has(item.id)
+        );
+
+      if (!next) continue;
+
+      picked.push(next);
+      usedIds.add(next.id);
+
+      if (
+        picked.length >= targetCount
+      ) {
+        break;
+      }
+    }
+  }
+
+  /*
+   * Pass 3:
+   * fill anything still remaining using
+   * the existing newest-first candidate
+   * ordering.
+   */
+  if (picked.length < targetCount) {
+    const remaining =
+      automaticCandidates.filter(
+        (item) =>
+          !usedIds.has(item.id)
+      );
+
+    for (const item of remaining) {
+      picked.push(item);
+      usedIds.add(item.id);
+
+      if (
+        picked.length >= targetCount
+      ) {
+        break;
+      }
+    }
+  }
+
+  /*
+   * 5. Convert into storefront products.
+   *
+   * Products that fall inside the manual
+   * arrangement are tagged CURATED.
+   * Automatically filled products remain
+   * BALANCED.
+   */
+  return picked
+    .slice(0, targetCount)
+    .map((product, index) =>
+      mapToGridProduct(
+        product,
+        index,
+        isExpandedPageOne,
+        index < curatedProducts.length
+          ? "CURATED"
+          : "BALANCED"
+      )
+    );
 }
