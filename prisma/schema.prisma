@@ -1303,6 +1303,7 @@ model BrandApplicationActivity {
 enum MerchandisingScopeType {
   PRODUCT_TYPE
   OCCASION
+  CONTINENT
 }
 
 enum MerchandisingVersion {

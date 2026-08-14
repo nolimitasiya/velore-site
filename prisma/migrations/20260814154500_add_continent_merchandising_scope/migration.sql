@@ -1,0 +1,1 @@
+ALTER TYPE "MerchandisingScopeType" ADD VALUE IF NOT EXISTS 'CONTINENT';

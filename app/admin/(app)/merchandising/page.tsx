@@ -32,6 +32,20 @@ function formatProductType(value: string) {
     .join(" ");
 }
 
+function formatRegion(value: string) {
+  return value
+    .toLowerCase()
+    .replaceAll("_", " ")
+    .split(" ")
+    .filter(Boolean)
+    .map(
+      (word) =>
+        word.charAt(0).toUpperCase() +
+        word.slice(1)
+    )
+    .join(" ");
+}
+
 export default async function MerchandisingPage() {
   await requireAdminSession();
 
@@ -54,10 +68,33 @@ export default async function MerchandisingPage() {
       label: formatProductType(type),
     }));
 
+
+const continentRows =
+  await prisma.continent.findMany({
+    where: {
+      isActive: true,
+    },
+    orderBy: {
+      sortOrder: "asc",
+    },
+    select: {
+      name: true,
+      region: true,
+    },
+  });
+
+const continents = continentRows.map(
+  (continent) => ({
+    value: continent.region,
+    label: continent.name,
+  })
+);
+
   return (
   <MerchandisingTabs
     productTypes={productTypes}
     occasions={occasions}
+    continents={continents}
   />
 );
 }

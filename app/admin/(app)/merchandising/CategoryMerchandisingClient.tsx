@@ -8,7 +8,10 @@ import {
   useState,
 } from "react";
 
-type ScopeType = "PRODUCT_TYPE" | "OCCASION";
+type ScopeType =
+  | "PRODUCT_TYPE"
+  | "OCCASION"
+  | "CONTINENT";
 
 type ProductTypeOption = {
   value: string;
@@ -19,6 +22,11 @@ type OccasionOption = {
   id: string;
   name: string;
   slug: string;
+};
+
+type ContinentOption = {
+  value: string;
+  label: string;
 };
 
 type MerchProduct = {
@@ -99,9 +107,11 @@ function sameOrder(a: string[], b: string[]) {
 export default function CategoryMerchandisingClient({
   productTypes,
   occasions,
+  continents,
 }: {
   productTypes: ProductTypeOption[];
   occasions: OccasionOption[];
+  continents: ContinentOption[];
 }) {
   const initialProductType =
     productTypes[0]?.value ?? "ABAYA";
@@ -170,15 +180,20 @@ export default function CategoryMerchandisingClient({
   );
 
   const availableOptions =
-    scopeType === "PRODUCT_TYPE"
-      ? productTypes.map((item) => ({
-          value: item.value,
-          label: item.label,
-        }))
-      : occasions.map((item) => ({
-          value: item.slug,
-          label: item.name,
-        }));
+  scopeType === "PRODUCT_TYPE"
+    ? productTypes.map((item) => ({
+        value: item.value,
+        label: item.label,
+      }))
+    : scopeType === "OCCASION"
+    ? occasions.map((item) => ({
+        value: item.slug,
+        label: item.name,
+      }))
+    : continents.map((item) => ({
+        value: item.value,
+        label: item.label,
+      }));
 
   async function load(
     nextScopeType = scopeType,
@@ -275,9 +290,11 @@ export default function CategoryMerchandisingClient({
     }
 
     const nextKey =
-      nextType === "PRODUCT_TYPE"
-        ? productTypes[0]?.value ?? ""
-        : occasions[0]?.slug ?? "";
+    nextType === "PRODUCT_TYPE"
+    ? productTypes[0]?.value ?? ""
+    : nextType === "OCCASION"
+    ? occasions[0]?.slug ?? ""
+    : continents[0]?.value ?? "";
 
     if (!nextKey) return;
 
@@ -590,22 +607,26 @@ export default function CategoryMerchandisingClient({
             </span>
 
             <select
-              value={scopeType}
-              onChange={(e) =>
-                chooseScopeType(
-                  e.target.value as ScopeType
-                )
-              }
-              className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-[#7B2D3E]/40"
-            >
-              <option value="PRODUCT_TYPE">
-                Product type
-              </option>
+  value={scopeType}
+  onChange={(e) =>
+    chooseScopeType(
+      e.target.value as ScopeType
+    )
+  }
+  className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-[#7B2D3E]/40"
+>
+  <option value="PRODUCT_TYPE">
+    Product type
+  </option>
 
-              <option value="OCCASION">
-                Occasion
-              </option>
-            </select>
+  <option value="OCCASION">
+    Occasion
+  </option>
+
+  <option value="CONTINENT">
+    Continent
+  </option>
+</select>
           </label>
 
           <label className="space-y-2">
@@ -634,6 +655,7 @@ export default function CategoryMerchandisingClient({
               )}
             </select>
           </label>
+
 
           <div className="flex items-end">
             <div className="flex rounded-2xl border border-black/10 bg-[#fcfbf8] p-1">

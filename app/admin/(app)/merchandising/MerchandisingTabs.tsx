@@ -16,12 +16,19 @@ type OccasionOption = {
   slug: string;
 };
 
+type ContinentOption = {
+  value: string;
+  label: string;
+};
+
 export default function MerchandisingTabs({
   productTypes,
   occasions,
+  continents,
 }: {
   productTypes: ProductTypeOption[];
   occasions: OccasionOption[];
+  continents: ContinentOption[];
 }) {
   const [tab, setTab] = useState<
     "CATEGORY" | "LOOK"
@@ -65,6 +72,7 @@ export default function MerchandisingTabs({
         <CategoryMerchandisingClient
           productTypes={productTypes}
           occasions={occasions}
+          continents={continents}
         />
       ) : (
         <CompleteTheLookClient />

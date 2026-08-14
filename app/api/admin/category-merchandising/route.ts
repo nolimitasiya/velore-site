@@ -6,6 +6,7 @@ import {
   MerchandisingScopeType,
   MerchandisingVersion,
   ProductType,
+  Region,
 } from "@prisma/client";
 
 export const runtime = "nodejs";
@@ -18,7 +19,8 @@ type SaveAction = "SAVE_DRAFT" | "PUBLISH" | "DISCARD_DRAFT";
 function isScopeType(value: unknown): value is MerchandisingScopeType {
   return (
     value === MerchandisingScopeType.PRODUCT_TYPE ||
-    value === MerchandisingScopeType.OCCASION
+    value === MerchandisingScopeType.OCCASION ||
+    value === MerchandisingScopeType.CONTINENT
   );
 }
 
@@ -57,31 +59,54 @@ function buildScopeWhere(
   scopeType: MerchandisingScopeType,
   scopeKey: string
 ) {
-  if (scopeType === MerchandisingScopeType.PRODUCT_TYPE) {
+  if (
+    scopeType ===
+    MerchandisingScopeType.PRODUCT_TYPE
+  ) {
     return {
       OR: [
         {
           productTypes: {
             some: {
-              productType: scopeKey as ProductType,
+              productType:
+                scopeKey as ProductType,
             },
           },
         },
         {
-          productType: scopeKey as ProductType,
+          productType:
+            scopeKey as ProductType,
         },
       ],
     };
   }
 
-  return {
-    productOccasions: {
-      some: {
-        occasion: {
-          slug: scopeKey.toLowerCase(),
+  if (
+    scopeType ===
+    MerchandisingScopeType.OCCASION
+  ) {
+    return {
+      productOccasions: {
+        some: {
+          occasion: {
+            slug: scopeKey.toLowerCase(),
+          },
         },
       },
-    },
+    };
+  }
+
+  return {
+    AND: [
+      {
+        brand: {
+          is: {
+            baseRegion:
+              scopeKey as Region,
+          },
+        },
+      },
+    ],
   };
 }
 
@@ -89,8 +114,14 @@ async function validateScope(
   scopeType: MerchandisingScopeType,
   scopeKey: string
 ) {
-  if (scopeType === MerchandisingScopeType.PRODUCT_TYPE) {
-    const valid = Object.values(ProductType).includes(scopeKey as ProductType);
+  if (
+    scopeType ===
+    MerchandisingScopeType.PRODUCT_TYPE
+  ) {
+    const valid =
+      Object.values(ProductType).includes(
+        scopeKey as ProductType
+      );
 
     if (!valid) {
       return {
@@ -102,19 +133,39 @@ async function validateScope(
     return { ok: true as const };
   }
 
-  const occasion = await prisma.occasion.findUnique({
-    where: {
-      slug: scopeKey.toLowerCase(),
-    },
-    select: {
-      id: true,
-    },
-  });
+  if (
+    scopeType ===
+    MerchandisingScopeType.OCCASION
+  ) {
+    const occasion =
+      await prisma.occasion.findUnique({
+        where: {
+          slug: scopeKey.toLowerCase(),
+        },
+        select: {
+          id: true,
+        },
+      });
 
-  if (!occasion) {
+    if (!occasion) {
+      return {
+        ok: false as const,
+        error: "Occasion not found.",
+      };
+    }
+
+    return { ok: true as const };
+  }
+
+  const validRegion =
+    Object.values(Region).includes(
+      scopeKey as Region
+    );
+
+  if (!validRegion) {
     return {
       ok: false as const,
-      error: "Occasion not found.",
+      error: "Invalid continent.",
     };
   }
 
