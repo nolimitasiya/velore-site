@@ -289,12 +289,12 @@ const [occasionOpen, setOccasionOpen] = useState(false);
 
         <div className="mt-4 h-px w-12 bg-black/20" />
 
-        <div className="mt-8 flex gap-4 overflow-x-auto pb-3">
+        <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
           {products.map((product) => (
             <article
-              key={product.id}
-              className="min-w-[72vw] overflow-hidden rounded-[18px] border border-black/10 bg-white sm:min-w-[340px] md:min-w-0 md:flex-1"
-            >
+  key={product.id}
+  className="overflow-hidden rounded-[18px] border border-black/10 bg-white"
+>
               <div className="relative aspect-[3/4] overflow-hidden bg-[#f5f1eb]">
                 <Image
                   src={product.image}
