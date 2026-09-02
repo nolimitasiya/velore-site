@@ -1,3 +1,5 @@
+"use client";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -68,6 +70,10 @@ const regions = [
 ];
 
 export default function GraduationCampaignHome() {
+
+const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+const [occasionOpen, setOccasionOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-white text-black">
       {/* HEADER */}
@@ -161,6 +167,87 @@ export default function GraduationCampaignHome() {
 <span>Editorial</span>
 <span>Sale</span>
           </nav>
+
+          {/* MOBILE NAV */}
+<div className="pb-4 md:hidden">
+  <button
+    type="button"
+    onClick={() => setMobileMenuOpen((prev) => !prev)}
+    className="mx-auto flex items-center gap-2 font-display text-[16px] text-black/70"
+  >
+    Menu
+    <span className="text-xs">
+      {mobileMenuOpen ? "−" : "+"}
+    </span>
+  </button>
+
+  {mobileMenuOpen && (
+    <div className="mt-4 border-t border-black/10 pt-4">
+      <div className="flex flex-col items-center gap-4 font-display text-[17px] text-black/70">
+
+        <span>New In</span>
+
+        <span>Clothing</span>
+
+        <span>Accessories</span>
+
+        {/* MOBILE OCCASION */}
+        <div className="w-full text-center">
+          <button
+            type="button"
+            onClick={() => setOccasionOpen((prev) => !prev)}
+            className="flex w-full items-center justify-center gap-2"
+          >
+            Occasion
+            <span className="text-xs">
+              {occasionOpen ? "−" : "+"}
+            </span>
+          </button>
+
+          {occasionOpen && (
+            <div className="mt-3 flex flex-col gap-3 bg-[#f7f4ef] py-4 text-[15px]">
+
+              <span className="text-black/50">
+                Everyday
+              </span>
+
+              <span className="text-black/50">
+                Workwear
+              </span>
+
+              <span className="text-black/50">
+                Wedding
+              </span>
+
+              <Link
+                href="/campaign/graduation/occasion/graduation"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setOccasionOpen(false);
+                }}
+                className="font-medium text-[#7B2D3E]"
+              >
+                Graduation
+              </Link>
+
+              <span className="text-black/50">
+                Evening
+              </span>
+
+            </div>
+          )}
+        </div>
+
+        <span>Brands</span>
+
+        <span>Editorial</span>
+
+        <span>Sale</span>
+
+      </div>
+    </div>
+  )}
+</div>
         </div>
       </header>
 
@@ -213,7 +300,7 @@ export default function GraduationCampaignHome() {
                   src={product.image}
                   alt={product.title}
                   fill
-                  sizes="(max-width: 768px) 72vw, 25vw"
+                  sizes="(max-width: 768px) 50vw, 25vw"
                   className="object-cover"
                 />
 
