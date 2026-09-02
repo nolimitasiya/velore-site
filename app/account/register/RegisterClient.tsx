@@ -8,8 +8,10 @@ export default function RegisterClient() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [dateOfBirth, setDateOfBirth] =  useState("");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  
 
   async function onRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -17,6 +19,54 @@ export default function RegisterClient() {
       setErr("Password must be at least 8 characters.");
       return;
     }
+
+    if (!dateOfBirth) {
+  setErr("Please enter your date of birth.");
+  return;
+}
+
+const dob =
+  new Date(`${dateOfBirth}T00:00:00.000Z`);
+
+if (
+  Number.isNaN(
+    dob.getTime()
+  )
+) {
+  setErr(
+    "Please enter a valid date of birth."
+  );
+  return;
+}
+
+const today =
+  new Date();
+
+let age =
+  today.getUTCFullYear() -
+  dob.getUTCFullYear();
+
+const monthDifference =
+  today.getUTCMonth() -
+  dob.getUTCMonth();
+
+if (
+  monthDifference < 0 ||
+  (
+    monthDifference === 0 &&
+    today.getUTCDate() <
+      dob.getUTCDate()
+  )
+) {
+  age -= 1;
+}
+
+if (age < 13) {
+  setErr(
+    "You must be at least 13 years old to create a Veilora account."
+  );
+  return;
+}
     setBusy(true);
     setErr(null);
     try {
@@ -24,7 +74,7 @@ export default function RegisterClient() {
         method: "POST",
         headers: { "content-type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email, password, firstName, lastName }),
+        body: JSON.stringify({ email, password, firstName, lastName, dateOfBirth,}),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) {
@@ -72,6 +122,28 @@ export default function RegisterClient() {
         </div>
 
         <div>
+  <label className="text-[11px] uppercase tracking-[0.14em] text-[#6b5c4e]">
+    Date of birth
+  </label>
+
+  <input
+    type="date"
+    className="mt-1 w-full rounded border border-[#d8c9b5] bg-white px-4 py-3 text-sm text-[#1a0a0e] outline-none focus:border-[#7B2D3E]"
+    value={dateOfBirth}
+    onChange={(e) =>
+      setDateOfBirth(
+        e.target.value
+      )
+    }
+    required
+  />
+
+  <p className="mt-1.5 text-[11px] text-[#a89280]">
+    Used to personalise your Veilora experience and understand our audience.
+  </p>
+</div>
+
+        <div>
           <label className="text-[11px] uppercase tracking-[0.14em] text-[#6b5c4e]">
             Email address
           </label>
@@ -102,7 +174,7 @@ export default function RegisterClient() {
 
         <button
           type="submit"
-          disabled={busy || !email || !password}
+          disabled={busy || !email || !password || !dateOfBirth}
           className="w-full rounded bg-[#7B2D3E] px-4 py-3.5 text-sm tracking-wide text-white transition hover:bg-[#6a2535] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy ? "Creating account..." : "Create account →"}

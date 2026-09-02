@@ -42,10 +42,18 @@ function toStorefrontProducts(
     imageUrl: p.images?.[0]?.url ?? null,
     price: p.price ? p.price.toString() : null,
     currency: p.currency,
-    buyUrl: buildTrackedOutboundUrl(p.id, {
-      sourcePage: "HOME",
-      position: index + 1,
-    }),
+    buyUrl: buildTrackedOutboundUrl(
+  p.id,
+  {
+    sourcePage: "HOME",
+    position: index + 1,
+  }
+),
+
+analytics: {
+  discoverySource: "HOME",
+  position: index + 1,
+},
   }));
 }
 
@@ -98,23 +106,56 @@ export default async function LiveHome({ region, country }: LiveHomeProps) {
   const finalSection = await resolveHomepageStorefrontSection(selectedCountry);
 
   /* map to UI */
-  const trendy: StorefrontProduct[] =
-    finalSection?.items.map((i, index) => ({
-      id: i.product.id,
-      title: i.product.title,
-      brandName: i.product.brand?.name ?? null,
-      brandSlug: i.product.brand?.slug ?? null,
-      productSlug: i.product.slug ?? null,
-      imageUrl: i.product.images?.[0]?.url ?? null,
-      price: i.product.price ? i.product.price.toString() : null,
-      currency: i.product.currency,
-      buyUrl: buildTrackedOutboundUrl(i.product.id, {
-        sourcePage: "HOME",
-        sectionId: finalSection.id,
-        sectionKey: finalSection.key,
-        position: index + 1,
-      }),
-    })) ?? [];
+ const trendy: StorefrontProduct[] =
+  finalSection?.items.map((i, index) => ({
+    id: i.product.id,
+    title: i.product.title,
+    brandName:
+      i.product.brand?.name ?? null,
+
+    brandSlug:
+      i.product.brand?.slug ?? null,
+
+    productSlug:
+      i.product.slug ?? null,
+
+    imageUrl:
+      i.product.images?.[0]?.url ?? null,
+
+    price:
+      i.product.price
+        ? i.product.price.toString()
+        : null,
+
+    currency:
+      i.product.currency,
+
+    buyUrl:
+      buildTrackedOutboundUrl(
+        i.product.id,
+        {
+          sourcePage: "HOME",
+          sectionId:
+            finalSection.id,
+          sectionKey:
+            finalSection.key,
+          position:
+            index + 1,
+        }
+      ),
+
+    analytics: {
+      discoverySource: "HOME",
+      sectionId:
+        finalSection.id,
+      sectionKey:
+        finalSection.key,
+      position:
+        index + 1,
+      contextType:
+        "SHOP_TRENDY",
+    },
+  })) ?? [];
 
 
     const continentsDb = await prisma.continent.findMany({

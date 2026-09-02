@@ -14,6 +14,7 @@ import { getAvailableStyles } from "@/lib/storefront/getAvailableStyles";
 import { buildStorefrontWhere } from "@/lib/storefront/buildStorefrontWhere";
 import { countryNameFromIso2 } from "@/lib/geo/countries";
 import { buildTrackedOutboundUrl } from "@/lib/affiliate/tracking";
+import SearchAnalyticsTracker from "@/components/analytics/SearchAnalyticsTracker";
 
 type Opt = { value: string; label: string };
 
@@ -42,18 +43,227 @@ function titleCaseLabel(s: string) {
     .join(" ");
 }
 
+
+
 function normalizeText(s: string) {
-  return s.toLowerCase().replaceAll("_", " ").trim();
+  return s
+    .toLowerCase()
+    .replaceAll("_", " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-function matchingProductTypes(q: string): ProductType[] {
-  const nq = normalizeText(q);
+function singularizeSimpleWord(word: string) {
+  const normalized = normalizeText(word);
 
-  return (Object.values(ProductType) as ProductType[]).filter((t) => {
-    const enumText = normalizeText(t);
-    const labelText = normalizeText(titleCaseLabel(t));
-    return enumText.includes(nq) || labelText.includes(nq);
+  if (normalized.endsWith("ies") && normalized.length > 3) {
+    return `${normalized.slice(0, -3)}y`;
+  }
+
+  if (normalized.endsWith("s") && normalized.length > 3) {
+    return normalized.slice(0, -1);
+  }
+
+  return normalized;
+}
+function queryContainsTaxonomyValue(
+  query: string,
+  name: string,
+  slug: string
+) {
+  const normalizedQuery = normalizeText(query);
+
+  const candidates = [
+    normalizeText(name),
+    normalizeText(slug),
+  ].filter(Boolean);
+
+  return candidates.some((candidate) => {
+    const escaped = candidate.replace(
+      /[.*+?^${}()|[\]\\]/g,
+      "\\$&"
+    );
+
+    const pattern = new RegExp(
+      `(^|\\s)${escaped}(?=\\s|$)`,
+      "i"
+    );
+
+    return pattern.test(normalizedQuery);
   });
+}
+
+function productTypeSearchTerms(type: ProductType) {
+  const enumText = normalizeText(type);
+  const labelText = normalizeText(
+    STOREFRONT_TYPE_LABELS[type] ?? titleCaseLabel(type)
+  );
+
+  return new Set([
+    enumText,
+    labelText,
+    singularizeSimpleWord(enumText),
+    singularizeSimpleWord(labelText),
+  ]);
+}
+
+  
+  const PRODUCT_TYPE_SEARCH_ALIASES: Partial<
+  Record<ProductType, string[]>
+> = {
+  ABAYA: [
+    "abaya",
+    "abayas",
+  ],
+
+  DRESS: [
+    "dress",
+    "dresses",
+    "maxi dress",
+    "long dress",
+  ],
+
+  SKIRT: [
+    "skirt",
+    "skirts",
+    "maxi skirt",
+    "long skirt",
+  ],
+
+  TOP: [
+    "top",
+    "tops",
+    "blouse",
+    "blouses",
+    "shirt",
+    "shirts",
+  ],
+
+
+  HIJAB: [
+    "hijab",
+    "hijabs",
+    "scarf",
+    "scarves",
+    "headscarf",
+    "headscarves",
+    "head scarf",
+    "head scarves",
+  ],
+
+  ACTIVEWEAR: [
+    "activewear",
+    "sportswear",
+    "gymwear",
+    "gym wear",
+    "workout wear",
+  ],
+
+  SETS: [
+    "set",
+    "sets",
+    "matching set",
+    "matching sets",
+    "co ord",
+    "co ords",
+    "coord",
+    "coords",
+    "two piece",
+    "two piece set",
+  ],
+
+  MATERNITY: [
+    "maternity",
+    "pregnancy",
+    "pregnancy wear",
+    "maternity wear",
+  ],
+
+  KHIMAR: [
+    "khimar",
+    "khimars",
+  ],
+
+  JILBAB: [
+    "jilbab",
+    "jilbabs",
+  ],
+
+   COATS_JACKETS: [
+    "coat",
+    "coats",
+    "jacket",
+    "jackets",
+    "coat jacket",
+    "coats jackets",
+  ],
+
+  HOODIE_SWEATSHIRT: [
+    "hoodie",
+    "hoodies",
+    "sweatshirt",
+    "sweatshirts",
+    "sweater",
+    "sweaters",
+  ],
+
+  PANTS: [
+    "pants",
+    "trousers",
+    "trouser",
+    "wide leg trousers",
+    "wide leg pants",
+  ],
+
+  BLAZER: [
+    "blazer",
+    "blazers",
+  ],
+
+
+};
+
+function matchingProductTypesFromQuery(
+  q: string
+): ProductType[] {
+  const normalizedQuery = normalizeText(q);
+
+  return (Object.values(ProductType) as ProductType[]).filter(
+    (type) => {
+      const enumText = normalizeText(type);
+
+      const labelText = normalizeText(
+        STOREFRONT_TYPE_LABELS[type] ??
+          titleCaseLabel(type)
+      );
+
+      const candidates = new Set([
+  enumText,
+  labelText,
+  singularizeSimpleWord(enumText),
+  singularizeSimpleWord(labelText),
+
+  ...(
+    PRODUCT_TYPE_SEARCH_ALIASES[type] ??
+    []
+  ).map(normalizeText),
+]);
+
+      return Array.from(candidates).some((candidate) => {
+        const escaped = candidate.replace(
+          /[.*+?^${}()|[\]\\]/g,
+          "\\$&"
+        );
+
+        const pattern = new RegExp(
+          `(^|\\s)${escaped}(?=\\s|$)`,
+          "i"
+        );
+
+        return pattern.test(normalizedQuery);
+      });
+    }
+  );
 }
 
 export default async function SearchPage({
@@ -68,6 +278,13 @@ export default async function SearchPage({
 
   const filters = parseStorefrontFilters(sp);
   const { types, sort } = filters;
+
+  const normalizedQuery = normalizeText(q);
+  
+
+  const matchedTypes = q
+  ? matchingProductTypesFromQuery(q)
+  : [];
 
   const orderBy =
     sort === "price_asc"
@@ -114,15 +331,65 @@ export default async function SearchPage({
   const styleOptions: Opt[] = await getAvailableStyles(types);
 
   const coloursRaw = await prisma.colour.findMany({
-    orderBy: { name: "asc" },
-    select: { slug: true, name: true },
-    take: 300,
-  });
+  orderBy: { name: "asc" },
+  select: {
+    id: true,
+    slug: true,
+    name: true,
+  },
+  take: 300,
+});
 
   const colorOptions: Opt[] = coloursRaw.map((c) => ({
     value: c.slug,
     label: c.name.toLowerCase(),
   }));
+
+  
+
+  const stylesRaw = await prisma.style.findMany({
+  orderBy: {
+    name: "asc",
+  },
+  select: {
+    id: true,
+    name: true,
+    slug: true,
+  },
+  take: 300,
+});
+
+const matchedStyles = q
+  ? stylesRaw.filter((style) =>
+      queryContainsTaxonomyValue(
+        q,
+        style.name,
+        style.slug
+      )
+    )
+  : [];
+
+  const materialsRaw = await prisma.material.findMany({
+  orderBy: {
+    name: "asc",
+  },
+  select: {
+    id: true,
+    name: true,
+    slug: true,
+  },
+  take: 300,
+});
+
+const matchedMaterials = q
+  ? materialsRaw.filter((material) =>
+      queryContainsTaxonomyValue(
+        q,
+        material.name,
+        material.slug
+      )
+    )
+  : [];
 
   const sizesRaw = await prisma.size.findMany({
     orderBy: { name: "asc" },
@@ -137,120 +404,257 @@ export default async function SearchPage({
       label: formatSizeLabel(s.name),
     }));
 
+  const occasionsRaw = await prisma.occasion.findMany({
+  orderBy: {
+    name: "asc",
+  },
+  select: {
+    id: true,
+    name: true,
+    slug: true,
+  },
+});
+
+const matchedOccasions = q
+  ? occasionsRaw.filter((occasion) =>
+      queryContainsTaxonomyValue(
+        q,
+        occasion.name,
+        occasion.slug
+      )
+    )
+  : [];
+
+const matchedColours = q
+  ? coloursRaw.filter((colour) =>
+      queryContainsTaxonomyValue(
+        q,
+        colour.name,
+        colour.slug
+      )
+    )
+  : [];
+
   const baseWhere = buildStorefrontWhere({
     filters,
   });
 
-  const matchedTypes = q ? matchingProductTypes(q) : [];
 
-  const where = q
-    ? {
-        AND: [
-          baseWhere,
-          {
-            OR: [
-              { title: { contains: q, mode: "insensitive" as const } },
+  const hasStructuredIntent =
+  matchedTypes.length > 0 ||
+  matchedOccasions.length > 0 ||
+  matchedColours.length > 0 ||
+  matchedStyles.length > 0 ||
+  matchedMaterials.length > 0;
+
+const structuredIntentWhere = hasStructuredIntent
+  ? {
+      AND: [
+        ...(matchedTypes.length
+          ? [
               {
-                brand: {
-                  is: {
-                    name: { contains: q, mode: "insensitive" as const },
-                  },
-                },
-              },
-              ...(matchedTypes.length
-                ? [{ productType: { in: matchedTypes } }]
-                : []),
-              {
-                category: {
-                  is: {
-                    name: { contains: q, mode: "insensitive" as const },
-                  },
-                },
-              },
-              {
-                category: {
-                  is: {
-                    slug: { contains: q.toLowerCase(), mode: "insensitive" as const },
-                  },
-                },
-              },
-              {
-                productTags: {
-                  some: {
-                    tag: {
-                      name: { contains: q, mode: "insensitive" as const },
+                OR: [
+                  {
+                    productType: {
+                      in: matchedTypes,
                     },
                   },
-                },
-              },
-              {
-                productTags: {
-                  some: {
-                    tag: {
-                      slug: { contains: q.toLowerCase(), mode: "insensitive" as const },
+                  {
+                    productTypes: {
+                      some: {
+                        productType: {
+                          in: matchedTypes,
+                        },
+                      },
                     },
                   },
-                },
+                ],
               },
-              {
-                productStyles: {
-                  some: {
-                    style: {
-                      name: { contains: q, mode: "insensitive" as const },
-                    },
-                  },
-                },
-              },
-              {
-                productStyles: {
-                  some: {
-                    style: {
-                      slug: { contains: q.toLowerCase(), mode: "insensitive" as const },
-                    },
-                  },
-                },
-              },
-              {
-                productMaterials: {
-                  some: {
-                    material: {
-                      name: { contains: q, mode: "insensitive" as const },
-                    },
-                  },
-                },
-              },
-              {
-                productMaterials: {
-                  some: {
-                    material: {
-                      slug: { contains: q.toLowerCase(), mode: "insensitive" as const },
-                    },
-                  },
-                },
-              },
+            ]
+          : []),
+
+        ...(matchedOccasions.length
+          ? [
               {
                 productOccasions: {
                   some: {
-                    occasion: {
-                      name: { contains: q, mode: "insensitive" as const },
+                    occasionId: {
+                      in: matchedOccasions.map(
+                        (occasion) => occasion.id
+                      ),
                     },
                   },
                 },
               },
-              {
-                productOccasions: {
-                  some: {
-                    occasion: {
-                      slug: { contains: q.toLowerCase(), mode: "insensitive" as const },
-                    },
-                  },
-                },
-              },
-            ],
+            ]
+          : []),
+
+          ...(matchedColours.length
+  ? [
+      {
+        productColours: {
+          some: {
+            colourId: {
+              in: matchedColours.map(
+                (colour) => colour.id
+              ),
+            },
           },
-        ],
-      }
-    : baseWhere;
+        },
+      },
+    ]
+  : []),
+
+  ...(matchedStyles.length
+  ? [
+      {
+        productStyles: {
+          some: {
+            styleId: {
+              in: matchedStyles.map(
+                (style) => style.id
+              ),
+            },
+          },
+        },
+      },
+    ]
+  : []),
+
+  ...(matchedMaterials.length
+  ? [
+      {
+        productMaterials: {
+          some: {
+            materialId: {
+              in: matchedMaterials.map(
+                (material) => material.id
+              ),
+            },
+          },
+        },
+      },
+    ]
+  : []),
+
+      ],
+    }
+  : null;
+
+const freeTextWhere = q
+  ? {
+      OR: [
+        {
+          title: {
+            contains: q,
+            mode: "insensitive" as const,
+          },
+        },
+        {
+          brand: {
+            is: {
+              name: {
+                contains: q,
+                mode: "insensitive" as const,
+              },
+            },
+          },
+        },
+        {
+          category: {
+            is: {
+              name: {
+                contains: q,
+                mode: "insensitive" as const,
+              },
+            },
+          },
+        },
+        {
+          category: {
+            is: {
+              slug: {
+                contains: q.toLowerCase(),
+                mode: "insensitive" as const,
+              },
+            },
+          },
+        },
+        {
+          productTags: {
+            some: {
+              tag: {
+                name: {
+                  contains: q,
+                  mode: "insensitive" as const,
+                },
+              },
+            },
+          },
+        },
+        {
+          productTags: {
+            some: {
+              tag: {
+                slug: {
+                  contains: q.toLowerCase(),
+                  mode: "insensitive" as const,
+                },
+              },
+            },
+          },
+        },
+        {
+          productStyles: {
+            some: {
+              style: {
+                name: {
+                  contains: q,
+                  mode: "insensitive" as const,
+                },
+              },
+            },
+          },
+        },
+        {
+          productMaterials: {
+            some: {
+              material: {
+                name: {
+                  contains: q,
+                  mode: "insensitive" as const,
+                },
+              },
+            },
+          },
+        },
+        {
+          productOccasions: {
+            some: {
+              occasion: {
+                name: {
+                  contains: q,
+                  mode: "insensitive" as const,
+                },
+              },
+            },
+          },
+        },
+      ],
+    }
+  : null;
+
+const where = q
+  ? {
+      AND: [
+        baseWhere,
+
+        hasStructuredIntent
+          ? structuredIntentWhere!
+          : freeTextWhere!,
+      ],
+    }
+  : baseWhere;
 
   const products = await prisma.product.findMany({
     where,
@@ -282,11 +686,50 @@ export default async function SearchPage({
   brandSlug: p.brand?.slug ?? null, // ← ADD
   productSlug: p.slug ?? null,       // ← ADD
   badges: (p.badges ?? []) as any,
+
+  analytics: {
+  sourcePage: "SEARCH",
+  sectionKey: "search_results",
+  position: index + 1,
+  pageNumber: 1,
+  contextType: "SEARCH_RESULTS",
+  searchQuery: q,
+},
+
 }));
+
+const searchIntent = {
+  productTypes: matchedTypes,
+
+  occasions: matchedOccasions.map(
+    (occasion) => occasion.slug
+  ),
+
+  colours: matchedColours.map(
+    (colour) => colour.slug
+  ),
+
+  styles: matchedStyles.map(
+    (style) => style.slug
+  ),
+
+  materials: matchedMaterials.map(
+    (material) => material.slug
+  ),
+};
 
 
   return (
     <SiteShell>
+      {q ? (
+  <SearchAnalyticsTracker
+    query={q}
+    resultsCount={mapped.length}
+    intent={searchIntent}
+    filters={filters}
+  />
+) : null}
+
       <main className="min-h-screen w-full bg-white">
         <div className="mx-auto w-full max-w-[1800px] px-8 py-10 space-y-10">
           <header className="space-y-2 text-center">

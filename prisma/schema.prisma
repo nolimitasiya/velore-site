@@ -149,6 +149,7 @@ model Brand {
   // ✅ ADD THESE (opposite relations)
   affiliateClicks   AffiliateClick[]
   affiliateEarnings AffiliateEarning[]
+  analyticsEvents   AnalyticsEvent[]
   payouts           BrandPayout[]
   billingEmail      String?
 }
@@ -216,6 +217,7 @@ model Product {
   category        Category?        @relation(fields: [categoryId], references: [id])
   images          ProductImage[]
   affiliateClicks AffiliateClick[]
+  analyticsEvents AnalyticsEvent[]
   status          ProductStatus    @default(DRAFT)
   lastApprovedAt  DateTime?
   productSizes    ProductSize[]
@@ -393,7 +395,50 @@ enum ClickSourcePage {
   HOME
   SEARCH
   BRAND
+  CATEGORY
+  PRODUCT
   DIARY
+  STYLE_FEED
+  CONTINENT
+  EMERGING_BRANDS
+  NEW_IN
+  SALE
+  OTHER
+}
+
+enum AnalyticsEventType {
+  SEARCH
+
+  PRODUCT_IMPRESSION
+  PRODUCT_VIEW
+  BRAND_VIEW
+
+  WISHLIST_ADD
+  WISHLIST_REMOVE
+
+  SHOP_CLICK
+
+  FILTER_APPLY
+  SORT_CHANGE
+
+  STYLE_FEED_VIEW
+  STYLE_FEED_OPEN
+  STYLE_FEED_PRODUCT_CLICK
+}
+
+enum AnalyticsSourcePage {
+  HOME
+  SEARCH
+  BRAND
+  CATEGORY
+  PRODUCT
+  DIARY
+  STYLE_FEED
+  CONTINENT
+  EMERGING_BRANDS
+  NEW_IN
+  SALE
+  OTHER
 }
 
 model AffiliateClick {
@@ -1162,10 +1207,14 @@ model Shopper {
   firstName   String?
   lastName    String?
   countryCode String?  @db.Char(2)
+
+  dateOfBirth DateTime?
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  wishlistItems WishlistItem[]
+  wishlistItems     WishlistItem[]
+  analyticsSessions AnalyticsSession[]
 }
 
 model WishlistItem {
@@ -1346,3 +1395,74 @@ model ProductCompleteTheLook {
   @@index([productId, position])
   @@index([linkedProductId])
 }
+
+model AnalyticsSession {
+  id String @id @default(cuid())
+
+  startedAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  shopperId String?  @db.Uuid
+  shopper   Shopper? @relation(fields: [shopperId], references: [id], onDelete: SetNull)
+
+  shopperCountryCode  String? @db.Char(2)
+  shopperCurrencyCode String? @db.Char(3)
+
+  events AnalyticsEvent[]
+
+  @@index([startedAt])
+  @@index([lastSeenAt])
+  @@index([shopperId])
+  @@index([shopperCountryCode, startedAt])
+}
+
+model AnalyticsEvent {
+  id String @id @default(cuid())
+
+  sessionId String
+  session   AnalyticsSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  eventType AnalyticsEventType
+
+  // Product / brand involved in the event
+  productId String? @db.Uuid
+  brandId   String? @db.Uuid
+
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  brand   Brand?   @relation(fields: [brandId], references: [id], onDelete: SetNull)
+
+  // Search intelligence
+  query           String?
+  normalizedQuery String?
+  resultsCount    Int?
+
+  // Filters / extra event-specific information
+  filters  Json?
+  metadata Json?
+
+  // Where the event happened
+  sourcePage AnalyticsSourcePage?
+  sourcePath String?
+
+  sectionId   String? @db.Uuid
+  sectionKey  String?
+  position    Int?
+  pageNumber  Int?
+  contextType String?
+
+  // Shopper's selected shopping market at event time
+  shopperCountryCode  String? @db.Char(2)
+  shopperCurrencyCode String? @db.Char(3)
+
+  createdAt DateTime @default(now())
+
+  @@index([sessionId, createdAt])
+  @@index([eventType, createdAt])
+  @@index([productId, createdAt])
+  @@index([brandId, createdAt])
+  @@index([normalizedQuery, createdAt])
+  @@index([shopperCountryCode, createdAt])
+  @@index([sourcePage, createdAt])
+  @@index([sectionId, createdAt])
+}
+

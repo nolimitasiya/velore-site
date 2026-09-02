@@ -20,6 +20,10 @@ import {
   getCategoryMerchLiveIds,
 } from "@/lib/storefront/getCategoryMerchProducts";
 
+import {
+  buildTrackedOutboundUrl,
+} from "@/lib/affiliate/tracking";
+
 
 type Opt = { value: string; label: string };
 
@@ -255,44 +259,58 @@ if (
       },
     });
 
-  mapped = products.map(
-    (p, index) => ({
-      id: p.id,
-      title: p.title,
-      brandName:
-        p.brand?.name ?? null,
-      brandSlug:
-        p.brand?.slug ?? null,
-      productSlug:
-        p.slug ?? null,
-      imageUrl:
-        p.images?.[0]?.url ?? null,
-      price: p.price
-        ? p.price.toString()
-        : null,
-      currency: String(
-        p.currency
-      ),
-      buyUrl: `/out/${p.id}`,
-      badges:
-        (p.badges ?? []) as string[],
-      analytics: {
-        sourcePage: "SEARCH" as const,
-        sectionKey: `occasion_${occasion.slug}_grid`,
-        position: index + 1,
-        pageNumber: currentPage,
-        isExpandedPageOne:
-          currentPage === 1
-            ? isExpandedPageOne
-            : false,
-        contextType:
-          shouldUseOccasionMerch &&
-          currentPage >= 2
-            ? "GRID_AFTER_MERCH"
-            : "GRID",
-      },
-    })
-  );
+  mapped = products.map((p, index) => ({
+  id: p.id,
+  title: p.title,
+
+  brandName:
+    p.brand?.name ?? null,
+
+  brandSlug:
+    p.brand?.slug ?? null,
+
+  productSlug:
+    p.slug ?? null,
+
+  imageUrl:
+    p.images?.[0]?.url ?? null,
+
+  price:
+    p.price
+      ? p.price.toString()
+      : null,
+
+  currency:
+    String(p.currency),
+
+  buyUrl: buildTrackedOutboundUrl(
+    p.id,
+    {
+      sourcePage: "CATEGORY",
+      sectionKey: `occasion_${occasion.slug}_grid`,
+      position: index + 1,
+      pageNumber: currentPage,
+      contextType: "OCCASION_TYPE",
+    }
+  ),
+
+  badges:
+    (p.badges ?? []) as string[],
+
+  analytics: {
+    sourcePage: "CATEGORY" as const,
+    sectionKey: `occasion_${occasion.slug}_grid`,
+    position: index + 1,
+    pageNumber: currentPage,
+
+    isExpandedPageOne:
+      currentPage === 1
+        ? isExpandedPageOne
+        : false,
+
+    contextType: "OCCASION_TYPE",
+  },
+}));
 }
 
   

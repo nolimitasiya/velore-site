@@ -97,7 +97,9 @@ function isLaunchPublicPage(pathname: string) {
     pathname === "/newsletter/unsubscribed" ||
     pathname.startsWith("/newsletter/unsubscribed") ||
     pathname === "/diary" ||
-    pathname.startsWith("/diary/")
+    pathname.startsWith("/diary/") ||
+    pathname === "/campaign/graduation" ||
+    pathname.startsWith("/campaign/graduation/") 
     
     
   );
@@ -113,6 +115,7 @@ function isLaunchPublicApi(pathname: string) {
     pathname.startsWith("/api/contact/") ||
     pathname.startsWith("/api/currency/") ||
     pathname.startsWith("/api/shopper-preferences/") ||
+    pathname.startsWith("/api/events/") ||
     pathname === "/api/search" ||
     pathname.startsWith("/api/search/") ||
     pathname.startsWith("/api/storefront/") ||
@@ -120,7 +123,9 @@ function isLaunchPublicApi(pathname: string) {
     pathname.startsWith("/api/diary/")||
     pathname.startsWith("/api/newsletter/") ||
     pathname.startsWith("/api/clicks/")||
-    pathname.startsWith("/api/out/") 
+    pathname.startsWith("/api/out/") ||
+    pathname === "/api/campaign/graduation-login" ||
+    pathname === "/api/campaign/graduation-logout" 
   );
 }
 

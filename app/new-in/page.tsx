@@ -18,6 +18,9 @@ import { parseStorefrontFilters } from "@/lib/storefront/parseFilters";
 import { getAvailableStyles } from "@/lib/storefront/getAvailableStyles";
 import { buildStorefrontWhere } from "@/lib/storefront/buildStorefrontWhere";
 import { countryNameFromIso2 } from "@/lib/geo/countries";
+import {
+  buildTrackedOutboundUrl,
+} from "@/lib/affiliate/tracking";
 
 type Opt = { value: string; label: string };
 
@@ -150,17 +153,65 @@ export default async function NewInPage({
     },
   });
 
-  const mapped: GridProduct[] = products.map((p) => ({
+  const mapped: GridProduct[] =
+  products.map((p, index) => ({
     id: p.id,
     title: p.title,
-    brandName: p.brand?.name ?? null,
-    brandSlug: p.brand?.slug ?? null, // ← ADDED
-    productSlug: p.slug ?? null,       // ← ADDED
-    imageUrl: p.images?.[0]?.url ?? null,
-    price: p.price ? p.price.toString() : null,
-    currency: String(p.currency),
-    buyUrl: `/out/${p.id}`,
-    badges: (p.badges ?? []) as any,
+
+    brandName:
+      p.brand?.name ?? null,
+
+    brandSlug:
+      p.brand?.slug ?? null,
+
+    productSlug:
+      p.slug ?? null,
+
+    imageUrl:
+      p.images?.[0]?.url ?? null,
+
+    price:
+      p.price
+        ? p.price.toString()
+        : null,
+
+    currency:
+      String(p.currency),
+
+    buyUrl:
+      buildTrackedOutboundUrl(
+        p.id,
+        {
+          sourcePage: "NEW_IN",
+          sectionKey: "new_in_grid",
+          position: index + 1,
+          pageNumber: 1,
+          contextType: "NEW_IN",
+        }
+      ),
+
+    badges:
+      (p.badges ?? []) as any,
+
+    analytics: {
+      sourcePage:
+        "NEW_IN" as const,
+
+      sectionKey:
+        "new_in_grid",
+
+      position:
+        index + 1,
+
+      pageNumber:
+        1,
+
+      isExpandedPageOne:
+        false,
+
+      contextType:
+        "NEW_IN",
+    },
   }));
 
   return (

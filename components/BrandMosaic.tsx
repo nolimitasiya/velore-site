@@ -45,11 +45,11 @@ export function BrandMosaic({ tiles }: { tiles: StorefrontBrandTile[] }) {
           </div>
 
           <Link
-            href="/brands"
+            href="/brands/emerging?src=EMERGING_BRANDS&skey=home_emerging_brands_view_all&page=1&ctx=HOME_EMERGING_BRANDS_VIEW_ALL"
             className="group hidden items-center gap-5 pb-1 font-body text-[11px] uppercase tracking-[0.2em] text-black/55 transition-colors hover:text-[#7B2D3E] md:flex"
           >
             <span className="border-b border-black/25 pb-1">
-              View all
+              View all emerging brands
             </span>
             <span className="text-xl transition-transform duration-300 group-hover:translate-x-1">
               →
@@ -62,7 +62,14 @@ export function BrandMosaic({ tiles }: { tiles: StorefrontBrandTile[] }) {
           {visibleTiles.map((tile, index) => (
             <Link
               key={tile.id}
-              href={`/brands/${tile.slug}`}
+              href={
+  `/brands/${tile.slug}` +
+  `?src=EMERGING_BRANDS` +
+  `&skey=home_emerging_brands_mosaic` +
+  `&pos=${index + 1}` +
+  `&page=1` +
+  `&ctx=HOME_EMERGING_BRANDS_MOSAIC`
+}
               className={`group relative overflow-hidden bg-black/5 ${
                 tileClasses[index] ?? "md:col-span-4"
               }`}
@@ -101,10 +108,10 @@ export function BrandMosaic({ tiles }: { tiles: StorefrontBrandTile[] }) {
         {/* Mobile view-all */}
         <div className="mt-7 md:hidden">
           <Link
-            href="/brands"
+            href="/brands/emerging?src=EMERGING_BRANDS&skey=home_emerging_brands_view_all&page=1&ctx=HOME_EMERGING_BRANDS_VIEW_ALL"
             className="flex items-center justify-between border-b border-black/15 pb-3 font-body text-[11px] uppercase tracking-[0.2em] text-black/60"
           >
-            <span>View all brands</span>
+            <span>View all emerging brands</span>
             <span className="text-lg">→</span>
           </Link>
         </div>

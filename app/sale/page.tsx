@@ -20,6 +20,8 @@ import { countryNameFromIso2 } from "@/lib/geo/countries";
 import { getMerchPageOneProducts } from "@/lib/storefront/getMerchPageOneProducts";
 import { getStorefrontPaginationState } from "@/lib/storefront/pagination";
 
+import {  buildTrackedOutboundUrl,} from "@/lib/affiliate/tracking";
+
 type Opt = { value: string; label: string };
 
 function titleCaseLabel(s: string) {
@@ -188,25 +190,65 @@ export default async function SalePage({
       },
     });
 
-    mapped = products.map((p, index) => ({
+   mapped = products.map((p, index) => ({
   id: p.id,
   title: p.title,
-  brandName: p.brand?.name ?? null,
-  brandSlug: p.brand?.slug ?? null, // ← ADDED
-  productSlug: p.slug ?? null,       // ← ADDED
-  imageUrl: p.images?.[0]?.url ?? null,
-  price: p.price ? p.price.toString() : null,
-  currency: String(p.currency),
-  buyUrl: `/out/${p.id}`,
-  badges: (p.badges ?? []) as any,
+
+  brandName:
+    p.brand?.name ?? null,
+
+  brandSlug:
+    p.brand?.slug ?? null,
+
+  productSlug:
+    p.slug ?? null,
+
+  imageUrl:
+    p.images?.[0]?.url ?? null,
+
+  price:
+    p.price
+      ? p.price.toString()
+      : null,
+
+  currency:
+    String(p.currency),
+
+  buyUrl:
+    buildTrackedOutboundUrl(
+      p.id,
+      {
+        sourcePage: "SALE",
+        sectionKey: "sale_grid",
+        position: index + 1,
+        pageNumber: currentPage,
+        contextType: "SALE",
+      }
+    ),
+
+  badges:
+    (p.badges ?? []) as any,
+
   analytics: {
-    sourcePage: "SEARCH" as const,
-    sectionKey: "sale_grid",
-    position: index + 1,
-    pageNumber: currentPage,
-    isExpandedPageOne: currentPage === 1 ? isExpandedPageOne : false,
+    sourcePage:
+      "SALE" as const,
+
+    sectionKey:
+      "sale_grid",
+
+    position:
+      index + 1,
+
+    pageNumber:
+      currentPage,
+
+    isExpandedPageOne:
+      currentPage === 1
+        ? isExpandedPageOne
+        : false,
+
     contextType:
-      shouldUseMerchPageOne && currentPage >= 2 ? "GRID_AFTER_MERCH" : "GRID",
+      "SALE",
   },
 }));
   }

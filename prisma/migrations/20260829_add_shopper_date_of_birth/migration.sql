@@ -1,0 +1,2 @@
+ALTER TABLE "Shopper"
+ADD COLUMN "dateOfBirth" TIMESTAMP(3);

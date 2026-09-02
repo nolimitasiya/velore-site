@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import type { GridProduct } from "@/components/ProductGrid";
 import type { Prisma } from "@prisma/client";
 
+import {  buildTrackedOutboundUrl,} from "@/lib/affiliate/tracking";
+
 export type MerchPageKey = "CLOTHING" | "SALE" | "OCCASION";
 type MerchBucket = "TOP_PICKS" | "DISCOVER_MORE" | "EXPLORE_NEW";
 
@@ -86,28 +88,78 @@ function isMerchProductEligibleForPage(
 function mapMerchToGridProduct(
   item: MerchProductRecord,
   index: number,
-  isExpandedPageOne: boolean
+  isExpandedPageOne: boolean,
+  pageKey: MerchPageKey
 ): GridProduct {
+  const contextType =
+  pageKey === "OCCASION"
+    ? "OCCASION"
+    : pageKey === "CLOTHING"
+    ? "CLOTHING"
+    : "SALE";
+
+  const sourcePage =
+  pageKey === "SALE"
+    ? "SALE"
+    : "CATEGORY";
+    
   return {
-    id: item.product.id,
-    title: item.product.title,
-    imageUrl: item.product.images[0]?.url ?? null,
-    brandName: item.product.brand.name,
-    brandSlug: item.product.brand.slug,
-    productSlug: item.product.slug,
-    price: item.product.price == null ? null : String(item.product.price),
-    currency: item.product.currency,
-    buyUrl: `/out/${item.product.id}`,
-    badges: item.product.badges,
-    analytics: {
-      sourcePage: "SEARCH",
-      sectionKey: item.bucket.toLowerCase(),
-      position: index + 1,
-      pageNumber: 1,
-      isExpandedPageOne,
-      contextType: "MERCH",
-    },
-  };
+  id: item.product.id,
+  title: item.product.title,
+  imageUrl:
+    item.product.images[0]?.url ?? null,
+  brandName:
+    item.product.brand.name,
+  brandSlug:
+    item.product.brand.slug,
+  productSlug:
+    item.product.slug,
+  price:
+    item.product.price == null
+      ? null
+      : String(item.product.price),
+  currency:
+    item.product.currency,
+
+  buyUrl:
+    buildTrackedOutboundUrl(
+      item.product.id,
+      {
+        sourcePage,
+
+        sectionKey:
+          item.bucket.toLowerCase(),
+
+        position:
+          index + 1,
+
+        pageNumber:
+          1,
+
+        contextType,
+      }
+    ),
+
+  badges:
+    item.product.badges,
+
+  analytics: {
+    sourcePage,
+
+    sectionKey:
+      item.bucket.toLowerCase(),
+
+    position:
+      index + 1,
+
+    pageNumber:
+      1,
+
+    isExpandedPageOne,
+
+    contextType,
+  },
+};
 }
 
 function mapFallbackToGridProduct(
@@ -116,6 +168,18 @@ function mapFallbackToGridProduct(
   pageKey: MerchPageKey,
   isExpandedPageOne: boolean
 ): GridProduct {
+  const contextType =
+    pageKey === "OCCASION"
+      ? "OCCASION"
+      : pageKey === "CLOTHING"
+      ? "CLOTHING"
+      : "SALE";
+
+  const sourcePage =
+  pageKey === "SALE"
+    ? "SALE"
+    : "CATEGORY";
+
   return {
     id: product.id,
     title: product.title,
@@ -123,17 +187,33 @@ function mapFallbackToGridProduct(
     brandName: product.brand.name,
     brandSlug: product.brand.slug,
     productSlug: product.slug,
-    price: product.price == null ? null : String(product.price),
+    price:
+      product.price == null
+        ? null
+        : String(product.price),
     currency: product.currency,
-    buyUrl: `/out/${product.id}`,
+
+    buyUrl: buildTrackedOutboundUrl(
+      product.id,
+      {
+        sourcePage,
+        sectionKey: `${pageKey.toLowerCase()}_grid`,
+        position: index + 1,
+        pageNumber: 1,
+        contextType,
+      }
+    ),
+
+    // KEEP THIS
     badges: product.badges,
+
     analytics: {
-      sourcePage: "SEARCH",
+      sourcePage,
       sectionKey: `${pageKey.toLowerCase()}_grid`,
       position: index + 1,
       pageNumber: 1,
       isExpandedPageOne,
-      contextType: "GRID",
+      contextType,
     },
   };
 }
@@ -245,8 +325,14 @@ export async function getMerchPageOneProducts(
     if (!foundAny) break;
   }
 
-  const merchGridProducts = chosen.map((item, index) =>
-    mapMerchToGridProduct(item, index, isExpandedPageOne)
+  const merchGridProducts =
+  chosen.map((item, index) =>
+    mapMerchToGridProduct(
+      item,
+      index,
+      isExpandedPageOne,
+      pageKey
+    )
   );
 
   if (merchGridProducts.length >= targetCount) return merchGridProducts;

@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import MoneyLabel from "@/components/MoneyLabel";
+import ProductImpressionTracker from "@/components/analytics/ProductImpressionTracker";
 
 export type StyleFeedPost = {
   id: string;
@@ -248,13 +249,29 @@ useEffect(() => {
 
           {selectedPost.products && selectedPost.products.length > 0 ? (
             <div className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-4">
-              {selectedPost.products.map((product) => (
-                <Link
-                  key={product.id}
-                  href={`/b/${product.brandSlug}/p/${product.slug}`}
-                  onClick={() => setSelectedPost(null)}
-                  className="group/product"
-                >
+              {selectedPost.products.map((product, index) => (
+  <ProductImpressionTracker
+    key={product.id}
+    productId={product.id}
+    sourcePage="STYLE_FEED"
+    sectionKey={`style_feed_${selectedPost.id}`}
+    position={index + 1}
+    pageNumber={1}
+    contextType="STYLE_FEED_LOOK"
+  >
+    <Link
+    key={product.id}
+    href={
+      `/b/${product.brandSlug}/p/${product.slug}` +
+      `?src=STYLE_FEED` +
+      `&skey=style_feed_${selectedPost.id}` +
+      `&pos=${index + 1}` +
+      `&page=1` +
+      `&ctx=STYLE_FEED_LOOK`
+    }
+    onClick={() => setSelectedPost(null)}
+    className="group/product"
+  >
                   <div className="relative aspect-[3/4] overflow-hidden bg-black/[0.035]">
                     {product.imageUrl ? (
                       <Image
@@ -290,6 +307,7 @@ useEffect(() => {
                         ) : null}
                   </div>
                 </Link>
+                  </ProductImpressionTracker>
               ))}
             </div>
           ) : (

@@ -16,6 +16,8 @@ import { countryNameFromIso2 } from "@/lib/geo/countries";
 import { getMerchPageOneProducts } from "@/lib/storefront/getMerchPageOneProducts";
 import { getStorefrontPaginationState } from "@/lib/storefront/pagination";
 
+import {  buildTrackedOutboundUrl,} from "@/lib/affiliate/tracking";
+
 type Opt = { value: string; label: string };
 
 const OCCASION_PRODUCT_TYPES: ProductType[] = [
@@ -258,22 +260,53 @@ export default async function OccasionPage({
     mapped = products.map((p, index) => ({
   id: p.id,
   title: p.title,
-  brandName: p.brand?.name ?? null,
-  brandSlug: p.brand?.slug ?? null, // ← ADDED
-  productSlug: p.slug ?? null,       // ← ADDED
-  imageUrl: p.images?.[0]?.url ?? null,
-  price: p.price ? p.price.toString() : null,
-  currency: String(p.currency),
-  buyUrl: `/out/${p.id}`,
-  badges: (p.badges ?? []) as any,
+
+  brandName:
+    p.brand?.name ?? null,
+
+  brandSlug:
+    p.brand?.slug ?? null,
+
+  productSlug:
+    p.slug ?? null,
+
+  imageUrl:
+    p.images?.[0]?.url ?? null,
+
+  price:
+    p.price
+      ? p.price.toString()
+      : null,
+
+  currency:
+    String(p.currency),
+
+  buyUrl: buildTrackedOutboundUrl(
+    p.id,
+    {
+      sourcePage: "CATEGORY",
+      sectionKey: "occasion_grid",
+      position: index + 1,
+      pageNumber: currentPage,
+      contextType: "OCCASION",
+    }
+  ),
+
+  badges:
+    (p.badges ?? []) as any,
+
   analytics: {
-    sourcePage: "SEARCH" as const,
+    sourcePage: "CATEGORY" as const,
     sectionKey: "occasion_grid",
     position: index + 1,
     pageNumber: currentPage,
-    isExpandedPageOne: currentPage === 1 ? isExpandedPageOne : false,
-    contextType:
-      shouldUseMerchPageOne && currentPage >= 2 ? "GRID_AFTER_MERCH" : "GRID",
+
+    isExpandedPageOne:
+      currentPage === 1
+        ? isExpandedPageOne
+        : false,
+
+    contextType: "OCCASION",
   },
 }));
   }

@@ -20,6 +20,8 @@ import { countryNameFromIso2 } from "@/lib/geo/countries";
 import { getContinentPageOneProducts } from "@/lib/storefront/getContinentPageOneProducts";
 import { getStorefrontPaginationState } from "@/lib/storefront/pagination";
 
+import {  buildTrackedOutboundUrl,} from "@/lib/affiliate/tracking";
+
 type Opt = { value: string; label: string };
 
 function titleCaseLabel(s: string) {
@@ -197,25 +199,74 @@ export default async function ContinentPage({
       },
     });
 
-    mapped = products.map((p, index) => ({
+   mapped = products.map((p, index) => ({
   id: p.id,
   title: p.title,
-  brandName: p.brand?.name ?? null,
-  brandSlug: p.brand?.slug ?? null,
-  productSlug: p.slug ?? null,
-  imageUrl: p.images?.[0]?.url ?? null,
-  price: p.price ? p.price.toString() : null,
-  currency: String(p.currency),
-  buyUrl: `/out/${p.id}`,
-  badges: (p.badges ?? []) as any,
+  brandName:
+    p.brand?.name ?? null,
+  brandSlug:
+    p.brand?.slug ?? null,
+  productSlug:
+    p.slug ?? null,
+  imageUrl:
+    p.images?.[0]?.url ?? null,
+  price:
+    p.price
+      ? p.price.toString()
+      : null,
+  currency:
+    String(p.currency),
+
+  buyUrl:
+    buildTrackedOutboundUrl(
+      p.id,
+      {
+        sourcePage:
+          "CONTINENT",
+
+        sectionKey:
+          `continent_${slug}`,
+
+        position:
+          index + 1,
+
+        pageNumber:
+          currentPage,
+
+        contextType:
+          shouldUseBalancedPageOne &&
+          currentPage >= 2
+            ? "GRID_AFTER_BALANCED"
+            : "CONTINENT_GRID",
+      }
+    ),
+
+  badges:
+    (p.badges ?? []) as any,
+
   analytics: {
-    sourcePage: "SEARCH" as const,
-    sectionKey: "continent_grid",
-    position: index + 1,
-    pageNumber: currentPage,
-    isExpandedPageOne: currentPage === 1 ? isExpandedPageOne : false,
+    sourcePage:
+      "CONTINENT" as const,
+
+    sectionKey:
+      `continent_${slug}`,
+
+    position:
+      index + 1,
+
+    pageNumber:
+      currentPage,
+
+    isExpandedPageOne:
+      currentPage === 1
+        ? isExpandedPageOne
+        : false,
+
     contextType:
-      shouldUseBalancedPageOne && currentPage >= 2 ? "GRID_AFTER_BALANCED" : "GRID",
+      shouldUseBalancedPageOne &&
+      currentPage >= 2
+        ? "GRID_AFTER_BALANCED"
+        : "CONTINENT_GRID",
   },
 }));
   }

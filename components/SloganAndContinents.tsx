@@ -65,7 +65,7 @@ export function SloganAndContinents({
     {continents.map((c) => (
       <Link
         key={c.slug}
-        href={`/continent/${c.slug}`}
+        href={`/continent/${c.slug}?src=CONTINENT`}
         className="group relative w-[220px] shrink-0 snap-start sm:w-[260px] lg:w-[300px]"
       >
         <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-black/5">

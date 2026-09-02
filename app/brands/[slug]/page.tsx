@@ -7,7 +7,13 @@ import { ProductRow, type StorefrontProduct } from "@/components/ProductRow";
 import StorefrontFilters from "@/components/StorefrontFilters";
 import { Prisma, BrandAccountStatus, AffiliateStatus } from "@prisma/client";
 import { buildTrackedOutboundUrl } from "@/lib/affiliate/tracking";
-import { headers } from "next/headers";
+
+import {
+  normalizeDiscoverySource,
+} from "@/lib/analytics/discoverySource";
+
+import BrandViewTracker from "@/components/analytics/BrandViewTracker";
+
 
 function regionLabel(value: string | null) {
   return value ? value.replaceAll("_", " ") : null;
@@ -48,6 +54,41 @@ export default async function BrandPage({
 }) {
   const { slug } = await params;
   const sp = await searchParams;
+
+  const discoverySource =
+  normalizeDiscoverySource(
+    firstParam(sp, "src")
+  ) ?? "BRAND";
+
+const discoveryQuery =
+  firstParam(sp, "q").trim() ||
+  null;
+
+const discoverySectionKey =
+  firstParam(sp, "skey").trim() ||
+  null;
+
+const discoveryPositionRaw =
+  Number(firstParam(sp, "pos"));
+
+const discoveryPosition =
+  Number.isFinite(discoveryPositionRaw) &&
+  discoveryPositionRaw >= 1
+    ? Math.floor(discoveryPositionRaw)
+    : null;
+const discoveryPageRaw =
+  Number(firstParam(sp, "page"));
+
+const discoveryPage =
+  Number.isFinite(discoveryPageRaw) &&
+  discoveryPageRaw >= 1
+    ? Math.floor(discoveryPageRaw)
+    : null;
+
+const discoveryContext =
+  firstParam(sp, "ctx").trim() ||
+  null;
+  
 
   const types = allParams(sp, "type").map((v) => v.toUpperCase());
   const styles = allParams(sp, "style").map((v) => v.toLowerCase());
@@ -102,24 +143,7 @@ export default async function BrandPage({
     );
   }
 
-  const headerList = await headers();
-
-const countryCode =
-  headerList.get("x-vercel-ip-country") ||
-  headerList.get("cf-ipcountry") ||
-  null;
-
-try {
-  await prisma.brandProfileView.create({
-    data: {
-      brandId: brand.id,
-      sourcePath: `/brands/${brand.slug}`,
-      countryCode,
-    },
-  });
-} catch (error) {
-  console.error("brandProfileView.create failed", error);
-}
+ 
   const where: Prisma.ProductWhereInput = {
     brandId: brand.id,
     status: "APPROVED",
@@ -208,19 +232,102 @@ try {
     },
   });
 
-  const products: StorefrontProduct[] = productsDb.map((p, index) => ({
+  const products: StorefrontProduct[] =
+  productsDb.map((p, index) => ({
     id: p.id,
     title: p.title,
-    brandName: brand.name,
-    imageUrl: p.images?.[0]?.url ?? null,
-    price: p.price ? p.price.toString() : null,
-    currency: p.currency,
-    buyUrl: buildTrackedOutboundUrl(p.id, {
-      sourcePage: "BRAND",
-      position: index + 1,
-    }),
-    brandSlug: brand.slug,   // ← ADD
-    productSlug: p.slug,     // ← ADD
+
+    brandName:
+      brand.name,
+
+    imageUrl:
+      p.images?.[0]?.url ??
+      null,
+
+    price:
+      p.price
+        ? p.price.toString()
+        : null,
+
+    currency:
+      p.currency,
+
+    buyUrl:
+  buildTrackedOutboundUrl(
+    p.id,
+    {
+      sourcePage:
+        discoverySource,
+
+      // CURRENT exposure
+      sectionKey:
+        "brand_product_grid",
+
+      position:
+        index + 1,
+
+      pageNumber:
+        discoveryPage,
+
+      contextType:
+        "BRAND_PRODUCT_GRID",
+
+      searchQuery:
+        discoveryQuery,
+
+      // ORIGINAL entry into this journey
+      entrySectionKey:
+        discoverySectionKey,
+
+      entryPosition:
+        discoveryPosition,
+
+      entryPageNumber:
+        discoveryPage,
+
+      entryContextType:
+        discoveryContext,
+    }
+  ),
+
+    brandSlug:
+      brand.slug,
+
+    productSlug:
+      p.slug,
+
+    analytics: {
+  discoverySource,
+
+  searchQuery:
+    discoveryQuery,
+
+  // CURRENT product-grid exposure
+  sectionKey:
+    "brand_product_grid",
+
+  position:
+    index + 1,
+
+  pageNumber:
+    discoveryPage,
+
+  contextType:
+    "BRAND_PRODUCT_GRID",
+
+  // ORIGINAL Emerging Brands entry
+  entrySectionKey:
+    discoverySectionKey,
+
+  entryPosition:
+    discoveryPosition,
+
+  entryPageNumber:
+    discoveryPage,
+
+  entryContextType:
+    discoveryContext,
+},
   }));
 
   const location = [brand.baseCity, brand.baseCountryCode]
@@ -228,8 +335,12 @@ try {
     .join(" • ");
 
   return (
-    <SiteShell>
-      <div className="mx-auto w-full max-w-[1800px] px-8 py-10 space-y-8">
+  <SiteShell>
+    <BrandViewTracker
+      brandId={brand.id}
+    />
+
+    <div className="mx-auto w-full max-w-[1800px] px-8 py-10 space-y-8">
         <section className="overflow-hidden rounded-[32px]">
           <div className="relative h-[340px] md:h-[500px] bg-[#d8d0c5]">
             <div

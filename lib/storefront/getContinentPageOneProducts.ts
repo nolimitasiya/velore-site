@@ -6,6 +6,8 @@ import {
   type Region,
 } from "@prisma/client";
 
+import {  buildTrackedOutboundUrl,} from "@/lib/affiliate/tracking";
+
 type CandidateProduct = {
   id: string;
   slug: string;
@@ -31,28 +33,53 @@ function mapToGridProduct(
   product: CandidateProduct,
   index: number,
   isExpandedPageOne: boolean,
-  contextType: "CURATED" | "BALANCED"
+  contextType: "CURATED" | "BALANCED",
+  region: Region
 ): GridProduct {
   return {
     id: product.id,
     title: product.title,
-    brandName: product.brand?.name ?? null,
-    brandSlug: product.brand?.slug ?? null,
-    productSlug: product.slug,
-    imageUrl: product.images[0]?.url ?? null,
+    brandName:
+      product.brand?.name ?? null,
+    brandSlug:
+      product.brand?.slug ?? null,
+    productSlug:
+      product.slug,
+    imageUrl:
+      product.images[0]?.url ?? null,
     price:
       product.price == null
         ? null
         : String(product.price),
-    currency: String(product.currency),
-    buyUrl: `/out/${product.id}`,
-    badges: (product.badges ?? []) as string[],
+    currency:
+      String(product.currency),
+
+    buyUrl:
+      buildTrackedOutboundUrl(
+        product.id,
+        {
+          sourcePage: "CONTINENT",
+          sectionKey:
+            `continent_${region.toLowerCase()}`,
+          position:
+            index + 1,
+          pageNumber:
+            1,
+          contextType,
+        }
+      ),
+
+    badges:
+      (product.badges ?? []) as string[],
 
     analytics: {
-      sourcePage: "SEARCH",
-      sectionKey: "continent_grid",
-      position: index + 1,
-      pageNumber: 1,
+      sourcePage: "CONTINENT",
+      sectionKey:
+        `continent_${region.toLowerCase()}`,
+      position:
+        index + 1,
+      pageNumber:
+        1,
       isExpandedPageOne,
       contextType,
     },
@@ -216,11 +243,12 @@ export async function getContinentPageOneProducts(
       .slice(0, targetCount)
       .map((product, index) =>
         mapToGridProduct(
-          product,
-          index,
-          isExpandedPageOne,
-          "CURATED"
-        )
+  product,
+  index,
+  isExpandedPageOne,
+  "CURATED",
+  region
+)
       );
   }
 
@@ -382,12 +410,13 @@ export async function getContinentPageOneProducts(
     .slice(0, targetCount)
     .map((product, index) =>
       mapToGridProduct(
-        product,
-        index,
-        isExpandedPageOne,
-        index < curatedProducts.length
-          ? "CURATED"
-          : "BALANCED"
-      )
+  product,
+  index,
+  isExpandedPageOne,
+  index < curatedProducts.length
+    ? "CURATED"
+    : "BALANCED",
+  region
+)
     );
 }

@@ -7,6 +7,10 @@ import {
   Prisma,
 } from "@prisma/client";
 
+import {
+  buildTrackedOutboundUrl,
+} from "@/lib/affiliate/tracking";
+
 const MANUAL_LIMIT = 48;
 
 type ScopeType = "PRODUCT_TYPE" | "OCCASION";
@@ -29,7 +33,8 @@ function mapProduct(
   product: ProductRecord,
   index: number,
   sectionKey: string,
-  isExpandedPageOne: boolean
+  isExpandedPageOne: boolean,
+  contextType: "PRODUCT_TYPE" | "OCCASION_TYPE"
 ): GridProduct {
   return {
     id: product.id,
@@ -40,16 +45,34 @@ function mapProduct(
     imageUrl: product.images[0]?.url ?? null,
     price: product.price == null ? null : String(product.price),
     currency: String(product.currency),
-    buyUrl: `/out/${product.id}`,
-    badges: product.badges ?? [],
-    analytics: {
-      sourcePage: "SEARCH",
+    buyUrl:
+  buildTrackedOutboundUrl(
+    product.id,
+    {
+      sourcePage: "CATEGORY",
       sectionKey,
       position: index + 1,
       pageNumber: 1,
-      isExpandedPageOne,
-      contextType: "CATEGORY_MERCH",
-    },
+      contextType,
+    }
+  ),
+    badges: product.badges ?? [],
+    analytics: {
+  sourcePage:
+    "CATEGORY",
+
+  sectionKey,
+
+  position:
+    index + 1,
+
+  pageNumber:
+    1,
+
+  isExpandedPageOne,
+
+  contextType,
+},
   };
 }
 
@@ -233,13 +256,19 @@ export async function getCategoryMerchProducts({
   return finalProducts.map(
     (product, index) =>
       mapProduct(
-        product,
-        index,
-        scopeType === "PRODUCT_TYPE"
-          ? `${scopeKey.toLowerCase()}_merch`
-          : `occasion_${scopeKey.toLowerCase()}_merch`,
-        isExpandedPageOne
-      )
+  product,
+  index,
+
+  scopeType === "PRODUCT_TYPE"
+    ? `product_type_${scopeKey.toLowerCase()}`
+    : `occasion_${scopeKey.toLowerCase()}`,
+
+  isExpandedPageOne,
+
+  scopeType === "PRODUCT_TYPE"
+    ? "PRODUCT_TYPE"
+    : "OCCASION_TYPE"
+)
   );
 }
 

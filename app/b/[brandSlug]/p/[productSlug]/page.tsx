@@ -15,7 +15,9 @@ import { BrandAccountStatus, AffiliateStatus } from "@prisma/client";
 import ImageGallery from "./ImageGallery";
 import Accordion from "./Accordion";
 import WishlistButton from "@/components/WishlistButton";
-import ProductViewTracker from "./ProductViewTracker";
+import ProductViewTracker from "@/components/analytics/ProductViewTracker";
+
+import {  normalizeDiscoverySource,} from "@/lib/analytics/discoverySource";
 
 
 
@@ -60,10 +62,83 @@ function getShippingToLabel(worldwide: boolean, countryCodes: string[]) {
 
 export default async function ProductPage({
   params,
+  searchParams,
 }: {
-  params: Promise<{ brandSlug: string; productSlug: string }>;
+  params: Promise<{
+    brandSlug: string;
+    productSlug: string;
+  }>;
+
+  searchParams: Promise<
+    Record<
+      string,
+      string | string[] | undefined
+    >
+  >;
 }) {
   const { brandSlug, productSlug } = await params;
+
+  const sp = await searchParams;
+
+const rawDiscoverySource =
+  Array.isArray(sp.src)
+    ? sp.src[0] ?? null
+    : sp.src ?? null;
+
+const discoverySource =
+  normalizeDiscoverySource(
+    rawDiscoverySource
+  );
+
+const discoveryQuery = Array.isArray(sp.q)
+  ? sp.q[0] ?? null
+  : sp.q ?? null;
+
+const discoveryPositionRaw =
+  Array.isArray(sp.pos)
+    ? sp.pos[0] ?? null
+    : sp.pos ?? null;
+
+    const discoverySectionKey =
+  Array.isArray(sp.skey)
+    ? sp.skey[0] ?? null
+    : sp.skey ?? null;
+
+const discoveryPageRaw =
+  Array.isArray(sp.page)
+    ? sp.page[0] ?? null
+    : sp.page ?? null;
+
+const discoveryPage =
+  discoveryPageRaw &&
+  Number.isFinite(
+    Number(discoveryPageRaw)
+  )
+    ? Math.max(
+        1,
+        Math.floor(
+          Number(discoveryPageRaw)
+        )
+      )
+    : null;
+
+const discoveryContext =
+  Array.isArray(sp.ctx)
+    ? sp.ctx[0] ?? null
+    : sp.ctx ?? null;
+
+const discoveryPosition =
+  discoveryPositionRaw &&
+  Number.isFinite(
+    Number(discoveryPositionRaw)
+  )
+    ? Math.max(
+        1,
+        Math.floor(
+          Number(discoveryPositionRaw)
+        )
+      )
+    : null;
 
   const product = await prisma.product.findFirst({
     where: {
@@ -238,7 +313,32 @@ completeTheLookFor: {
     },
   });
 
-  const outUrl = buildTrackedOutboundUrl(product.id, { sourcePage: "SEARCH" });
+  
+
+const outUrl =
+  buildTrackedOutboundUrl(
+    product.id,
+    {
+      sourcePage:
+        discoverySource,
+
+      position:
+        discoveryPosition,
+
+      sectionKey:
+        discoverySectionKey,
+
+      pageNumber:
+        discoveryPage,
+
+      contextType:
+        discoveryContext,
+
+      searchQuery:
+        discoveryQuery,
+    }
+  );
+
   const hasOutLink =
     brand.affiliateStatus === AffiliateStatus.ACTIVE &&
     (product.affiliateUrl || product.sourceUrl);
@@ -431,7 +531,28 @@ const shippingToLabels = getShippingToLabel(
       </button>
     )}
     <div className="flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-full border border-black/10 bg-white">
-      <WishlistButton productId={product.id} />
+      <WishlistButton
+  productId={product.id}
+  analytics={{
+    sourcePage:
+      discoverySource ?? undefined,
+
+    searchQuery:
+      discoveryQuery,
+
+    position:
+      discoveryPosition,
+
+    sectionKey:
+      discoverySectionKey,
+
+    pageNumber:
+      discoveryPage,
+
+    contextType:
+      discoveryContext,
+  }}
+/>
     </div>
   </div>
 </div>
@@ -526,64 +647,120 @@ const shippingToLabels = getShippingToLabel(
                 </div>
               </Accordion>
             </div>
-            {/* Complete the Look */}
+{/* Complete the Look */}
 {completeTheLookProducts.length > 0 && (
   <div className="border-t border-black/8 pt-5">
     <div className="mb-4">
-      
-
       <h2 className="mt-1 text-base font-semibold tracking-tight text-black">
         Complete the Look
       </h2>
     </div>
 
     <div className="grid grid-cols-2 gap-3">
-      {completeTheLookProducts.map((p) => (
-        <Link
-          key={p.id}
-          href={`/b/${p.brand.slug}/p/${p.slug}`}
-          className="group"
-        >
-          <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-black/[0.03]">
-            {p.images[0]?.url ? (
-              <Image
-                src={p.images[0].url}
-                alt={p.title}
-                fill
-                className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                sizes="200px"
-              />
-            ) : (
-              <div className="absolute inset-0 grid place-items-center text-[10px] text-black/30">
-                No image
+      {completeTheLookProducts.map(
+        (p, index) => {
+          const params =
+            new URLSearchParams();
+
+          /*
+           * Preserve the ORIGINAL discovery source.
+           *
+           * Example:
+           * Emerging Brands
+           * → Top
+           * → Complete the Look
+           * → Skirt
+           *
+           * remains EMERGING_BRANDS.
+           */
+          if (discoverySource) {
+            params.set(
+              "src",
+              discoverySource
+            );
+          }
+
+          if (discoveryQuery) {
+            params.set(
+              "q",
+              discoveryQuery
+            );
+          }
+
+          params.set(
+            "pos",
+            String(index + 1)
+          );
+
+          params.set(
+            "skey",
+            "complete_the_look"
+          );
+
+          params.set(
+            "ctx",
+            "COMPLETE_THE_LOOK"
+          );
+
+          const completeLookHref =
+            `/b/${p.brand.slug}/p/${p.slug}` +
+            `?${params.toString()}`;
+
+          return (
+            <Link
+              key={p.id}
+              href={completeLookHref}
+              className="group"
+            >
+              <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-black/[0.03]">
+                {p.images[0]?.url ? (
+                  <Image
+                    src={p.images[0].url}
+                    alt={p.title}
+                    fill
+                    className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                    sizes="200px"
+                  />
+                ) : (
+                  <div className="absolute inset-0 grid place-items-center text-[10px] text-black/30">
+                    No image
+                  </div>
+                )}
+
+                {p.badges.includes(
+                  "sale"
+                ) && (
+                  <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[9px] font-medium">
+                    SALE
+                  </span>
+                )}
               </div>
-            )}
 
-            {p.badges.includes("sale") && (
-              <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[9px] font-medium">
-                SALE
-              </span>
-            )}
-          </div>
+              <div className="pt-2.5">
+                <p className="text-[9px] font-medium uppercase tracking-[0.14em] text-black/40">
+                  {p.brand.name}
+                </p>
 
-          <div className="pt-2.5">
-            <p className="text-[9px] font-medium uppercase tracking-[0.14em] text-black/40">
-              {p.brand.name}
-            </p>
+                <p className="mt-0.5 line-clamp-1 text-xs font-medium text-black">
+                  {p.title}
+                </p>
 
-            <p className="mt-0.5 line-clamp-1 text-xs font-medium text-black">
-              {p.title}
-            </p>
-
-            <p className="mt-1 text-xs text-black/60">
-              <MoneyLabel
-                amount={p.price?.toString() ?? null}
-                currency={p.currency}
-              />
-            </p>
-          </div>
-        </Link>
-      ))}
+                <p className="mt-1 text-xs text-black/60">
+                  <MoneyLabel
+                    amount={
+                      p.price?.toString() ??
+                      null
+                    }
+                    currency={
+                      p.currency
+                    }
+                  />
+                </p>
+              </div>
+            </Link>
+          );
+        }
+      )}
     </div>
   </div>
 )}
@@ -615,37 +792,109 @@ const shippingToLabels = getShippingToLabel(
         
 
         {/* You might also like */}
-        {relatedDb.length > 0 && (
-          <section className="mt-20 border-t border-black/8 pt-12">
-            <h2 className="mb-6 text-lg font-semibold tracking-tight">You might also like</h2>
-            <div className="grid gap-5 grid-cols-2 sm:grid-cols-4">
-              {relatedDb.map((p, index) => {
-                const relatedOutUrl = buildTrackedOutboundUrl(p.id, { sourcePage: "SEARCH", position: index + 1 });
-                return (
-                  <Link key={p.id} href={`/b/${p.brand.slug}/p/${p.slug}`} className="group overflow-hidden rounded-3xl border border-black/5 bg-white transition hover:shadow-sm">
-                    <div className="relative aspect-[3/4] bg-black/5">
-                      {p.images[0]?.url ? (
-                        <Image src={p.images[0].url} alt={p.title} fill className="object-cover transition-transform duration-300 group-hover:scale-105" sizes="(max-width: 640px) 50vw, 25vw" />
-                      ) : (
-                        <div className="absolute inset-0 grid place-items-center text-xs text-black/30">No image</div>
-                      )}
-                      {p.badges.includes("sale") && (
-                        <span className="absolute left-3 top-3 rounded-full bg-white/90 border border-black/10 px-2 py-1 text-[10px] font-semibold tracking-wider">SALE</span>
-                      )}
-                    </div>
-                    <div className="p-4">
-                      <p className="text-[11px] uppercase tracking-wide text-black/50">{p.brand.name}</p>
-                      <p className="mt-1 line-clamp-2 text-sm font-medium leading-5">{p.title}</p>
-                      <p className="mt-2 text-sm text-black/60">
-                        <MoneyLabel amount={p.price?.toString() ?? null} currency={p.currency} />
-                      </p>
-                    </div>
-                  </Link>
-                );
-              })}
+{relatedDb.length > 0 && (
+  <section className="mt-20 border-t border-black/8 pt-12">
+    <h2 className="mb-6 text-lg font-semibold tracking-tight">
+      You might also like
+    </h2>
+
+    <div className="grid gap-5 grid-cols-2 sm:grid-cols-4">
+      {relatedDb.map((p, index) => {
+        const params =
+          new URLSearchParams();
+
+        /*
+         * Keep the original discovery source
+         * whenever we have one.
+         *
+         * If this PDP was reached directly,
+         * PRODUCT becomes the internal source
+         * for discovery through recommendations.
+         */
+        params.set(
+          "src",
+          discoverySource ?? "PRODUCT"
+        );
+
+        if (discoveryQuery) {
+          params.set(
+            "q",
+            discoveryQuery
+          );
+        }
+
+        params.set(
+          "pos",
+          String(index + 1)
+        );
+
+        params.set(
+          "skey",
+          "related_products"
+        );
+
+        params.set(
+          "ctx",
+          "RELATED_PRODUCTS"
+        );
+
+        const relatedHref =
+          `/b/${p.brand.slug}/p/${p.slug}` +
+          `?${params.toString()}`;
+
+        return (
+          <Link
+            key={p.id}
+            href={relatedHref}
+            className="group overflow-hidden rounded-3xl border border-black/5 bg-white transition hover:shadow-sm"
+          >
+            <div className="relative aspect-[3/4] bg-black/5">
+              {p.images[0]?.url ? (
+                <Image
+                  src={p.images[0].url}
+                  alt={p.title}
+                  fill
+                  className="object-cover transition-transform duration-300 group-hover:scale-105"
+                  sizes="(max-width: 640px) 50vw, 25vw"
+                />
+              ) : (
+                <div className="absolute inset-0 grid place-items-center text-xs text-black/30">
+                  No image
+                </div>
+              )}
+
+              {p.badges.includes("sale") && (
+                <span className="absolute left-3 top-3 rounded-full bg-white/90 border border-black/10 px-2 py-1 text-[10px] font-semibold tracking-wider">
+                  SALE
+                </span>
+              )}
             </div>
-          </section>
-        )}
+
+            <div className="p-4">
+              <p className="text-[11px] uppercase tracking-wide text-black/50">
+                {p.brand.name}
+              </p>
+
+              <p className="mt-1 line-clamp-2 text-sm font-medium leading-5">
+                {p.title}
+              </p>
+
+              <p className="mt-2 text-sm text-black/60">
+                <MoneyLabel
+                  amount={
+                    p.price?.toString() ??
+                    null
+                  }
+                  currency={p.currency}
+                />
+              </p>
+            </div>
+          </Link>
+        );
+      })}
+    </div>
+  </section>
+)}
       </div>
     </SiteShell>
   );

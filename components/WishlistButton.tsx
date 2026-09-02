@@ -1,6 +1,42 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import {
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
+
+import { useSearchParams } from "next/navigation";
+
+import type {
+  DiscoverySource,
+} from "@/lib/analytics/discoverySource";
+
+import {
+  normalizeDiscoverySource,
+} from "@/lib/analytics/discoverySource";
+
+import {
+  ensureAnalyticsSession,
+} from "@/lib/analytics/clientSession";
+
+
+type WishlistAnalyticsContext = {
+  sourcePage?: DiscoverySource;
+  searchQuery?: string | null;
+  position?: number | null;
+
+  sectionKey?: string | null;
+  pageNumber?: number | null;
+  contextType?: string | null;
+
+  entrySectionKey?: string | null;
+  entryPosition?: number | null;
+  entryPageNumber?: number | null;
+  entryContextType?: string | null;
+
+};
+
 
 // Global wishlist state shared across all instances on the page
 const listeners = new Set<(ids: Set<string>) => void>();
@@ -25,7 +61,17 @@ async function loadWishlist() {
   }
 }
 
-export default function WishlistButton({ productId }: { productId: string }) {
+export default function WishlistButton({
+
+  
+  productId,
+  analytics,
+  
+}: {
+  productId: string;
+  analytics?: WishlistAnalyticsContext;
+}) {
+  const searchParams = useSearchParams();
   const [wished, setWished] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -41,53 +87,297 @@ export default function WishlistButton({ productId }: { productId: string }) {
   }, [sync]);
 
   async function toggle(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
+  e.preventDefault();
+  e.stopPropagation();
 
-    // Check auth first
-    const me = await fetch("/api/account/auth/me", { credentials: "include" });
-    if (!me.ok) {
-      window.location.assign(`/account/login?next=${encodeURIComponent(window.location.pathname)}`);
+  // Check authentication first
+  const me = await fetch(
+    "/api/account/auth/me",
+    {
+      credentials: "include",
+    }
+  );
+
+  if (!me.ok) {
+    window.location.assign(
+      `/account/login?next=${encodeURIComponent(
+        window.location.pathname +
+          window.location.search
+      )}`
+    );
+
+    return;
+  }
+
+  setBusy(true);
+
+  const nowWished = !wished;
+
+  // Optimistic UI update
+  if (nowWished) {
+    globalWishlist.add(productId);
+  } else {
+    globalWishlist.delete(productId);
+  }
+
+  notifyAll();
+
+  try {
+    let response: Response;
+
+    if (nowWished) {
+      response = await fetch(
+        "/api/account/wishlist",
+        {
+          method: "POST",
+
+          headers: {
+            "content-type":
+              "application/json",
+          },
+
+          credentials: "include",
+
+          body: JSON.stringify({
+            productId,
+          }),
+        }
+      );
+    } else {
+      response = await fetch(
+        `/api/account/wishlist/${productId}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        `Wishlist request failed: ${response.status}`
+      );
+    }
+
+    /*
+     * The REAL wishlist operation succeeded.
+     * We can now record the historical analytics event.
+     *
+     * Analytics failure must never break the wishlist.
+     */
+    void ensureAnalyticsSession()
+  .then((ready) => {
+    if (!ready) {
       return;
     }
 
-    setBusy(true);
-    const nowWished = !wished;
+    return fetch(
+      "/api/events/wishlist",
+      {
+        method: "POST",
 
-    // Optimistic update
-    if (nowWished) {
-      globalWishlist.add(productId);
-    } else {
-      globalWishlist.delete(productId);
+        headers: {
+          "content-type":
+            "application/json",
+        },
+
+        credentials:
+          "same-origin",
+
+        keepalive: true,
+
+        body: JSON.stringify({
+          productId,
+
+          action:
+            nowWished
+              ? "ADD"
+              : "REMOVE",
+
+          sourcePath:
+            window.location.pathname +
+            window.location.search,
+
+          actionSourcePage:
+            window.location.pathname.startsWith(
+              "/search"
+            )
+              ? "SEARCH"
+              : window.location.pathname.startsWith(
+                  "/b/"
+                )
+              ? "PRODUCT"
+              : window.location.pathname.startsWith(
+                  "/brands/emerging"
+                )
+              ? "EMERGING_BRANDS"
+              : window.location.pathname.startsWith(
+                  "/brands/"
+                )
+              ? "BRAND"
+              : window.location.pathname.startsWith(
+                  "/continent/"
+                )
+              ? "CONTINENT"
+              : window.location.pathname.startsWith(
+                  "/categories/"
+                )
+              ? "CATEGORY"
+              : window.location.pathname === "/"
+              ? "HOME"
+              : "OTHER",
+
+          discoverySource:
+            analytics?.sourcePage ??
+            normalizeDiscoverySource(
+              searchParams.get("src")
+            ),
+
+          searchQuery:
+            analytics?.searchQuery ??
+            searchParams.get("q") ??
+            null,
+
+          searchPosition:
+            analytics?.position ??
+            (() => {
+              const raw =
+                searchParams.get("pos");
+
+              if (!raw) {
+                return null;
+              }
+
+              const number =
+                Number(raw);
+
+              return Number.isFinite(
+                number
+              )
+                ? Math.max(
+                    1,
+                    Math.floor(number)
+                  )
+                : null;
+            })(),
+
+          sectionKey:
+            analytics?.sectionKey ??
+            searchParams.get("skey") ??
+            null,
+
+          pageNumber:
+            analytics?.pageNumber ??
+            (() => {
+              const raw =
+                searchParams.get(
+                  "page"
+                );
+
+              if (!raw) {
+                return null;
+              }
+
+              const number =
+                Number(raw);
+
+              return Number.isFinite(
+                number
+              )
+                ? Math.max(
+                    1,
+                    Math.floor(number)
+                  )
+                : null;
+            })(),
+
+          contextType:
+            analytics?.contextType ??
+            searchParams.get("ctx") ??
+            null,
+
+            entrySectionKey:
+  analytics?.entrySectionKey ??
+  searchParams.get("entry_skey") ??
+  null,
+
+entryPosition:
+  analytics?.entryPosition ??
+  (() => {
+    const raw =
+      searchParams.get("entry_pos");
+
+    if (!raw) {
+      return null;
     }
+
+    const number =
+      Number(raw);
+
+    return Number.isFinite(number)
+      ? Math.max(
+          1,
+          Math.floor(number)
+        )
+      : null;
+  })(),
+
+entryPageNumber:
+  analytics?.entryPageNumber ??
+  (() => {
+    const raw =
+      searchParams.get("entry_page");
+
+    if (!raw) {
+      return null;
+    }
+
+    const number =
+      Number(raw);
+
+    return Number.isFinite(number)
+      ? Math.max(
+          1,
+          Math.floor(number)
+        )
+      : null;
+  })(),
+
+entryContextType:
+  analytics?.entryContextType ??
+  searchParams.get("entry_ctx") ??
+  null,
+        }),
+      }
+    );
+  })
+  .catch((error) => {
+    console.error(
+      "Unable to record wishlist analytics",
+      error
+    );
+  });
+  } catch (error) {
+    /*
+     * The real wishlist operation failed,
+     * so revert our optimistic UI update.
+     */
+    if (nowWished) {
+      globalWishlist.delete(productId);
+    } else {
+      globalWishlist.add(productId);
+    }
+
     notifyAll();
 
-    try {
-      if (nowWished) {
-        await fetch("/api/account/wishlist", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ productId }),
-        });
-      } else {
-        await fetch(`/api/account/wishlist/${productId}`, {
-          method: "DELETE",
-          credentials: "include",
-        });
-      }
-    } catch {
-      // Revert on error
-      if (nowWished) {
-        globalWishlist.delete(productId);
-      } else {
-        globalWishlist.add(productId);
-      }
-      notifyAll();
-    } finally {
-      setBusy(false);
-    }
+    console.error(
+      "Wishlist update failed",
+      error
+    );
+  } finally {
+    setBusy(false);
   }
+}
 
   return (
     <button

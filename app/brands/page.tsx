@@ -196,6 +196,31 @@ export default async function BrandsPage({
             </p>
           </header>
 
+          <section className="mb-10 border-y border-black/10 py-5 md:mb-12">
+  <Link
+    href="/brands/emerging"
+    className="group flex items-center justify-between gap-6"
+  >
+    <div>
+      <p className="font-body text-[10px] uppercase tracking-[0.2em] text-[#7B2D3E]/70">
+        Curated discovery
+      </p>
+
+      <h2 className="mt-1 font-display text-[28px] font-normal leading-none text-black md:text-[34px]">
+        Explore Emerging Brands
+      </h2>
+
+      <p className="mt-2 font-body text-sm text-black/45">
+        Discover independent labels to watch.
+      </p>
+    </div>
+
+    <span className="text-2xl text-black/40 transition-transform duration-300 group-hover:translate-x-2 group-hover:text-[#7B2D3E]">
+      →
+    </span>
+  </Link>
+</section>
+
           {/* Country filter */}
           <div className="mb-8 flex justify-end">
             <BrandFilters regions={[]} countries={countryOptions} />

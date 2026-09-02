@@ -4,6 +4,7 @@ import Link from "next/link";
 import MoneyLabel from "@/components/MoneyLabel";
 import ProductClickTrackingLink from "@/components/analytics/ProductClickTrackingLink";
 import WishlistButton from "@/components/WishlistButton";
+import ProductImpressionTracker from "@/components/analytics/ProductImpressionTracker";
 
 export type StorefrontProduct = {
   id: string;
@@ -15,6 +16,21 @@ export type StorefrontProduct = {
   buyUrl: string | null;
   brandSlug?: string | null;
   productSlug?: string | null;
+
+  analytics?: {
+    discoverySource?: string | null;
+    sectionId?: string | null;
+    sectionKey?: string | null;
+    position?: number | null;
+    pageNumber?: number | null;
+    contextType?: string | null;
+    searchQuery?: string | null;
+
+    entrySectionKey?: string | null;
+    entryPosition?: number | null;
+    entryPageNumber?: number | null;
+    entryContextType?: string | null;
+};
 };
 
 export function ProductRow({ products }: { products: StorefrontProduct[] }) {
@@ -22,17 +38,130 @@ export function ProductRow({ products }: { products: StorefrontProduct[] }) {
     <div className="mx-auto w-full max-w-[1800px] px-8">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
         {products.map((p) => {
-          const detailHref =
-            p.brandSlug && p.productSlug
-              ? `/b/${p.brandSlug}/p/${p.productSlug}`
-              : null;
+          const params = new URLSearchParams();
+
+if (p.analytics?.discoverySource) {
+  params.set(
+    "src",
+    p.analytics.discoverySource
+  );
+}
+
+if (p.analytics?.sectionKey) {
+  params.set(
+    "skey",
+    p.analytics.sectionKey
+  );
+}
+
+if (p.analytics?.position) {
+  params.set(
+    "pos",
+    String(p.analytics.position)
+  );
+}
+
+if (p.analytics?.pageNumber) {
+  params.set(
+    "page",
+    String(p.analytics.pageNumber)
+  );
+}
+
+if (p.analytics?.contextType) {
+  params.set(
+    "ctx",
+    p.analytics.contextType
+  );
+}
+
+if (p.analytics?.searchQuery) {
+  params.set(
+    "q",
+    p.analytics.searchQuery
+  );
+}
+
+if (p.analytics?.entrySectionKey) {
+  params.set(
+    "entry_skey",
+    p.analytics.entrySectionKey
+  );
+}
+
+if (
+  typeof p.analytics?.entryPosition === "number"
+) {
+  params.set(
+    "entry_pos",
+    String(p.analytics.entryPosition)
+  );
+}
+
+if (
+  typeof p.analytics?.entryPageNumber === "number"
+) {
+  params.set(
+    "entry_page",
+    String(p.analytics.entryPageNumber)
+  );
+}
+
+if (p.analytics?.entryContextType) {
+  params.set(
+    "entry_ctx",
+    p.analytics.entryContextType
+  );
+}
+
+const detailHref =
+  p.brandSlug && p.productSlug
+    ? `/b/${p.brandSlug}/p/${p.productSlug}${
+        params.toString()
+          ? `?${params.toString()}`
+          : ""
+      }`
+    : null;
           const href = p.buyUrl?.trim() || null;
 
           return (
-            <div
-              key={p.id}
-              className="rounded-3xl border border-black/10 bg-white overflow-hidden"
-            >
+  <ProductImpressionTracker
+    key={p.id}
+    productId={p.id}
+    sourcePage={
+      p.analytics?.discoverySource as any
+    }
+    sectionKey={
+      p.analytics?.sectionKey
+    }
+    position={
+      p.analytics?.position
+    }
+    pageNumber={
+      p.analytics?.pageNumber
+    }
+    contextType={
+      p.analytics?.contextType
+    }
+    searchQuery={
+      p.analytics?.searchQuery
+    }
+    entrySectionKey={
+  p.analytics?.entrySectionKey
+}
+entryPosition={
+  p.analytics?.entryPosition
+}
+entryPageNumber={
+  p.analytics?.entryPageNumber
+}
+entryContextType={
+  p.analytics?.entryContextType
+}
+  >
+    <div
+      className="rounded-3xl border border-black/10 bg-white overflow-hidden"
+    >
               <div className="relative aspect-[3/4] bg-black/5">
                 {p.imageUrl ? (
                   detailHref ? (
@@ -77,7 +206,36 @@ export function ProductRow({ products }: { products: StorefrontProduct[] }) {
 
                 {/* Wishlist heart */}
                 <div className="absolute right-3 top-3">
-                  <WishlistButton productId={p.id} />
+                  <WishlistButton
+  productId={p.id}
+  analytics={{
+    sourcePage:
+      p.analytics?.discoverySource as any,
+    searchQuery:
+      p.analytics?.searchQuery ?? null,
+    position:
+      p.analytics?.position ?? null,
+    sectionKey:
+      p.analytics?.sectionKey ?? null,
+    pageNumber:
+      p.analytics?.pageNumber ?? null,
+    contextType:
+      p.analytics?.contextType ?? null,
+
+      entrySectionKey:
+  p.analytics?.entrySectionKey ?? null,
+
+entryPosition:
+  p.analytics?.entryPosition ?? null,
+
+entryPageNumber:
+  p.analytics?.entryPageNumber ?? null,
+
+entryContextType:
+  p.analytics?.entryContextType ?? null,
+
+  }}
+/>
                 </div>
                 
               </div>
@@ -129,9 +287,12 @@ export function ProductRow({ products }: { products: StorefrontProduct[] }) {
                 )}
               </div>
             </div>
+            </ProductImpressionTracker>
+
           );
         })}
       </div>
     </div>
+    
   );
 }

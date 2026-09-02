@@ -4,6 +4,9 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import DiaryReadTracker from "@/components/diary/DiaryReadTracker";
 import SiteShell from "@/components/SiteShell";
+import WishlistButton from "@/components/WishlistButton";
+import ProductImpressionTracker from "@/components/analytics/ProductImpressionTracker";
+import { buildTrackedOutboundUrl } from "@/lib/affiliate/tracking";
 
 export const dynamic = "force-dynamic";
 
@@ -220,41 +223,141 @@ export default async function DiaryPostPage({ params }: PageProps) {
                     product.currency ?? null
                   );
 
+                  const position = index + 1;
+
+const analyticsContext = {
+  sourcePage: "DIARY" as const,
+  sectionKey: `diary_${post.slug}_related`,
+  position,
+  pageNumber: 1,
+  contextType: "DIARY_RELATED_PRODUCT",
+};
+
+const trackingParams = new URLSearchParams({
+  src: "DIARY",
+  skey: analyticsContext.sectionKey,
+  pos: String(position),
+  page: "1",
+  ctx: "DIARY_RELATED_PRODUCT",
+  dpid: post.id,
+});
+
+const detailHref =
+  product.brand?.slug && product.slug
+    ? `/b/${product.brand.slug}/p/${product.slug}?${trackingParams.toString()}`
+    : null;
+
+const outUrl = buildTrackedOutboundUrl(
+  product.id,
+  analyticsContext
+);
+
                   return (
-                    <article key={product.id} className="group relative">
-  <Link href={product.brand?.slug && product.slug ? `/b/${product.brand.slug}/p/${product.slug}` : `/out/${product.id}?src=DIARY&dpid=${post.id}&ctx=DIARY_RELATED_PRODUCT&pos=${index + 1}`} className="block">
-    <div className="relative aspect-[4/4.8] overflow-hidden rounded-[20px] bg-black/5">
-      {imageUrl ? (
-        <Image src={imageUrl} alt={product.title} fill
-          className="object-cover transition duration-500 group-hover:scale-[1.02]" />
-      ) : (
-        <div className="flex h-full items-center justify-center text-sm text-black/35">No image</div>
-      )}
-    </div>
-    <div className="pt-4 text-center">
-      {product.brand?.name ? (
-        <p className="text-[11px] uppercase tracking-[0.18em] text-black/45">{product.brand.name}</p>
-      ) : null}
-      <h3 className="mt-2 text-sm leading-6 text-black">{product.title}</h3>
-      {price ? <p className="mt-1 text-sm text-black/65">{price}</p> : null}
-    </div>
-  </Link>
-
-  {/* Net-a-Porter style + button */}
-  <div className="mt-3 flex justify-center">
-    <a
-  
-    href={`/out/${product.id}?src=DIARY&dpid=${post.id}&ctx=DIARY_RELATED_PRODUCT&pos=${index + 1}`}
-    target="_blank"
-    rel="noreferrer"
-    className="inline-flex items-center gap-1 rounded-full border border-black/10 bg-white px-4 py-1.5 text-[11px] font-medium uppercase tracking-[0.12em] hover:bg-black hover:text-white transition-colors"
+  <ProductImpressionTracker
+    key={product.id}
+    productId={product.id}
+    sourcePage="DIARY"
+    sectionKey={analyticsContext.sectionKey}
+    position={position}
+    pageNumber={1}
+    contextType="DIARY_RELATED_PRODUCT"
   >
-    Shop ↗
-  </a>
-</div>
+    <article className="group relative">
+      {detailHref ? (
+        <Link
+          href={detailHref}
+          className="block"
+        >
+          <div className="relative aspect-[4/4.8] overflow-hidden rounded-[20px] bg-black/5">
+            {imageUrl ? (
+              <Image
+                src={imageUrl}
+                alt={product.title}
+                fill
+                className="object-cover transition duration-500 group-hover:scale-[1.02]"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-black/35">
+                No image
+              </div>
+            )}
+          </div>
 
-</article>
-                  );
+          <div className="pt-4 text-center">
+            {product.brand?.name ? (
+              <p className="text-[11px] uppercase tracking-[0.18em] text-black/45">
+                {product.brand.name}
+              </p>
+            ) : null}
+
+            <h3 className="mt-2 text-sm leading-6 text-black">
+              {product.title}
+            </h3>
+
+            {price ? (
+              <p className="mt-1 text-sm text-black/65">
+                {price}
+              </p>
+            ) : null}
+          </div>
+        </Link>
+      ) : (
+        <div className="block">
+          <div className="relative aspect-[4/4.8] overflow-hidden rounded-[20px] bg-black/5">
+            {imageUrl ? (
+              <Image
+                src={imageUrl}
+                alt={product.title}
+                fill
+                className="object-cover"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-black/35">
+                No image
+              </div>
+            )}
+          </div>
+
+          <div className="pt-4 text-center">
+            {product.brand?.name ? (
+              <p className="text-[11px] uppercase tracking-[0.18em] text-black/45">
+                {product.brand.name}
+              </p>
+            ) : null}
+
+            <h3 className="mt-2 text-sm leading-6 text-black">
+              {product.title}
+            </h3>
+
+            {price ? (
+              <p className="mt-1 text-sm text-black/65">
+                {price}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      <div className="absolute right-3 top-3 z-10">
+        <WishlistButton
+          productId={product.id}
+          analytics={analyticsContext}
+        />
+      </div>
+
+      <div className="mt-3 flex justify-center">
+        <a
+          href={outUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 rounded-full border border-black/10 bg-white px-4 py-1.5 text-[11px] font-medium uppercase tracking-[0.12em] transition-colors hover:bg-black hover:text-white"
+        >
+          Shop ↗
+        </a>
+      </div>
+    </article>
+  </ProductImpressionTracker>
+);
                 })}
               </div>
             </div>

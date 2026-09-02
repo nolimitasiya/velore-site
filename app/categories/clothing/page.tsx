@@ -25,6 +25,9 @@ import {
   getCategoryMerchLiveIds,
 } from "@/lib/storefront/getCategoryMerchProducts";
 
+import {
+  buildTrackedOutboundUrl,
+} from "@/lib/affiliate/tracking";
 
 type Opt = { value: string; label: string };
 
@@ -329,26 +332,78 @@ const shouldUseLegacyClothingMerch =
     mapped = products.map((p, index) => ({
   id: p.id,
   title: p.title,
-  brandName: p.brand?.name ?? null,
-  brandSlug: p.brand?.slug ?? null, // ← ADDED
-  productSlug: p.slug ?? null,       // ← ADDED
-  imageUrl: p.images?.[0]?.url ?? null,
-  price: p.price ? p.price.toString() : null,
-  currency: String(p.currency),
-  buyUrl: `/out/${p.id}`,
-  badges: (p.badges ?? []) as any,
+
+  brandName:
+    p.brand?.name ?? null,
+
+  brandSlug:
+    p.brand?.slug ?? null,
+
+  productSlug:
+    p.slug ?? null,
+
+  imageUrl:
+    p.images?.[0]?.url ?? null,
+
+  price:
+    p.price
+      ? p.price.toString()
+      : null,
+
+  currency:
+    String(p.currency),
+
+  buyUrl:
+    buildTrackedOutboundUrl(
+      p.id,
+      {
+        sourcePage: "CATEGORY",
+
+        sectionKey:
+          selectedMerchType
+            ? `product_type_${selectedMerchType.toLowerCase()}`
+            : "clothing_grid",
+
+        position:
+          index + 1,
+
+        pageNumber:
+          currentPage,
+
+        contextType:
+          selectedMerchType
+            ? "PRODUCT_TYPE"
+            : "CLOTHING",
+      }
+    ),
+
+  badges:
+    (p.badges ?? []) as any,
+
   analytics: {
-    sourcePage: "SEARCH" as const,
-    sectionKey: "clothing_grid",
-    position: index + 1,
-    pageNumber: currentPage,
-    isExpandedPageOne: currentPage === 1 ? isExpandedPageOne : false,
+    sourcePage:
+      "CATEGORY" as const,
+
+    sectionKey:
+      selectedMerchType
+        ? `product_type_${selectedMerchType.toLowerCase()}`
+        : "clothing_grid",
+
+    position:
+      index + 1,
+
+    pageNumber:
+      currentPage,
+
+    isExpandedPageOne:
+      currentPage === 1
+        ? isExpandedPageOne
+        : false,
+
     contextType:
-  (shouldUseCategoryMerch ||
-    shouldUseLegacyClothingMerch) &&
-  currentPage >= 2
-    ? "GRID_AFTER_MERCH"
-    : "GRID",
+      selectedMerchType
+        ? "PRODUCT_TYPE"
+        : "CLOTHING",
   },
 }));
   }

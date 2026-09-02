@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { buildTrackedProductUrl } from "@/lib/affiliate/url";
-import { ClickSourcePage } from "@prisma/client";
+import {  AnalyticsEventType,  AnalyticsSourcePage,  ClickSourcePage,} from "@prisma/client";
+
+import {
+  attachAnalyticsSessionCookie,
+  getOrCreateAnalyticsSession,
+} from "@/lib/analytics/session";
+
+import {
+  normalizeDiscoverySource,
+} from "@/lib/analytics/discoverySource";
+
+
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,14 +63,45 @@ function normalizePosition(value: string | null) {
 function normalizeSourcePage(
   value: string | null
 ): ClickSourcePage | null {
-  const normalized = (value ?? "").trim().toUpperCase();
+  const normalized =
+    (value ?? "")
+      .trim()
+      .toUpperCase();
 
-  if (normalized === "HOME") return ClickSourcePage.HOME;
-  if (normalized === "SEARCH") return ClickSourcePage.SEARCH;
-  if (normalized === "BRAND") return ClickSourcePage.BRAND;
-  if (normalized === "DIARY") return ClickSourcePage.DIARY;
+  switch (normalized) {
+    case "HOME":
+      return ClickSourcePage.HOME;
 
-  return null;
+    case "SEARCH":
+      return ClickSourcePage.SEARCH;
+
+    case "BRAND":
+      return ClickSourcePage.BRAND;
+
+    case "CATEGORY":
+      return ClickSourcePage.CATEGORY;
+
+    case "PRODUCT":
+      return ClickSourcePage.PRODUCT;
+
+    case "DIARY":
+      return ClickSourcePage.DIARY;
+
+    case "STYLE_FEED":
+      return ClickSourcePage.STYLE_FEED;
+
+    case "CONTINENT":
+      return ClickSourcePage.CONTINENT;
+
+    case "EMERGING_BRANDS":
+      return ClickSourcePage.EMERGING_BRANDS;
+
+    case "OTHER":
+      return ClickSourcePage.OTHER;
+
+    default:
+      return null;
+  }
 }
 
 function normalizePageNumber(value: string | null) {
@@ -181,6 +223,11 @@ export async function POST(
 
   const sourcePage = normalizeSourcePage(searchParams.get("src"));
 
+  const discoverySource =
+  normalizeDiscoverySource(
+    searchParams.get("src")
+  );
+
   const diaryPostId = normalizeUuidLike(
     searchParams.get("diaryPostId") ??
       searchParams.get("dpid")
@@ -191,6 +238,11 @@ export async function POST(
   const position = normalizePosition(searchParams.get("pos"));
   const pageNumber = normalizePageNumber(searchParams.get("page"));
 
+  const searchQuery =
+  String(
+    searchParams.get("q") ?? ""
+  ).trim() || null;
+
   const isExpandedPageOne = normalizeBooleanFlag(
     searchParams.get("expanded")
   );
@@ -198,6 +250,35 @@ export async function POST(
   const contextType = normalizeContextType(
     searchParams.get("ctx")
   );
+
+  const entrySectionKey =
+  normalizeSectionKey(
+    searchParams.get("entry_skey")
+  );
+
+const entryPosition =
+  normalizePosition(
+    searchParams.get("entry_pos")
+  );
+
+const entryPageNumber =
+  normalizePageNumber(
+    searchParams.get("entry_page")
+  );
+
+const entryContextType =
+  normalizeContextType(
+    searchParams.get("entry_ctx")
+  );
+
+const {
+  sessionId,
+  shopperCountryCode:
+    analyticsShopperCountryCode,
+  shopperCurrencyCode:
+    analyticsShopperCurrencyCode,
+} =
+  await getOrCreateAnalyticsSession(req);
 
   try {
     await prisma.affiliateClick.create({
@@ -227,8 +308,68 @@ export async function POST(
     console.error("affiliateClick.create failed", error);
   }
 
-  return NextResponse.json({
-    destinationUrl,
-    brandName: product.brand.name,
+  try {
+  await prisma.analyticsEvent.create({
+    data: {
+      sessionId,
+
+      eventType:
+        AnalyticsEventType.SHOP_CLICK,
+
+      productId: product.id,
+      brandId: product.brandId,
+
+      // The click physically happened on the PDP
+      sourcePage:
+        AnalyticsSourcePage.PRODUCT,
+
+      sourcePath:
+        `/b/product`,
+
+      position,
+      sectionKey,
+      pageNumber,
+      contextType,
+
+      shopperCountryCode:
+        analyticsShopperCountryCode,
+
+      shopperCurrencyCode:
+        analyticsShopperCurrencyCode,
+
+      metadata: {
+  discoverySource,
+  searchQuery,
+  searchPosition:
+  position,
+  sectionKey,
+  pageNumber,
+  contextType,
+  entrySectionKey,
+  entryPosition,
+  entryPageNumber,
+  entryContextType,
+},
+    },
   });
+} catch (error) {
+  console.error(
+    "SHOP_CLICK analytics failed",
+    error
+  );
+}
+
+  const response =
+  NextResponse.json({
+    destinationUrl,
+    brandName:
+      product.brand.name,
+  });
+
+attachAnalyticsSessionCookie(
+  response,
+  sessionId
+);
+
+return response;
 }
