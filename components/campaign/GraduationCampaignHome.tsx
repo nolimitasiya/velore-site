@@ -144,8 +144,8 @@ export default function GraduationCampaignHome() {
       Wedding
     </span>
 
-    <Link 
-  href="/campaign/graduation"
+   <Link 
+  href="/campaign/graduation/occasion/graduation"
   className="block py-2 font-display text-[16px] transition hover:text-[#7B2D3E]"
 >
   Graduation
