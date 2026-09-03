@@ -283,9 +283,11 @@ export default function GraduationCampaignHome() {
 
         <div className="absolute inset-0 flex flex-col items-center justify-center px-8 text-center text-white">
 
-          <h1 className="max-w-lg font-heading text-4xl leading-[0.95] md:text-6xl">
-            Discover modest fashion from around the world
-          </h1>
+          <h1 className="max-w-2xl font-display text-4xl font-normal leading-[1.05] tracking-[-0.02em] md:text-6xl">
+  Discover modest fashion
+  <br />
+  from around the world
+</h1>
 
           <button
             type="button"
@@ -301,7 +303,8 @@ export default function GraduationCampaignHome() {
       {/* TRENDING THIS WEEK */}
       <section className="mx-auto w-full max-w-[1200px] px-5 py-12 md:px-8 md:py-16">
 
-        <h2 className="font-heading text-3xl md:text-4xl">
+        <h2 className="max-w-2xl font-display text-4xl font-normal leading-[1.05] tracking-[-0.02em] md:text-5xl">
+
           Trending This Week
         </h2>
 
@@ -377,7 +380,7 @@ export default function GraduationCampaignHome() {
           Shop by region
         </p>
 
-        <h2 className="mt-3 font-heading text-4xl md:text-5xl">
+        <h2 className="max-w-2xl font-display text-4xl font-normal leading-[1.05] tracking-[-0.02em] md:text-5xl">
           Discover the World
         </h2>
 
