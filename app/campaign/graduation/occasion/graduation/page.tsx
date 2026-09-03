@@ -2,60 +2,65 @@ import Image from "next/image";
 import Link from "next/link";
 
 const graduationProducts = [
-  {
-    id: "graduation-01",
-    title: "Satin Draped Cape Dress",
-    brand: "MAISON AYA",
-    price: "£139.00",
-    image:
-      "/campaign/graduation/occasion/graduation/graduation-01-satin-draped-cape.png",
-  },
 
-  {
-    id: "graduation-06",
-    title: "Draped Evening Gown",
-    brand: "LAYLAH",
-    price: "£149.00",
-    image:
-      "/campaign/graduation/occasion/graduation/graduation-06-evening-gown.png",
-  },
-
-  {
+    {
     id: "graduation-05",
+    slug: "Mayora Dress",
     title: "Black Pleated Wrap Dress",
-    brand: "ZAHRA",
+    brand: "Eleraa",
     price: "£145.00",
     image:
       "/campaign/graduation/occasion/graduation/graduation-05-black-pleated-wrap.png",
   },
+  
 
-  {
+   {
     id: "graduation-03",
-    title: "Silk Occasion Dress",
-    brand: "ELARA",
+    slug: "silk-occasion-dress",
+    title: "Silk Pleated Dress",
+    brand: "DALRA",
     price: "£128.00",
     image:
       "/campaign/graduation/occasion/graduation/graduation-03-silky-dress.png",
   },
-
+  
+ 
   {
     id: "graduation-02",
+    slug: "ivory-satin-wrap-dress",
     title: "Ivory Satin Wrap Dress",
-    brand: "NURA",
-    price: "£135.00",
+    brand: "Jana The Label",
+    price: "£99.00",
     image:
       "/campaign/graduation/occasion/graduation/graduation-02-ivory-satin-wrap.png",
   },
-  
   {
     id: "graduation-04",
+    slug: "plum-tie-waist-dress",
     title: "Plum Tie-Waist Dress",
-    brand: "AMARA",
+    brand: "Dalra",
     price: "£119.00",
     image:
       "/campaign/graduation/occasion/graduation/graduation-04-plum-tie-waist.png",
   },
-  
+  {
+    id: "graduation-01",
+    slug: "satin-draped-cape-dress",
+    title: "Satin Draped Cape Dress",
+    brand: "Noirai",
+    price: "£79.00",
+    image:
+      "/campaign/graduation/occasion/graduation/graduation-01-satin-draped-cape.png",
+  },
+  {
+    id: "graduation-06",
+    slug: "draped-evening-gown",
+    title: "Liyana Dress",
+    brand: "Nayvah",
+    price: "£129.00",
+    image:
+      "/campaign/graduation/occasion/graduation/graduation-06-evening-gown.png",
+  },
   
 ];
 
@@ -202,64 +207,71 @@ export default function GraduationOccasionPage() {
           </button>
         </div>
       </div>
+{/* PRODUCT GRID */}
+<section className="mx-auto max-w-[1500px] px-5 py-10 md:px-8 md:py-14">
+  <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 md:gap-x-6 md:gap-y-14">
 
-      {/* PRODUCT GRID */}
-      <section className="mx-auto max-w-[1500px] px-5 py-10 md:px-8 md:py-14">
+    {graduationProducts.map((product) => (
+      <article key={product.id}>
 
-        <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 md:gap-x-6 md:gap-y-14">
+        {/* CLICKABLE PRODUCT IMAGE */}
+        <Link
+          href={`/campaign/graduation/product/${product.slug}`}
+          className="block"
+        >
+          <div className="relative aspect-[3/4] overflow-hidden rounded-[18px] bg-[#f3f0ec]">
 
-          {graduationProducts.map((product) => (
-            <article key={product.id}>
+            <Image
+              src={product.image}
+              alt={product.title}
+              fill
+              sizes="(max-width: 768px) 50vw, 33vw"
+              className="object-cover"
+            />
 
-              {/* IMAGE */}
-              <div className="relative aspect-[3/4] overflow-hidden rounded-[18px] bg-[#f3f0ec]">
+            <span
+              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white text-lg shadow-sm"
+              aria-hidden="true"
+            >
+              ♡
+            </span>
 
-                <Image
-                  src={product.image}
-                  alt={product.title}
-                  fill
-                  sizes="(max-width: 768px) 50vw, 33vw"
-                  className="object-cover"
-                />
+          </div>
+        </Link>
 
-                {/* HEART */}
-                <button
-                  type="button"
-                  aria-label={`Save ${product.title}`}
-                  className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white text-lg shadow-sm"
-                >
-                  ♡
-                </button>
-              </div>
+        {/* PRODUCT INFORMATION */}
+        <div className="pt-4">
 
-              {/* PRODUCT INFORMATION */}
-              <div className="pt-4">
+          <Link
+            href={`/campaign/graduation/product/${product.slug}`}
+            className="transition hover:text-[#7B2D3E]"
+          >
+            <h2 className="font-display text-[17px]">
+              {product.title}
+            </h2>
+          </Link>
 
-                <h2 className="font-display text-[17px]">
-                  {product.title}
-                </h2>
+          <p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-black/45">
+            {product.brand}
+          </p>
 
-                <p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-black/45">
-                  {product.brand}
-                </p>
+          <p className="mt-2 text-sm">
+            {product.price}
+          </p>
 
-                <p className="mt-2 text-sm">
-                  {product.price}
-                </p>
-
-                <button
-                  type="button"
-                  className="mt-4 rounded-full bg-black px-6 py-2.5 text-[11px] text-white transition hover:bg-[#7B2D3E]"
-                >
-                  Shop
-                </button>
-
-              </div>
-            </article>
-          ))}
+          <Link
+            href={`/campaign/graduation/product/${product.slug}`}
+            className="mt-4 block w-full rounded-full bg-black px-8 py-3 text-center text-xs uppercase tracking-[0.15em] text-white transition hover:bg-[#7B2D3E]"
+          >
+            View Product
+          </Link>
 
         </div>
-      </section>
+      </article>
+    ))}
+
+  </div>
+</section>
 
       {/* BACK */}
       <div className="pb-20 text-center">
