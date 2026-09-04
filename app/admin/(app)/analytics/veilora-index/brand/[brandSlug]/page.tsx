@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -15,23 +15,34 @@ function absoluteUrl(path: string) {
 
 async function getJSON(path: string) {
   const jar = await cookies();
+  const url = await absoluteUrl(path);
 
-  const res = await fetch(
-    absoluteUrl(path),
-    {
-      cache: "no-store",
-      headers: {
-        cookie: jar.toString(),
-      },
-    }
-  );
+  const res = await fetch(url, {
+    cache: "no-store",
+    headers: {
+      cookie: jar.toString(),
+    },
+  });
+
+  const contentType =
+    res.headers.get("content-type") ?? "";
 
   if (!res.ok) {
     const text =
       await res.text().catch(() => "");
 
     throw new Error(
-      `Failed to load ${path} (${res.status}): ${text}`
+      `Analytics API failed: ${path} (${res.status}) ${text.slice(0, 500)}`
+    );
+  }
+
+  if (!contentType.includes("application/json")) {
+    const text =
+      await res.text().catch(() => "");
+
+    throw new Error(
+      `Analytics API returned non-JSON: ${path} (${res.status}) ` +
+        `content-type=${contentType} body=${text.slice(0, 500)}`
     );
   }
 

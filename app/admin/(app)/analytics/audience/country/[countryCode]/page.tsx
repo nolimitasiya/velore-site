@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import AnalyticsNav from "@/components/analytics/AnalyticsNav";
 
@@ -326,6 +326,28 @@ function MetricCard({
   );
 }
 
+async function absoluteUrl(path: string) {
+  const headerStore = await headers();
+
+  const host =
+    headerStore.get("x-forwarded-host") ??
+    headerStore.get("host");
+
+  const protocol =
+    headerStore.get("x-forwarded-proto") ??
+    (process.env.NODE_ENV === "production"
+      ? "https"
+      : "http");
+
+  if (!host) {
+    throw new Error(
+      `Unable to determine request host for ${path}`
+    );
+  }
+
+  return `${protocol}://${host}${path}`;
+}
+
 function BehaviourRateCard({
   label,
   rate,
@@ -608,21 +630,20 @@ const cookieStore =
 const cookieHeader =
   cookieStore.toString();
 
-const baseUrl =
-  process.env.NEXT_PUBLIC_APP_URL ??
-  "http://localhost:3000";
+const url = await absoluteUrl(
+  `/api/admin/analytics/audience/country/${encodeURIComponent(
+    marketCountryCode
+  )}?${apiParams.toString()}`
+);
 
  const response =
   await fetch(
-    `${baseUrl}/api/admin/analytics/audience/country/${encodeURIComponent(
-      marketCountryCode
-    )}?${apiParams.toString()}`,
+    url,
     {
       headers: {
         cookie:
           cookieHeader,
       },
-
       cache:
         "no-store",
     }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import AnalyticsNav from "@/components/analytics/AnalyticsNav";
 
@@ -109,6 +109,27 @@ function formatAgeBand(
     "-",
     "–"
   );
+}
+async function absoluteUrl(path: string) {
+  const headerStore = await headers();
+
+  const host =
+    headerStore.get("x-forwarded-host") ??
+    headerStore.get("host");
+
+  const protocol =
+    headerStore.get("x-forwarded-proto") ??
+    (process.env.NODE_ENV === "production"
+      ? "https"
+      : "http");
+
+  if (!host) {
+    throw new Error(
+      `Unable to determine request host for ${path}`
+    );
+  }
+
+  return `${protocol}://${host}${path}`;
 }
 
 function Card({
@@ -493,28 +514,45 @@ const source =
     );
   }
 
-  const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL ??
-    "http://localhost:3000";
+ const url = await absoluteUrl(
+  `/api/admin/analytics/audience/age/${encodeURIComponent(
+    ageBand
+  )}?${qs.toString()}`
+);
 
-  const response =
-    await fetch(
-      `${baseUrl}/api/admin/analytics/audience/age/${encodeURIComponent(
-        ageBand
-      )}?${qs.toString()}`,
-      {
-        headers: {
-          cookie:
-            cookieHeader,
-        },
+  const response = await fetch(
+  url,
+  {
+    headers: {
+      cookie: cookieHeader,
+    },
+    cache: "no-store",
+  }
+);
 
-        cache:
-          "no-store",
-      }
-    );
+ const contentType =
+  response.headers.get("content-type") ?? "";
 
-  const data =
-    (await response.json()) as AgeAudienceResponse;
+if (!response.ok) {
+  const text =
+    await response.text().catch(() => "");
+
+  throw new Error(
+    `Age audience API failed (${response.status}): ${text.slice(0, 500)}`
+  );
+}
+
+if (!contentType.includes("application/json")) {
+  const text =
+    await response.text().catch(() => "");
+
+  throw new Error(
+    `Age audience API returned non-JSON (${response.status}): ${text.slice(0, 500)}`
+  );
+}
+
+const data =
+  (await response.json()) as AgeAudienceResponse;
 
   if (
     !response.ok ||
