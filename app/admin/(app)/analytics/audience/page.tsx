@@ -1,41 +1,62 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import AnalyticsNav from "@/components/analytics/AnalyticsNav";
 
 export const dynamic = "force-dynamic";
 
-function absoluteUrl(path: string) {
-  const base =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : "http://localhost:3000");
+async function absoluteUrl(path: string) {
+  const headerStore = await headers();
 
-  return `${base}${path}`;
+  const host =
+    headerStore.get("x-forwarded-host") ??
+    headerStore.get("host");
+
+  const protocol =
+    headerStore.get("x-forwarded-proto") ??
+    (process.env.NODE_ENV === "production"
+      ? "https"
+      : "http");
+
+  if (!host) {
+    throw new Error(
+      `Unable to determine request host for ${path}`
+    );
+  }
+
+  return `${protocol}://${host}${path}`;
 }
 
 async function getJSON(path: string) {
   const jar = await cookies();
+  const url = await absoluteUrl(path);
 
-  const res = await fetch(
-    absoluteUrl(path),
-    {
-      cache: "no-store",
-      headers: {
-        cookie: jar.toString(),
-      },
-    }
-  );
+  const res = await fetch(url, {
+    cache: "no-store",
+    headers: {
+      cookie: jar.toString(),
+    },
+  });
+
+  const contentType =
+    res.headers.get("content-type") ?? "";
 
   if (!res.ok) {
     const text =
-      await res
-        .text()
-        .catch(() => "");
+      await res.text().catch(() => "");
 
     throw new Error(
-      `Failed: ${path} (${res.status}) ${text}`
+      `Analytics API failed: ${path} (${res.status}) ${text.slice(0, 500)}`
+    );
+  }
+
+  if (!contentType.includes("application/json")) {
+    const text =
+      await res.text().catch(() => "");
+
+    throw new Error(
+      `Analytics API returned non-JSON: ${path} (${res.status}) ` +
+        `content-type=${contentType} body=${text.slice(0, 500)}`
     );
   }
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Fragment } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers} from "next/headers";
 
 import AnalyticsNav from "@/components/analytics/AnalyticsNav";
 
@@ -378,49 +378,64 @@ function formatNumber(
   ).toLocaleString();
 }
 
-function absoluteUrl(
-  path: string
-) {
-  const base =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : "http://localhost:3000");
+async function absoluteUrl(path: string) {
+  const headerStore = await headers();
 
-  return `${base}${path}`;
+  const host =
+    headerStore.get("x-forwarded-host") ??
+    headerStore.get("host");
+
+  const protocol =
+    headerStore.get("x-forwarded-proto") ??
+    (process.env.NODE_ENV === "production"
+      ? "https"
+      : "http");
+
+  if (!host) {
+    throw new Error(
+      `Unable to determine request host for ${path}`
+    );
+  }
+
+  return `${protocol}://${host}${path}`;
 }
 
 async function getJSON(
   path: string
-) {
-  const jar =
-    await cookies();
+): Promise<InsightsResponse> {
+  const jar = await cookies();
+  const url = await absoluteUrl(path);
 
-  const response =
-    await fetch(
-      absoluteUrl(path),
-      {
-        cache: "no-store",
+  const response = await fetch(url, {
+    cache: "no-store",
+    headers: {
+      cookie: jar.toString(),
+    },
+  });
 
-        headers: {
-          cookie:
-            jar.toString(),
-        },
-      }
-    );
-
-  const text =
-    await response.text();
+  const contentType =
+    response.headers.get("content-type") ?? "";
 
   if (!response.ok) {
+    const text =
+      await response.text().catch(() => "");
+
     throw new Error(
-      `Insights request failed (${response.status}): ${text}`
+      `Insights request failed: ${path} (${response.status}) ${text.slice(0, 500)}`
     );
   }
 
-  return JSON.parse(
-    text
-  ) as InsightsResponse;
+  if (!contentType.includes("application/json")) {
+    const text =
+      await response.text().catch(() => "");
+
+    throw new Error(
+      `Insights API returned non-JSON: ${path} (${response.status}) ` +
+        `content-type=${contentType} body=${text.slice(0, 500)}`
+    );
+  }
+
+  return response.json() as Promise<InsightsResponse>;
 }
 
 function buildInsightsUrl({

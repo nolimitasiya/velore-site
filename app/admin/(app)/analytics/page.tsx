@@ -191,8 +191,6 @@ const toDate = sp.to ?? "";
   ),
 ]);
 
-const totalWishlistSaves =
-  await prisma.wishlistItem.count();
 
 const qs = (r: string) => (r === "30d" ? "" : `?range=${r}`);
 const index = indexOverview?.overview ?? {};
@@ -206,15 +204,29 @@ const audienceGeography =
 const activeMarkets =
   audienceGeography.length;
 
-const ageCoverage =
-  audience.ageCoverage != null
-    ? `${(
-        Number(
-          audience.ageCoverage
-        ) * 100
-      ).toFixed(0)}%`
-    : "—";
+const ageDistribution =
+  audienceData?.ageDistribution ?? [];
 
+const primaryAgeRow =
+  [...ageDistribution].sort(
+    (
+      a: {
+        ageBand: string;
+        shoppers: number;
+      },
+      b: {
+        ageBand: string;
+        shoppers: number;
+      }
+    ) =>
+      b.shoppers -
+      a.shoppers
+  )[0];
+
+const primaryAgeGroup =
+  primaryAgeRow?.shoppers > 0
+    ? primaryAgeRow.ageBand
+    : "—";
 
 
   return (
@@ -468,11 +480,11 @@ const ageCoverage =
     },
 
     {
-      label:
-        "Age coverage",
-      value:
-        ageCoverage,
-    },
+  label:
+    "Primary age group",
+  value:
+    primaryAgeGroup,
+},
   ]}
 />
 
@@ -492,7 +504,7 @@ const ageCoverage =
     },
     {
       label: "Wishlist saves",
-      value: totalWishlistSaves,
+      value: index.wishlistAdds ?? 0,
     },
     {
       label: "Shop clicks",
