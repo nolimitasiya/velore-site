@@ -41,6 +41,24 @@ const AGE_BANDS = [
 const MIN_SIGNAL_SESSIONS =
   5;
 
+const MIN_DEMOGRAPHIC_EXPOSED_SESSIONS =
+  20;
+
+const MIN_DEMOGRAPHIC_SHOPPERS =
+  5;
+
+function hasDemographicSample(
+  exposedSessions: number,
+  identifiedShoppers: number
+) {
+  return (
+    exposedSessions >=
+      MIN_DEMOGRAPHIC_EXPOSED_SESSIONS &&
+    identifiedShoppers >=
+      MIN_DEMOGRAPHIC_SHOPPERS
+  );
+}
+
 function startOfUtcDay(
   date: Date
 ) {
@@ -314,6 +332,14 @@ type SignalBucket = {
   shopped: Set<string>;
 };
 
+type DemographicSignalBucket = {
+  exposed: Set<string>;
+  shoppers: Set<string>;
+  viewed: Set<string>;
+  saved: Set<string>;
+  shopped: Set<string>;
+};
+
 type SignalEvent = {
   sessionId: string;
   eventType?: AnalyticsEventType;
@@ -337,6 +363,7 @@ type AgeProductTypeCell = {
   strengthScore: number;
 
   eligible: boolean;
+  identifiedShoppers: number;
 
   status:
     | "QUALIFYING"
@@ -375,6 +402,7 @@ type OpportunityRow = {
   productType: string;
 
   exposedSessions: number;
+  identifiedShoppers: number;
 
   viewSessions: number;
   saveSessions: number;
@@ -2129,6 +2157,49 @@ for (
     const signal of
       signals
   ) {
+const signalExposedSessionIds =
+  new Set(
+    ageExposureEvents
+      .filter((event) =>
+        event.signals.includes(
+          signal.signal
+        )
+      )
+      .map(
+        (event) =>
+          event.sessionId
+      )
+  );
+
+const signalShopperIds =
+  new Set<string>();
+
+for (
+  const sessionId of
+    signalExposedSessionIds
+) {
+  const shopperId =
+    sessionShopperMap.get(
+      sessionId
+    );
+
+  if (shopperId) {
+    signalShopperIds.add(
+      shopperId
+    );
+  }
+}
+
+const identifiedShoppers =
+  signalShopperIds.size;
+
+const eligible =
+  hasDemographicSample(
+    signal.exposedSessions,
+    identifiedShoppers
+  );
+
+
     ageProductTypeHeatmap.push({
       ageBand,
 
@@ -2162,13 +2233,13 @@ for (
       strengthScore:
         signal.strengthScore,
 
-      eligible:
-        signal.eligible,
+      eligible,
+      identifiedShoppers,
 
-      status:
-        signal.status as
-          | "QUALIFYING"
-          | "LOW_SAMPLE",
+status:
+  eligible
+    ? "QUALIFYING"
+    : "LOW_SAMPLE",
     });
   }
 }
@@ -2188,7 +2259,7 @@ for (
 const marketCountryCellMap =
   new Map<
     string,
-    SignalBucket
+    DemographicSignalBucket
   >();
 
 function getMarketCountryBucket(
@@ -2205,15 +2276,17 @@ function getMarketCountryBucket(
 
   if (!bucket) {
     bucket = {
-      exposed:
-        new Set<string>(),
-      viewed:
-        new Set<string>(),
-      saved:
-        new Set<string>(),
-      shopped:
-        new Set<string>(),
-    };
+  exposed:
+    new Set<string>(),
+  shoppers:
+    new Set<string>(),
+  viewed:
+    new Set<string>(),
+  saved:
+    new Set<string>(),
+  shopped:
+    new Set<string>(),
+};
 
     marketCountryCellMap.set(
       key,
@@ -2266,12 +2339,19 @@ for (
     continue;
   }
 
+  const bucket =
   getMarketCountryBucket(
     marketCode,
     countryCode
-  ).exposed.add(
-    event.sessionId
   );
+
+bucket.exposed.add(
+  event.sessionId
+);
+
+bucket.shoppers.add(
+  shopperId
+);
 }
 
 /*
@@ -2377,6 +2457,9 @@ const marketByShopperCountry =
         const exposedSessions =
           bucket.exposed.size;
 
+        const identifiedShoppers =
+          bucket.shoppers.size;
+
         const viewSessions =
           intersectionSize(
             bucket.exposed,
@@ -2419,14 +2502,17 @@ const marketByShopperCountry =
           shopIntentRate * 0.5;
 
         const eligible =
-          exposedSessions >=
-          MIN_SIGNAL_SESSIONS;
+          hasDemographicSample(
+          exposedSessions,
+          identifiedShoppers
+          );
 
         return {
           marketCode,
           countryCode,
 
           exposedSessions,
+          identifiedShoppers,
           viewSessions,
           saveSessions,
           shopSessions,
@@ -2442,6 +2528,7 @@ const marketByShopperCountry =
           eligible,
 
           status:
+
             eligible
               ? "QUALIFYING"
               : "LOW_SAMPLE",
@@ -2701,11 +2788,10 @@ const discoveryByProductType:
  * Only qualifying combinations
  * are returned.
  */
-
 const opportunityMap =
   new Map<
     string,
-    SignalBucket
+    DemographicSignalBucket
   >();
 
 function buildOpportunityKey({
@@ -2741,6 +2827,8 @@ function getOpportunityBucket(
   if (!bucket) {
     bucket = {
       exposed:
+        new Set<string>(),
+      shoppers:
         new Set<string>(),
       viewed:
         new Set<string>(),
@@ -2849,11 +2937,18 @@ for (
         productType,
       });
 
-    getOpportunityBucket(
-      key
-    ).exposed.add(
-      event.sessionId
-    );
+    const bucket =
+  getOpportunityBucket(
+    key
+  );
+
+bucket.exposed.add(
+  event.sessionId
+);
+
+bucket.shoppers.add(
+  shopperId
+);
   }
 }
 
@@ -3014,6 +3109,9 @@ const strongestOpportunities:
         const exposedSessions =
           bucket.exposed.size;
 
+        const identifiedShoppers =
+            bucket.shoppers.size;
+
         const viewSessions =
           intersectionSize(
             bucket.exposed,
@@ -3063,6 +3161,7 @@ const strongestOpportunities:
           productType,
 
           exposedSessions,
+          identifiedShoppers,
 
           viewSessions,
           saveSessions,
@@ -3087,10 +3186,12 @@ const strongestOpportunities:
      * executive recommendations.
      */
     .filter(
-      (row) =>
-        row.exposedSessions >=
-        MIN_SIGNAL_SESSIONS
+  (row) =>
+    hasDemographicSample(
+      row.exposedSessions,
+      row.identifiedShoppers
     )
+)
 
     .sort(
       (a, b) =>

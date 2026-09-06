@@ -344,6 +344,19 @@ const source =
   const ageDistribution =
     data?.ageDistribution ?? [];
 
+    const primaryAgeRow =
+  [...ageDistribution].sort(
+    (
+      a: { ageBand: string; shoppers: number },
+      b: { ageBand: string; shoppers: number }
+    ) => b.shoppers - a.shoppers
+  )[0];
+
+const primaryAgeGroup =
+  primaryAgeRow?.shoppers > 0
+    ? primaryAgeRow.ageBand
+    : "—";
+
   const countries:
     string[] =
     data?.filters?.countries ??
@@ -690,8 +703,8 @@ const source =
             </Card>
 
             <Card
-              title="Active audience"
-              subtitle="Analytics sessions active in selected period"
+              title="Active session"
+              subtitle="Shopping sessions active in selected period"
             >
               <div className="p-5">
 
@@ -917,24 +930,22 @@ const source =
               <div className="flex flex-wrap items-center justify-between gap-2">
 
                 <div className="text-xs text-neutral-400">
-                  Age coverage
-                </div>
+  Primary age group
+</div>
 
-                <div className="text-sm font-semibold text-[#7B2D3E]">
-                  {percent(
-                    overview.ageCoverage
-                  )}
-                </div>
+<div className="text-sm font-semibold text-[#7B2D3E]">
+  {primaryAgeGroup}
+</div>
+
+              
 
               </div>
 
               <div className="mt-1 text-[11px] leading-5 text-neutral-400">
-                Age distribution only
-                represents registered
-                shoppers with a known date of
-                birth. It does not represent
-                anonymous Veilora sessions.
-              </div>
+  Primary age group represents the
+  largest age segment among registered
+  Veilora shoppers.
+</div>
 
             </div>
 

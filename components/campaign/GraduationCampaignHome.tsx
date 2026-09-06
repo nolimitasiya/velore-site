@@ -272,7 +272,7 @@ export default function GraduationCampaignHome() {
       <section className="relative h-[390px] overflow-hidden md:h-[480px]">
 
         <Image
-          src="/campaign/graduation/hero.jpg"
+          src="/campaign/graduation/hero.png"
           alt=""
           fill
           priority

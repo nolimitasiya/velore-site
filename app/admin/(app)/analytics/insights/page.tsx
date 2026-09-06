@@ -234,6 +234,20 @@ const regionNames =
       type: "region",
     }
   );
+const MIN_DEMOGRAPHIC_EXPOSED_SESSIONS = 20;
+const MIN_DEMOGRAPHIC_SHOPPERS = 5;
+
+function hasDemographicSample(row: {
+  shoppers: number;
+  exposedSessions: number;
+}) {
+  return (
+    Number(row.exposedSessions ?? 0) >=
+      MIN_DEMOGRAPHIC_EXPOSED_SESSIONS &&
+    Number(row.shoppers ?? 0) >=
+      MIN_DEMOGRAPHIC_SHOPPERS
+  );
+}
 
   function heatmapIntensity(
   score: number
@@ -621,13 +635,15 @@ function HorizontalBarChart({
   emptyText,
 }: {
   rows: Array<{
-    key: string;
-    label: string;
-    value: number;
-    share?: number;
-    exposedSessions?: number;
+  key: string;
+  label: string;
+  value: number;
+  share?: number;
+  exposedSessions?: number;
+  shoppers?: number;
+  qualifies?: boolean;
+}>;
 
-  }>;
   maxValue: number;
   valueLabel?: (
     row: {
@@ -636,7 +652,8 @@ function HorizontalBarChart({
       value: number;
       share?: number;
       exposedSessions?: number;
-
+      shoppers?: number;
+      qualifies?: boolean;
     }
   ) => string;
   emptyText: string;
@@ -1774,8 +1791,7 @@ export default async function InsightsPage({
   const countryRows =
   data.audienceByCountry.map(
     (row) => ({
-      key:
-        row.countryCode,
+      key: row.countryCode,
 
       label:
         countryLabel(
@@ -1785,15 +1801,25 @@ export default async function InsightsPage({
       value:
         row.shoppers,
 
+      shoppers:
+        row.shoppers,
+
       exposedSessions:
         row.exposedSessions,
 
       share:
         row.share,
+
+      qualifies:
+        hasDemographicSample({
+          shoppers: row.shoppers,
+          exposedSessions:
+            row.exposedSessions,
+        }),
     })
   );
 
-  const ageRows =
+const ageRows =
   data.audienceByAge
     .filter(
       (row) =>
@@ -1812,14 +1838,26 @@ export default async function InsightsPage({
         value:
           row.shoppers,
 
+        shoppers:
+          row.shoppers,
+
         exposedSessions:
           row.exposedSessions,
 
         share:
           row.share,
+
+        qualifies:
+          hasDemographicSample({
+            shoppers:
+              row.shoppers,
+
+            exposedSessions:
+              row.exposedSessions,
+          }),
       })
     );
-
+    
   const marketRows =
     data.marketExposure.map(
       (row) => ({
@@ -2402,7 +2440,7 @@ source !== "all" ? (
 
   <div className="rounded-[24px] border border-black/10 bg-white p-5">
     <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7B2D3E]/60">
-      Identified shoppers
+      Registered shoppers
     </div>
 
     <div className="mt-3 text-3xl font-semibold tracking-tight text-neutral-950">
@@ -2452,7 +2490,7 @@ source !== "all" ? (
     </div>
 
     <p className="mt-2 text-xs leading-5 text-neutral-400">
-      Identified shoppers with more than one qualifying exposure session in this period.
+      Registered shoppers with more than one qualifying exposure session in this period.
     </p>
   </div>
 </div>
@@ -2478,15 +2516,25 @@ source !== "all" ? (
                 maxCountry
               }
               valueLabel={(row) =>
-  `${formatNumber(
-    row.value
-  )} shopper${
-    row.value === 1
-      ? ""
-      : "s"
-  } · ${formatNumber(
-    row.exposedSessions
-  )} sessions`
+  row.qualifies === false
+    ? `${formatNumber(
+        row.value
+      )} shopper${
+        row.value === 1
+          ? ""
+          : "s"
+      } · ${formatNumber(
+        row.exposedSessions
+      )} sessions · Low sample`
+    : `${formatNumber(
+        row.value
+      )} shopper${
+        row.value === 1
+          ? ""
+          : "s"
+      } · ${formatNumber(
+        row.exposedSessions
+      )} sessions`
 }
               emptyText="No registered-country data for this filtered cohort yet."
             />
@@ -2519,16 +2567,26 @@ source !== "all" ? (
               maxValue={
                 maxAge
               }
-              valueLabel={(row) =>
-  `${formatNumber(
-    row.value
-  )} shopper${
-    row.value === 1
-      ? ""
-      : "s"
-  } · ${formatNumber(
-    row.exposedSessions
-  )} sessions`
+            valueLabel={(row) =>
+  row.qualifies === false
+    ? `${formatNumber(
+        row.value
+      )} shopper${
+        row.value === 1
+          ? ""
+          : "s"
+      } · ${formatNumber(
+        row.exposedSessions
+      )} sessions · Low sample`
+    : `${formatNumber(
+        row.value
+      )} shopper${
+        row.value === 1
+          ? ""
+          : "s"
+      } · ${formatNumber(
+        row.exposedSessions
+      )} sessions`
 }
               emptyText="No known-age data for this filtered cohort yet."
             />
@@ -2665,7 +2723,7 @@ source !== "all" ? (
       30% save rate +
       {" "}
       50% shop-intent rate.
-      Cells require at least 5 unique exposed sessions to qualify.
+      Cells require at least 20 unique exposed sessions and 5 identified shoppers to qualify.
     </div>
   </Panel>
 </section>
@@ -2778,7 +2836,7 @@ source !== "all" ? (
 
   <Panel
     title="Strongest Opportunities"
-    subtitle="Only combinations with at least 5 unique exposed sessions are eligible for ranking."
+    subtitle="Only combinations with at least 20 unique exposed sessions and 5 identified shoppers are eligible for ranking."
   >
     <OpportunityRanking
       rows={

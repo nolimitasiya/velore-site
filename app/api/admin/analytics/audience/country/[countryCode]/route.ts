@@ -871,19 +871,67 @@ brand: {
             take: 50_000,
           })
         : [];
-const filteredActiveSessionIds =
+/*
+ * Sessions actually exposed to
+ * this brand market.
+ */
+const marketAudienceSessionIds =
   new Set(
-    events.map(
-      (event) =>
-        event.sessionId
+    events
+      .filter(
+        (event) =>
+          event.eventType ===
+          AnalyticsEventType.PRODUCT_IMPRESSION
+      )
+      .map(
+        (event) =>
+          event.sessionId
+      )
+  );
+
+const audienceSize =
+  marketAudienceSessionIds.size;
+
+/*
+ * Sessions that were exposed
+ * AND then meaningfully engaged
+ * with this market.
+ *
+ * Engagement =
+ * VIEW, SAVE or SHOP CLICK.
+ */
+const respondingSessionIds =
+  new Set(
+    events
+      .filter(
+        (event) =>
+          event.eventType ===
+            AnalyticsEventType.PRODUCT_VIEW ||
+          event.eventType ===
+            AnalyticsEventType.WISHLIST_ADD ||
+          event.eventType ===
+            AnalyticsEventType.SHOP_CLICK
+      )
+      .map(
+        (event) =>
+          event.sessionId
+      )
+  );
+
+const engagedSessionIds =
+  new Set(
+    Array.from(
+      marketAudienceSessionIds
+    ).filter(
+      (sessionId) =>
+        respondingSessionIds.has(
+          sessionId
+        )
     )
   );
 
-  const marketSessionIds =
-  filteredActiveSessionIds;
-
-const audienceSize =
-  marketSessionIds.size;
+const engagedSessions =
+  engagedSessionIds.size;
 
   const allMarketEvents =
   sessionIds.length
@@ -903,9 +951,6 @@ const audienceSize =
           eventType: {
             in: [
               AnalyticsEventType.PRODUCT_IMPRESSION,
-              AnalyticsEventType.PRODUCT_VIEW,
-              AnalyticsEventType.WISHLIST_ADD,
-              AnalyticsEventType.SHOP_CLICK,
             ],
           },
 
@@ -944,7 +989,7 @@ const knownMarketSessionIds =
 
 const audienceShare =
   safeRate(
-    marketSessionIds.size,
+    marketAudienceSessionIds.size,
     knownMarketSessionIds.size
   );
 
@@ -1339,7 +1384,7 @@ const audienceShare =
     DISCOVERY_SOURCES,
 },
 
-      segment: {
+ segment: {
   type: "MARKET",
 
   key:
@@ -1351,8 +1396,7 @@ const audienceShare =
   audienceSize,
   audienceShare,
 
-  activeSessions:
-    marketSessionIds.size,
+  engagedSessions,
 },
 
       range: {

@@ -1686,11 +1686,7 @@ const savedAndShopped =
       })
     )
 
-    // Keep failed searches only in Unmet Demand
-    .filter(
-      (row) =>
-        row.zeroResults === 0
-    )
+    
 
     .sort(
       (a, b) =>

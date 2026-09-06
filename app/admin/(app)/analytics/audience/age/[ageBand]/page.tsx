@@ -272,24 +272,28 @@ function SignalTable({
             <thead>
               <tr className="border-b border-neutral-200 text-left font-semibold text-[#a88972]">
                 <th className="px-5 py-4">
-                  SIGNAL
-                </th>
+  SIGNAL
+</th>
 
-                <th className="px-5 py-4 text-right">
-                  Exposure
-                </th>
+<th className="px-5 py-4 text-right">
+  Exposed sessions
+</th>
 
-                <th className="px-5 py-4 text-right">
-                  Views
-                </th>
+<th className="px-5 py-4 text-right">
+  View rate
+</th>
 
-                <th className="px-5 py-4 text-right">
-                  Saves
-                </th>
+<th className="px-5 py-4 text-right">
+  Save rate
+</th>
 
-                <th className="px-5 py-4 text-right">
-                  Shop
-                </th>
+<th className="px-5 py-4 text-right">
+  Shop intent
+</th>
+
+<th className="px-5 py-4 text-right">
+  Strength
+</th>
               </tr>
             </thead>
 
@@ -311,20 +315,32 @@ function SignalTable({
                     ) : null}
                   </td>
 
-                  <td className="px-5 py-5 text-right text-base text-neutral-950">
-                    {row.uniqueImpressionSessions}
-                  </td>
-
-                  <td className="px-5 py-5 text-right text-base text-neutral-950">
-  {row.views}
+                 <td className="px-5 py-5 text-right text-base text-neutral-950">
+  {row.uniqueImpressionSessions}
 </td>
 
 <td className="px-5 py-5 text-right text-base text-neutral-950">
-  {row.wishlistAdds}
+  {row.qualifies
+    ? formatPercent(row.viewRate)
+    : "—"}
 </td>
 
 <td className="px-5 py-5 text-right text-base text-neutral-950">
-  {row.shopClicks}
+  {row.qualifies
+    ? formatPercent(row.saveRate)
+    : "—"}
+</td>
+
+<td className="px-5 py-5 text-right text-base text-neutral-950">
+  {row.qualifies
+    ? formatPercent(row.shopIntentRate)
+    : "—"}
+</td>
+
+<td className="px-5 py-5 text-right text-base font-medium text-neutral-950">
+  {row.qualifies
+    ? (row.strengthScore * 100).toFixed(1)
+    : "—"}
 </td>
                 </tr>
               ))}
@@ -412,20 +428,32 @@ function ActivityTable({
                   </td>
 
                   <td className="px-5 py-5 text-right text-base text-neutral-950">
-                    {row.uniqueImpressionSessions}
-                  </td>
+  {row.uniqueImpressionSessions}
+</td>
 
-                  <td className="px-5 py-5 text-right text-base text-neutral-950">
-                    {row.views}
-                  </td>
+<td className="px-5 py-5 text-right text-base text-neutral-950">
+  {row.qualifies
+    ? formatPercent(row.viewRate)
+    : "—"}
+</td>
 
-                  <td className="px-5 py-5 text-right text-base text-neutral-950">
-                    {row.wishlistAdds}
-                  </td>
+<td className="px-5 py-5 text-right text-base text-neutral-950">
+  {row.qualifies
+    ? formatPercent(row.saveRate)
+    : "—"}
+</td>
 
-                  <td className="px-5 py-5 text-right text-base text-neutral-950">
-                    {row.shopClicks}
-                  </td>
+<td className="px-5 py-5 text-right text-base text-neutral-950">
+  {row.qualifies
+    ? formatPercent(row.shopIntentRate)
+    : "—"}
+</td>
+
+<td className="px-5 py-5 text-right text-base font-medium text-neutral-950">
+  {row.qualifies
+    ? (row.strengthScore * 100).toFixed(1)
+    : "—"}
+</td>
                 </tr>
               ))}
             </tbody>

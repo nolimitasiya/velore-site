@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
 import { adminError } from "@/lib/auth/http";
 import { rangeWindow, customRangeWindow } from "@/lib/revenue/ranges";
+import { AnalyticsEventType } from "@prisma/client";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -23,26 +24,115 @@ export async function GET(req: Request) {
         : null;
 
     const [
-  cToday, c7, c30, cCustom,
-  vToday, v7, v30, vCustom,
-  brandCount, productCount,
+  cToday,
+  c7,
+  c30,
+  cCustom,
+  vToday,
+  v7,
+  v30,
+  vCustom,
+  brandCount,
+  productCount,
 ] = await Promise.all([
-  // Shop at clicks (NOT product views)
-  prisma.affiliateClick.count({ where: { NOT: { type: "PRODUCT_VIEW" }, clickedAt: { gte: wToday.gte, lt: wToday.lt } } }),
-  prisma.affiliateClick.count({ where: { NOT: { type: "PRODUCT_VIEW" }, clickedAt: { gte: w7.gte, lt: w7.lt } } }),
-  prisma.affiliateClick.count({ where: { NOT: { type: "PRODUCT_VIEW" }, clickedAt: { gte: w30.gte, lt: w30.lt } } }),
+  // Shop clicks — canonical AnalyticsEvent tracking
+  prisma.analyticsEvent.count({
+    where: {
+      eventType: AnalyticsEventType.SHOP_CLICK,
+      createdAt: {
+        gte: wToday.gte,
+        lt: wToday.lt,
+      },
+    },
+  }),
+
+  prisma.analyticsEvent.count({
+    where: {
+      eventType: AnalyticsEventType.SHOP_CLICK,
+      createdAt: {
+        gte: w7.gte,
+        lt: w7.lt,
+      },
+    },
+  }),
+
+  prisma.analyticsEvent.count({
+    where: {
+      eventType: AnalyticsEventType.SHOP_CLICK,
+      createdAt: {
+        gte: w30.gte,
+        lt: w30.lt,
+      },
+    },
+  }),
+
   wCustom
-    ? prisma.affiliateClick.count({ where: { NOT: { type: "PRODUCT_VIEW" }, clickedAt: { gte: wCustom.gte, lt: wCustom.lt } } })
+    ? prisma.analyticsEvent.count({
+        where: {
+          eventType: AnalyticsEventType.SHOP_CLICK,
+          createdAt: {
+            gte: wCustom.gte,
+            lt: wCustom.lt,
+          },
+        },
+      })
     : Promise.resolve(null),
-  // Product views
-  prisma.affiliateClick.count({ where: { type: "PRODUCT_VIEW", clickedAt: { gte: wToday.gte, lt: wToday.lt } } }),
-  prisma.affiliateClick.count({ where: { type: "PRODUCT_VIEW", clickedAt: { gte: w7.gte, lt: w7.lt } } }),
-  prisma.affiliateClick.count({ where: { type: "PRODUCT_VIEW", clickedAt: { gte: w30.gte, lt: w30.lt } } }),
+
+  // Product views — canonical AnalyticsEvent tracking
+  prisma.analyticsEvent.count({
+    where: {
+      eventType: AnalyticsEventType.PRODUCT_VIEW,
+      createdAt: {
+        gte: wToday.gte,
+        lt: wToday.lt,
+      },
+    },
+  }),
+
+  prisma.analyticsEvent.count({
+    where: {
+      eventType: AnalyticsEventType.PRODUCT_VIEW,
+      createdAt: {
+        gte: w7.gte,
+        lt: w7.lt,
+      },
+    },
+  }),
+
+  prisma.analyticsEvent.count({
+    where: {
+      eventType: AnalyticsEventType.PRODUCT_VIEW,
+      createdAt: {
+        gte: w30.gte,
+        lt: w30.lt,
+      },
+    },
+  }),
+
   wCustom
-    ? prisma.affiliateClick.count({ where: { type: "PRODUCT_VIEW", clickedAt: { gte: wCustom.gte, lt: wCustom.lt } } })
+    ? prisma.analyticsEvent.count({
+        where: {
+          eventType: AnalyticsEventType.PRODUCT_VIEW,
+          createdAt: {
+            gte: wCustom.gte,
+            lt: wCustom.lt,
+          },
+        },
+      })
     : Promise.resolve(null),
-  prisma.brand.count({ where: { affiliateStatus: "ACTIVE" } }),
-  prisma.product.count({ where: { isActive: true } }),
+
+  // Current platform inventory
+  prisma.brand.count({
+    where: {
+      affiliateStatus: "ACTIVE",
+    },
+  }),
+
+  prisma.product.count({
+    where: {
+      isActive: true,
+    },
+  }),
 ]);
 
     // After your existing counts, add:

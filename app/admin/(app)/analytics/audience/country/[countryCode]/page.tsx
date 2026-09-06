@@ -36,16 +36,16 @@ type MarketAudienceResponse = {
     discoverySources: string[];
   };
 
-  segment: {
-    type: "MARKET";
+ segment: {
+  type: "MARKET";
 
-    key: string;
-    label: string;
+  key: string;
+  label: string;
 
-    audienceSize: number;
-    audienceShare: number;
-    activeSessions: number;
-  };
+  audienceSize: number;
+  audienceShare: number;
+  engagedSessions: number;
+};
 
   range: {
     start: string;
@@ -1036,12 +1036,12 @@ const url = await absoluteUrl(
             />
 
             <MetricCard
-              label="Active sessions"
-              value={formatNumber(
-                data.segment.activeSessions
-              )}
-              description="Unique sessions contributing tracked behaviour to this market."
-            />
+  label="Engaged sessions"
+  value={formatNumber(
+    data.segment.engagedSessions
+  )}
+  description="Exposed sessions that viewed, saved or Shop-clicked a product from this market."
+/>
           </div>
         </section>
 

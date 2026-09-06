@@ -1010,28 +1010,38 @@ function getSignalLeader(rows: any[]) {
                 </div>
 
                 <div className="mt-4 border-t border-black/5 pt-3">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-neutral-400">
-                      Exposure
-                    </span>
+  <div className="flex items-center justify-between text-xs">
+    <span className="text-neutral-400">
+      Impressions
+    </span>
 
-                    <span className="font-medium text-black">
-                      {row.impressions}
-                    </span>
-                  </div>
+    <span className="font-medium text-black">
+      {row.impressions}
+    </span>
+  </div>
 
-                  <div className="mt-1.5 flex items-center justify-between text-xs">
-                    <span className="text-neutral-400">
-                      Shop intent
-                    </span>
+  <div className="mt-1.5 flex items-center justify-between text-xs">
+    <span className="text-neutral-400">
+      Exposed sessions
+    </span>
 
-                    <span className="font-medium text-[#7B2D3E]">
-                      {percent(
-                        row.shopIntentRate
-                      )}
-                    </span>
-                  </div>
-                </div>
+    <span className="font-medium text-black">
+      {row.uniqueImpressionSessions}
+    </span>
+  </div>
+
+  <div className="mt-1.5 flex items-center justify-between text-xs">
+    <span className="text-neutral-400">
+      Shop intent
+    </span>
+
+    <span className="font-medium text-[#7B2D3E]">
+      {percent(
+        row.shopIntentRate
+      )}
+    </span>
+  </div>
+</div>
               </>
             ) : (
               <div className="py-4 text-xs text-neutral-400">
@@ -1245,16 +1255,22 @@ function getSignalLeader(rows: any[]) {
             <table className="w-full text-sm">
               <thead className="text-left text-xs uppercase tracking-wide text-[#a89280]">
                 <tr>
-                  <th className="px-4 py-3">
-                    Search
-                  </th>
-                  <th className="px-4 py-3 text-right">
-                    Searches
-                  </th>
-                  <th className="px-4 py-3 text-right">
-                    Zero rate
-                  </th>
-                </tr>
+  <th className="px-4 py-3">
+    Search
+  </th>
+
+  <th className="px-4 py-3 text-right">
+    Searches
+  </th>
+
+  <th className="px-4 py-3 text-right">
+    Unmet searches
+  </th>
+
+  <th className="px-4 py-3 text-right">
+    Zero rate
+  </th>
+</tr>
               </thead>
 
               <tbody>
@@ -1271,14 +1287,18 @@ function getSignalLeader(rows: any[]) {
                       </td>
 
                       <td className="px-4 py-3.5 text-right">
-                        {row.searches}
-                      </td>
+  {row.searches}
+</td>
 
-                      <td className="px-4 py-3.5 text-right font-semibold text-[#7B2D3E]">
-                        {percent(
-                          row.zeroResultRate
-                        )}
-                      </td>
+<td className="px-4 py-3.5 text-right font-semibold text-[#7B2D3E]">
+  {row.zeroResults}
+</td>
+
+<td className="px-4 py-3.5 text-right">
+  {percent(
+    row.zeroResultRate
+  )}
+</td>
                     </tr>
                   )
                 )}
@@ -1311,7 +1331,7 @@ function getSignalLeader(rows: any[]) {
                     Impressions
                   </th>
                   <th className="px-4 py-3 text-right">
-                      Exposed shoppers
+                      Exposed session
                       </th>
                   <th className="px-4 py-3 text-right">
                     Views
@@ -1454,7 +1474,7 @@ function getSignalLeader(rows: any[]) {
           </th>
 
           <th className="px-4 py-3 text-right">
-  Exposed shoppers
+  Exposed session
 </th>
 
           <th className="px-4 py-3 text-right">
