@@ -4,6 +4,7 @@ import { requireAdminSession } from "@/lib/auth/AdminSession";
 import BrandSwitcher from "./BrandSwitcher";
 import BrandNotesEditor from "./BrandNotesEditor";
 import BrandHomepageSettingsEditor from "./BrandHomepageSettingsEditor";
+import BrandMenuSettingsEditor from "./BrandMenuSettingsEditor";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -84,7 +85,7 @@ export default async function AdminBrandDetailPage({
       </div>
 
       {/* CARDS GRID — outside the hero */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
 
         {/* AFFILIATE CARD */}
         <div className="rounded-[28px] border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
@@ -151,6 +152,12 @@ export default async function AdminBrandDetailPage({
           initialShowOnHomepage={brand.showOnHomepage}
           initialHomepageOrder={brand.homepageOrder}
         />
+
+        <BrandMenuSettingsEditor
+  brandId={brand.id}
+  initialShowInBrandsMenu={brand.showInBrandsMenu}
+  initialBrandsMenuOrder={brand.brandsMenuOrder}
+/>
 
         {/* NOTES */}
         <BrandNotesEditor brandId={brand.id} initialNotes={brand.notes} />

@@ -5,11 +5,12 @@ import { requireBrandContext } from "@/lib/auth/BrandSession";
 import { ProductStatus } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { isAllowedBrandCurrency } from "@/lib/currency/codes";
-
-
+import { invalidateStorefrontProduct } from "@/lib/storefront/invalidate-product";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+
 
 function toStr(v: any) {
   const s = String(v ?? "").trim();
@@ -84,9 +85,23 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     const { id } = await ctx.params;
 
     const existing = await prisma.product.findFirst({
-      where: { id, brandId },
-      select: { id: true, status: true },
-    });
+  where: {
+    id,
+    brandId,
+  },
+
+  select: {
+    id: true,
+    status: true,
+    slug: true,
+
+    brand: {
+      select: {
+        slug: true,
+      },
+    },
+  },
+});
 
     if (!existing) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
 
@@ -164,7 +179,18 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
             : {}),
           updatedAt: new Date(),
         },
-        select: { id: true, status: true, publishedAt: true },
+        select: {
+  id: true,
+  slug: true,
+  status: true,
+  publishedAt: true,
+
+  brand: {
+    select: {
+      slug: true,
+    },
+  },
+},
       });
 
       
@@ -245,6 +271,13 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       
       return p;
     });
+    
+    invalidateStorefrontProduct({
+  productId: updated.id,
+  brandSlug: updated.brand.slug,
+  productSlug: updated.slug,
+  previousProductSlug: existing.slug,
+});
 
     return NextResponse.json({ ok: true, product: updated });
   } catch (e: any) {

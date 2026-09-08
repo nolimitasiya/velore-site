@@ -87,8 +87,11 @@ model Brand {
   contactEmail String?
   contactPhone String?
 
-  showOnHomepage       Boolean  @default(false)
-  homepageOrder        Int?
+  showOnHomepage   Boolean @default(false)
+  homepageOrder    Int?
+  showInBrandsMenu Boolean @default(false)
+  brandsMenuOrder  Int?
+
   shippingCountryCodes String[] @default([])
 
   notes BrandNote[]
@@ -152,6 +155,8 @@ model Brand {
   analyticsEvents   AnalyticsEvent[]
   payouts           BrandPayout[]
   billingEmail      String?
+
+  @@index([showInBrandsMenu, brandsMenuOrder])
 }
 
 model Category {
@@ -837,6 +842,9 @@ model StyleFeedPost {
   showOnHomepage Boolean @default(false)
   homepageOrder  Int?
 
+  showInBrandsMenu Boolean @default(false)
+  brandsMenuOrder  Int?
+
   brand Brand? @relation(fields: [brandId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
@@ -1201,17 +1209,17 @@ enum ReturnsPaidBy {
 }
 
 model Shopper {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email       String   @unique
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email       String  @unique
   password    String
   firstName   String?
   lastName    String?
-  countryCode String?  @db.Char(2)
+  countryCode String? @db.Char(2)
 
   dateOfBirth DateTime?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   wishlistItems     WishlistItem[]
   analyticsSessions AnalyticsSession[]
@@ -1465,4 +1473,3 @@ model AnalyticsEvent {
   @@index([sourcePage, createdAt])
   @@index([sectionId, createdAt])
 }
-

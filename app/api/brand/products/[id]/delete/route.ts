@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireBrandContext } from "@/lib/auth/BrandSession";
+import { invalidateStorefrontProduct } from "@/lib/storefront/invalidate-product";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,16 +15,43 @@ export async function POST(
     const { brandId } = await requireBrandContext();
     const { id } = await params;
 
-    const res = await prisma.product.deleteMany({
-      where: { id, brandId },
-    });
+    const existing = await prisma.product.findFirst({
+  where: {
+    id,
+    brandId,
+  },
 
-    if (res.count === 0) {
-      return NextResponse.json(
-        { ok: false, error: "Not found" },
-        { status: 404 }
-      );
-    }
+  select: {
+    id: true,
+    slug: true,
+
+    brand: {
+      select: {
+        slug: true,
+      },
+    },
+  },
+});
+
+if (!existing) {
+  return NextResponse.json(
+    { ok: false, error: "Not found" },
+    { status: 404 }
+  );
+}
+
+await prisma.product.deleteMany({
+  where: {
+    id,
+    brandId,
+  },
+});
+
+invalidateStorefrontProduct({
+  productId: existing.id,
+  productSlug: existing.slug,
+  brandSlug: existing.brand.slug,
+});
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {

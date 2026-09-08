@@ -118,9 +118,13 @@ export async function getHeaderPromos() {
   return map;
 }
 
+
+
 export async function getHeaderBrandNavItems() {
-  const brands = await prisma.brand.findMany({
+  const selectedBrands = await prisma.brand.findMany({
     where: {
+      showInBrandsMenu: true,
+
       products: {
         some: {
           status: "APPROVED",
@@ -129,16 +133,55 @@ export async function getHeaderBrandNavItems() {
         },
       },
     },
-    orderBy: { name: "asc" },
+
+    orderBy: [
+      {
+        brandsMenuOrder: "asc",
+      },
+      {
+        name: "asc",
+      },
+    ],
+
     take: 12,
+
     select: {
       name: true,
       slug: true,
     },
   });
 
+  const brands =
+    selectedBrands.length > 0
+      ? selectedBrands
+      : await prisma.brand.findMany({
+          where: {
+            products: {
+              some: {
+                status: "APPROVED",
+                isActive: true,
+                publishedAt: { not: null },
+              },
+            },
+          },
+
+          orderBy: {
+            name: "asc",
+          },
+
+          take: 12,
+
+          select: {
+            name: true,
+            slug: true,
+          },
+        });
+
   return brands.map((b) => ({
     label: b.name,
     href: `/brands/${b.slug}`,
   }));
 }
+
+
+

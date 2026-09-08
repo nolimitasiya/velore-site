@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
 import { ProductStatus } from "@prisma/client";
+import { invalidateStorefrontProduct } from "@/lib/storefront/invalidate-product";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -79,14 +80,27 @@ export async function POST(
       where: { id },
       data,
       select: {
-        id: true,
-        status: true,
-        reviewNote: true,
-        publishedAt: true,
-        lastApprovedAt: true,
-        isActive: true,
-        updatedAt: true,
-      },
+  id: true,
+  slug: true,
+  status: true,
+  reviewNote: true,
+  publishedAt: true,
+  lastApprovedAt: true,
+  isActive: true,
+  updatedAt: true,
+
+  brand: {
+    select: {
+      slug: true,
+    },
+  },
+},
+    });
+
+    invalidateStorefrontProduct({
+      productId: product.id,
+      productSlug: product.slug,
+      brandSlug: product.brand.slug,
     });
 
     return NextResponse.json({ ok: true, product });

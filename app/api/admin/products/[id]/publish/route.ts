@@ -4,6 +4,7 @@ import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
 import { ProductStatus } from "@prisma/client";
+import { invalidateStorefrontProduct } from "@/lib/storefront/invalidate-product";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,10 +44,30 @@ export async function POST(
     }
 
     const product = await prisma.product.update({
-      where: { id },
-      data: { publishedAt: published ? new Date() : null },
-      select: { id: true, publishedAt: true },
-    });
+  where: { id },
+
+  data: {
+    publishedAt: published ? new Date() : null,
+  },
+
+  select: {
+    id: true,
+    slug: true,
+    publishedAt: true,
+
+    brand: {
+      select: {
+        slug: true,
+      },
+    },
+  },
+});
+
+invalidateStorefrontProduct({
+  productId: product.id,
+  productSlug: product.slug,
+  brandSlug: product.brand.slug,
+});
 
     return NextResponse.json({ ok: true, product });
   } catch (e: any) {

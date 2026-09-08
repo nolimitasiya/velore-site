@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -60,7 +61,7 @@ const clothingLinks: NavItem[] = [
   { label: "Hijabs", href: "/categories/clothing?type=HIJAB" },
   { label: "Khimars", href: "/categories/clothing?type=KHIMAR" },
   { label: "Jilbabs", href: "/categories/clothing?type=JILBAB" },
-  { label: "Activewear", href: "/categories/occasion/activewear" },
+  { label: "Activewear", href: "/categories/clothing?type=ACTIVEWEAR" },
   { label: "Maternity", href: "/categories/clothing?type=MATERNITY" },
 ];
 const accessoriesLinks: NavItem[] = [
@@ -187,16 +188,25 @@ function DropdownMenu({
   promo: HeaderPromo;
   compact?: boolean;
 }) {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+
+  // Always close the dropdown after navigation.
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
   const panelClass = [
     "absolute left-1/2 top-full z-50 -translate-x-1/2",
     "pt-4",
     compact ? "w-[560px]" : "w-[720px]",
     "border border-black/10 bg-white text-black",
     "shadow-[0_24px_80px_rgba(0,0,0,0.16)]",
-    "opacity-0 pointer-events-none translate-y-2",
     "transition-all duration-200 ease-out",
-    "group-hover:opacity-100 group-hover:pointer-events-auto group-hover:translate-y-0",
-    "group-focus-within:opacity-100 group-focus-within:pointer-events-auto group-focus-within:translate-y-0",
+
+    open
+      ? "opacity-100 pointer-events-auto translate-y-0"
+      : "opacity-0 pointer-events-none translate-y-2",
   ].join(" ");
 
   const innerClass = compact
@@ -204,35 +214,74 @@ function DropdownMenu({
     : "grid grid-cols-[1.15fr_0.85fr] gap-10 px-8 py-8";
 
   return (
-    <div className={`${navItemWrapper} group relative`}>
-      <Link href={href} className={navLink(active)} aria-controls={menuId}>
+    <div
+      className={`${navItemWrapper} relative`}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onFocusCapture={() => setOpen(true)}
+      onBlurCapture={(event) => {
+        const nextFocusedElement =
+          event.relatedTarget as Node | null;
+
+        if (
+          !nextFocusedElement ||
+          !event.currentTarget.contains(nextFocusedElement)
+        ) {
+          setOpen(false);
+        }
+      }}
+    >
+      <Link
+        href={href}
+        className={navLink(active)}
+        aria-controls={menuId}
+        aria-expanded={open}
+        aria-haspopup="true"
+        onClick={() => setOpen(false)}
+      >
         <span className="inline-flex items-center gap-2">
           {label}
-          <span className="text-[10px] text-black/35 transition-transform duration-200 group-hover:rotate-180">
-  ▾
-</span>
+
+          <span
+            className={[
+              "text-[10px] text-black/35 transition-transform duration-200",
+              open ? "rotate-180" : "",
+            ].join(" ")}
+          >
+            ▾
+          </span>
         </span>
       </Link>
 
-      <div id={menuId} className={panelClass}>
+      <div
+        id={menuId}
+        className={panelClass}
+        onClickCapture={() => setOpen(false)}
+      >
         <div className={innerClass}>
           <div>
-            <div className={dropdownEyebrow}>Shop {label}</div>
+            <div className={dropdownEyebrow}>
+              Shop {label}
+            </div>
 
             <div className={dropdownGrid}>
               {items.map((item) => (
                 <Link
-  key={item.href}
-  href={item.href}
-  className={`${dropdownItem} whitespace-nowrap`}
->
-  {item.label}
-</Link>
+                  key={item.href}
+                  href={item.href}
+                  className={`${dropdownItem} whitespace-nowrap`}
+                >
+                  {item.label}
+                </Link>
               ))}
             </div>
           </div>
 
-          <PromoAside href={href} label={label} promo={promo} />
+          <PromoAside
+            href={href}
+            label={label}
+            promo={promo}
+          />
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
+import { invalidateStorefrontProduct } from "@/lib/storefront/invalidate-product";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,14 +39,31 @@ export async function PATCH(
     }
 
     const product = await prisma.product.update({
-      where: { id },
-      data: { affiliateUrl },
+  where: { id },
+
+  data: {
+    affiliateUrl,
+  },
+
+  select: {
+    id: true,
+    slug: true,
+    affiliateUrl: true,
+    updatedAt: true,
+
+    brand: {
       select: {
-        id: true,
-        affiliateUrl: true,
-        updatedAt: true,
+        slug: true,
       },
-    });
+    },
+  },
+});
+
+invalidateStorefrontProduct({
+  productId: product.id,
+  productSlug: product.slug,
+  brandSlug: product.brand.slug,
+});
 
     return NextResponse.json({ ok: true, product });
   } catch (e: any) {

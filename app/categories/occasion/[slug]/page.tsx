@@ -115,7 +115,24 @@ const shouldUseOccasionMerch =
       ? [{ price: "desc" as const }, { publishedAt: "desc" as const }]
       : [{ publishedAt: "desc" as const }];
 
-  const brandsRaw = await prisma.brand.findMany({
+ const where = buildStorefrontWhere({
+  filters,
+  occasionSlug: occasion.slug,
+});
+
+const typeOptions: Opt[] = OCCASION_PRODUCT_TYPES.map((t) => ({
+  value: t,
+  label: titleCaseLabel(t),
+}));
+
+const [
+  brandsRaw,
+  styleOptions,
+  coloursRaw,
+  sizesRaw,
+  totalCount,
+] = await Promise.all([
+  prisma.brand.findMany({
     where: {
       products: {
         some: {
@@ -131,61 +148,64 @@ const shouldUseOccasionMerch =
       },
     },
     orderBy: { name: "asc" },
-    select: { slug: true, name: true, baseCountryCode: true },
+    select: {
+      slug: true,
+      name: true,
+      baseCountryCode: true,
+    },
     take: 1000,
-  });
+  }),
 
-  const brandOptions: Opt[] = brandsRaw.map((b) => ({
-    value: b.slug,
-    label: b.name,
-  }));
+  getAvailableStyles(types),
 
-  const countryOptions: Opt[] = Array.from(
-    new Set(brandsRaw.map((b) => b.baseCountryCode).filter(Boolean))
-  )
-    .sort()
-    .map((cc) => ({
-      value: String(cc),
-      label: countryNameFromIso2(String(cc)),
-    }));
-
-  const typeOptions: Opt[] = OCCASION_PRODUCT_TYPES.map((t) => ({
-    value: t,
-    label: titleCaseLabel(t),
-  }));
-
-  const styleOptions: Opt[] = await getAvailableStyles(types);
-
-  const coloursRaw = await prisma.colour.findMany({
+  prisma.colour.findMany({
     orderBy: { name: "asc" },
-    select: { slug: true, name: true },
+    select: {
+      slug: true,
+      name: true,
+    },
     take: 300,
-  });
+  }),
 
-  const colorOptions: Opt[] = coloursRaw.map((c) => ({
-    value: c.slug,
-    label: c.name.toLowerCase(),
+  prisma.size.findMany({
+    orderBy: { name: "asc" },
+    select: {
+      slug: true,
+      name: true,
+    },
+    take: 500,
+  }),
+
+  prisma.product.count({
+    where,
+  }),
+]);
+
+const brandOptions: Opt[] = brandsRaw.map((b) => ({
+  value: b.slug,
+  label: b.name,
+}));
+
+const countryOptions: Opt[] = Array.from(
+  new Set(brandsRaw.map((b) => b.baseCountryCode).filter(Boolean))
+)
+  .sort()
+  .map((cc) => ({
+    value: String(cc),
+    label: countryNameFromIso2(String(cc)),
   }));
 
-  const sizesRaw = await prisma.size.findMany({
-    orderBy: { name: "asc" },
-    select: { slug: true, name: true },
-    take: 500,
-  });
+const colorOptions: Opt[] = coloursRaw.map((c) => ({
+  value: c.slug,
+  label: c.name.toLowerCase(),
+}));
 
-  const sizeOptions = sizesRaw
-    .sort(sortSizes)
-    .map((s) => ({
-      value: s.slug,
-      label: formatSizeLabel(s.name),
-    }));
-
-  const where = buildStorefrontWhere({
-    filters,
-    occasionSlug: occasion.slug,
-  });
-
-  const totalCount = await prisma.product.count({ where });
+const sizeOptions: Opt[] = sizesRaw
+  .sort(sortSizes)
+  .map((s) => ({
+    value: s.slug,
+    label: formatSizeLabel(s.name),
+  }));
 
   let mapped: GridProduct[] = [];
 

@@ -2,7 +2,6 @@
 // CHANGES: removed styles/occasions pills, trust block, about brand accordion
 //          added brand shipping/returns to shipping accordion
 
-import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -16,9 +15,8 @@ import ImageGallery from "./ImageGallery";
 import Accordion from "./Accordion";
 import WishlistButton from "@/components/WishlistButton";
 import ProductViewTracker from "@/components/analytics/ProductViewTracker";
-
 import {  normalizeDiscoverySource,} from "@/lib/analytics/discoverySource";
-
+import {  getStorefrontProductDetail,  getCompleteTheLook,  getProductDiaryPosts,  getRelatedProducts,} from "@/lib/storefront/product-detail";
 
 
 function formatProductTypeLabel(value: string) {
@@ -140,131 +138,10 @@ const discoveryPosition =
       )
     : null;
 
-  const product = await prisma.product.findFirst({
-    where: {
-      slug: productSlug,
-      brand: { slug: brandSlug },
-      isActive: true,
-      publishedAt: { not: null },
-      status: "APPROVED",
-    },
-    include: {
-      brand: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          websiteUrl: true,
-          instagramHandle: true,
-          baseCity: true,
-          baseCountryCode: true,
-          baseRegion: true,
-          accountStatus: true,
-          affiliateStatus: true,
-          shippingDomestic: true,
-          shippingInternational: true,
-          returnWindowDays: true,
-          returnsPaidBy: true,
-          shippingCountryCodes: true,
-
-          
-        },
-      },
-
-      completeTheLook: {
-  orderBy: {
-    position: "asc",
-  },
-  include: {
-    linkedProduct: {
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        price: true,
-        currency: true,
-        badges: true,
-        isActive: true,
-        publishedAt: true,
-        status: true,
-        brand: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            accountStatus: true,
-            affiliateStatus: true,
-          },
-        },
-        images: {
-          orderBy: {
-            sortOrder: "asc",
-          },
-          take: 1,
-          select: {
-            url: true,
-          },
-        },
-      },
-    },
-  },
-},
-
-completeTheLookFor: {
-  orderBy: {
-    position: "asc",
-  },
-  include: {
-    product: {
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        price: true,
-        currency: true,
-        badges: true,
-        isActive: true,
-        publishedAt: true,
-        status: true,
-
-        brand: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            accountStatus: true,
-            affiliateStatus: true,
-          },
-        },
-
-        images: {
-          orderBy: {
-            sortOrder: "asc",
-          },
-          take: 1,
-          select: {
-            url: true,
-          },
-        },
-      },
-    },
-  },
-},
-      images: { orderBy: { sortOrder: "asc" } },
-      productColours: { include: { colour: true } },
-      productSizes: { include: { size: true } },
-      productMaterials: { include: { material: true } },
-      shippingCountries: true,
-      diaryPosts: {
-        include: {
-          diaryPost: {
-            select: { id: true, title: true, slug: true, coverImageUrl: true, status: true },
-          },
-        },
-        take: 2,
-      },
-    },
-  });
+  const product = await getStorefrontProductDetail(
+  brandSlug,
+  productSlug
+);
 
   if (!product) notFound();
 
@@ -283,35 +160,28 @@ completeTheLookFor: {
     );
   }
 
-  const relatedDb = await prisma.product.findMany({
-    where: {
-      id: { not: product.id },
-      isActive: true,
-      publishedAt: { not: null },
-      status: "APPROVED",
-      brand: {
-        accountStatus: BrandAccountStatus.ACTIVE,
-        affiliateStatus: AffiliateStatus.ACTIVE,
-      },
-      OR: [
-        { brandId: brand.id },
-        product.categoryId ? { categoryId: product.categoryId } : {},
-        product.productType ? { productType: product.productType } : {},
-      ].filter((o) => Object.keys(o).length > 0),
-    },
-    orderBy: { publishedAt: "desc" },
-    take: 4,
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      price: true,
-      currency: true,
-      badges: true,
-      brand: { select: { name: true, slug: true } },
-      images: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true } },
-    },
-  });
+const [
+  completeTheLookProducts,
+  publishedDiaryPosts,
+  relatedDb,
+] = await Promise.all([
+  getCompleteTheLook(
+    product.id
+  ),
+
+  getProductDiaryPosts(
+    product.id
+  ),
+
+  getRelatedProducts({
+    productId: product.id,
+    brandId: brand.id,
+    categoryId:
+      product.categoryId,
+    productType:
+      product.productType,
+  }),
+]);
 
   
 
@@ -348,38 +218,8 @@ const outUrl =
   const brandLocation = [brand.baseCity, brand.baseCountryCode, regionLabel(brand.baseRegion)]
     .filter(Boolean).join(" · ");
 
-  const publishedDiaryPosts = product.diaryPosts
-    .filter((d) => d.diaryPost.status === "PUBLISHED")
-    .map((d) => d.diaryPost);
-
-  const completeTheLookProducts = [
-  ...product.completeTheLook.map(
-    (item) => item.linkedProduct
-  ),
-
-  ...product.completeTheLookFor.map(
-    (item) => item.product
-  ),
-]
-  // Prevent duplicates
-  .filter(
-    (linkedProduct, index, array) =>
-      array.findIndex(
-        (item) => item.id === linkedProduct.id
-      ) === index
-  )
-  // Only show live products
-  .filter(
-    (linkedProduct) =>
-      linkedProduct.isActive &&
-      linkedProduct.publishedAt !== null &&
-      linkedProduct.status === "APPROVED" &&
-      linkedProduct.brand.accountStatus ===
-        BrandAccountStatus.ACTIVE &&
-      linkedProduct.brand.affiliateStatus ===
-        AffiliateStatus.ACTIVE
-  );
-
+  
+  
   // Shipping display logic
   const hasShippingInfo = brand.shippingDomestic || brand.shippingInternational;
   const brandShipsWorldwide =
