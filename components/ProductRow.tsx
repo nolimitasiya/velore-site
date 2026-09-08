@@ -165,7 +165,10 @@ entryContextType={
               <div className="relative aspect-[3/4] bg-black/5">
                 {p.imageUrl ? (
                   detailHref ? (
-                    <Link href={detailHref}>
+                    <Link
+  href={detailHref}
+  prefetch={false}
+>
                       <Image
                         src={p.imageUrl}
                         alt={p.title}
@@ -242,10 +245,11 @@ entryContextType:
 
               <div className="p-4">
                 {detailHref ? (
-                  <Link
-                    href={detailHref}
-                    className="line-clamp-2 text-sm font-medium leading-5 hover:underline"
-                  >
+                 <Link
+  href={detailHref}
+  prefetch={false}
+  className="line-clamp-2 text-sm font-medium leading-5 hover:underline"
+>
                     {p.title}
                   </Link>
                 ) : href ? (
