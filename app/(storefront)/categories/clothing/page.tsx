@@ -449,7 +449,7 @@ const shouldUseLegacyClothingMerch =
   }
 
   return (
-    <SiteShell>
+    
       <main className="min-h-screen w-full bg-white">
         <div className="mx-auto w-full max-w-[1800px] space-y-8 px-8 py-10">
           <header className="py-5 text-center md:py-8">
@@ -490,6 +490,5 @@ const shouldUseLegacyClothingMerch =
           )}
         </div>
       </main>
-    </SiteShell>
   );
 }
