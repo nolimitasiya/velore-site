@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NavigationPromoKey } from "@prisma/client";
+import { unstable_cache } from "next/cache";
 
 export type HeaderPromo = {
   key: NavigationPromoKey;
@@ -97,10 +98,12 @@ const DEFAULT_PROMOS: HeaderPromoMap = {
   
 };
 
-export async function getHeaderPromos() {
+async function fetchHeaderPromos() {
   const promos = await prisma.navigationPromo.findMany();
 
-  const map: HeaderPromoMap = { ...DEFAULT_PROMOS };
+  const map: HeaderPromoMap = {
+    ...DEFAULT_PROMOS,
+  };
 
   for (const promo of promos) {
     map[promo.key] = {
@@ -118,9 +121,19 @@ export async function getHeaderPromos() {
   return map;
 }
 
+export async function getHeaderPromos() {
+  return unstable_cache(
+    fetchHeaderPromos,
+    ["header-promos"],
+    {
+      tags: ["header-promos"],
+    }
+  )();
+}
 
 
-export async function getHeaderBrandNavItems() {
+
+async function fetchHeaderBrandNavItems() {
   const selectedBrands = await prisma.brand.findMany({
     where: {
       showInBrandsMenu: true,
@@ -129,7 +142,9 @@ export async function getHeaderBrandNavItems() {
         some: {
           status: "APPROVED",
           isActive: true,
-          publishedAt: { not: null },
+          publishedAt: {
+            not: null,
+          },
         },
       },
     },
@@ -160,7 +175,9 @@ export async function getHeaderBrandNavItems() {
               some: {
                 status: "APPROVED",
                 isActive: true,
-                publishedAt: { not: null },
+                publishedAt: {
+                  not: null,
+                },
               },
             },
           },
@@ -177,11 +194,18 @@ export async function getHeaderBrandNavItems() {
           },
         });
 
-  return brands.map((b) => ({
-    label: b.name,
-    href: `/brands/${b.slug}`,
+  return brands.map((brand) => ({
+    label: brand.name,
+    href: `/brands/${brand.slug}`,
   }));
 }
 
-
-
+export async function getHeaderBrandNavItems() {
+  return unstable_cache(
+    fetchHeaderBrandNavItems,
+    ["header-brand-nav-items"],
+    {
+      tags: ["header-brand-nav-items"],
+    }
+  )();
+}

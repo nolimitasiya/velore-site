@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
+import { revalidateTag } from "next/cache";
 
 export async function POST(
   req: Request,
@@ -67,6 +68,8 @@ export async function POST(
     },
   });
 
+  revalidateTag("header-brand-nav-items", "max");
+  
   return NextResponse.json({
     ok: true,
     brand,

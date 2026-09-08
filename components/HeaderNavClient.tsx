@@ -301,7 +301,7 @@ export default function HeaderNavClient({
     pathname === href || pathname.startsWith(`${href}/`);
 
   const isClothingActive = pathname.startsWith("/categories/clothing");
-    const isAccessoriesActive = pathname.startsWith("/categories/accessories");
+  const isAccessoriesActive = pathname.startsWith("/categories/accessories");
   const isOccasionActive = pathname.startsWith("/categories/occasion");
   const isEditorialActive = pathname === "/diary" || pathname.startsWith("/diary/");
   const isSaleActive = pathname.startsWith("/sale");
