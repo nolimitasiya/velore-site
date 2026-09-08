@@ -1,0 +1,1164 @@
+Folder PATH listing for volume Windows
+Volume serial number is 000001A4 72A8:D728
+C:\USERS\ASIYA\PROJECTS\DALRA\APP
+|   globals.css
+|   icon.png
+|   layout.tsx
+|   page.tsx
+|   
++---(gate)
+|   |   Gate.tsx
+|   |   layout.tsx
+|   |   
+|   +---brand-apply
+|   |   |   page.tsx
+|   |   |   StaggerMount.tsx
+|   |   |   
+|   |   \---thanks
+|   |           page.tsx
+|   |           
+|   \---thanks
+|           page.tsx
+|           
++---about
+|       page.tsx
+|       
++---account
+|   |   page.tsx
+|   |   
+|   +---forgot
+|   |       page.tsx
+|   |       
+|   +---login
+|   |       LoginClient.tsx
+|   |       page.tsx
+|   |       
+|   +---register
+|   |       page.tsx
+|   |       RegisterClient.tsx
+|   |       
+|   +---reset
+|   |       page.tsx
+|   |       
+|   \---wishlist
+|           page.tsx
+|           
++---admin
+|   |   layout.tsx
+|   |   page.tsx
+|   |   
+|   +---(app)
+|   |   |   layout.tsx
+|   |   |   
+|   |   +---analytics
+|   |   |   |   DiaryInsightsClient.tsx
+|   |   |   |   page.tsx
+|   |   |   |   
+|   |   |   +---audience
+|   |   |   |   |   page.tsx
+|   |   |   |   |   
+|   |   |   |   +---age
+|   |   |   |   |   \---[ageBand]
+|   |   |   |   |           page.tsx
+|   |   |   |   |           
+|   |   |   |   \---country
+|   |   |   |       \---[countryCode]
+|   |   |   |               page.tsx
+|   |   |   |               
+|   |   |   +---commerce
+|   |   |   |       page.tsx
+|   |   |   |       
+|   |   |   +---diary
+|   |   |   |   \---[id]
+|   |   |   |           page.tsx
+|   |   |   |           
+|   |   |   +---insights
+|   |   |   |       page.tsx
+|   |   |   |       
+|   |   |   \---veilora-index
+|   |   |       |   page.tsx
+|   |   |       |   
+|   |   |       +---brand
+|   |   |       |   \---[brandSlug]
+|   |   |       |           page.tsx
+|   |   |       |           
+|   |   |       \---signal
+|   |   |           \---[group]
+|   |   |               \---[key]
+|   |   |                   |   page.tsx
+|   |   |                   |   
+|   |   |                   \---brand
+|   |   |                       \---[brandSlug]
+|   |   |                               page.tsx
+|   |   |                               
+|   |   +---brand-invites
+|   |   |       BrandInvitesClient.tsx
+|   |   |       page.tsx
+|   |   |       
+|   |   +---brands
+|   |   |   |   AffiliateControls.tsx
+|   |   |   |   BrandRowClient.tsx
+|   |   |   |   ForceResetButton.tsx
+|   |   |   |   HomepageOrderControls.tsx
+|   |   |   |   page.tsx
+|   |   |   |   
+|   |   |   +---applications
+|   |   |   |   |   AddBrandButton.tsx
+|   |   |   |   |   ApplicationNotesButton.tsx
+|   |   |   |   |   ApplicationsTable.tsx
+|   |   |   |   |   OnboardButton.tsx
+|   |   |   |   |   page.tsx
+|   |   |   |   |   StatusSelect.tsx
+|   |   |   |   |   
+|   |   |   |   \---[id]
+|   |   |   |           page.tsx
+|   |   |   |           
+|   |   |   \---[id]
+|   |   |           BrandHomepageSettingsEditor.tsx
+|   |   |           BrandMenuSettingsEditor.tsx
+|   |   |           BrandNotesEditor.tsx
+|   |   |           BrandSwitcher.tsx
+|   |   |           page.tsx
+|   |   |           
+|   |   +---continents
+|   |   |       ContinentsAdminClient.tsx
+|   |   |       page.tsx
+|   |   |       
+|   |   +---diary
+|   |   |   |   DiaryPostForm.tsx
+|   |   |   |   page.tsx
+|   |   |   |   
+|   |   |   +---new
+|   |   |   |       page.tsx
+|   |   |   |       
+|   |   |   \---[id]
+|   |   |           page.tsx
+|   |   |           
+|   |   +---import
+|   |   |       page.tsx
+|   |   |       
+|   |   +---merchandising
+|   |   |       CategoryMerchandisingClient.tsx
+|   |   |       CompleteTheLookClient.tsx
+|   |   |       MerchandisingClient.tsx
+|   |   |       MerchandisingTabs.tsx
+|   |   |       page.tsx
+|   |   |       
+|   |   +---navigation
+|   |   |       page.tsx
+|   |   |       
+|   |   +---newsletter
+|   |   |       NewsletterTableClient.tsx
+|   |   |       page.tsx
+|   |   |       
+|   |   +---personal
+|   |   |   +---calendar
+|   |   |   |       CalendarClient.tsx
+|   |   |   |       page.tsx
+|   |   |   |       
+|   |   |   +---notes
+|   |   |   |       NotesClient.tsx
+|   |   |   |       page.tsx
+|   |   |   |       
+|   |   |   +---todos
+|   |   |   |       page.tsx
+|   |   |   |       TodosClient.tsx
+|   |   |   |       
+|   |   |   \---wellness
+|   |   |           page.tsx
+|   |   |           
+|   |   +---products
+|   |   |       page.tsx
+|   |   |       ProductAction.tsx
+|   |   |       
+|   |   +---storefront
+|   |   |       page.tsx
+|   |   |       StorefrontHeroEditor.tsx
+|   |   |       StyleFeedEditor.tsx
+|   |   |       
+|   |   \---waitlist
+|   |           page.tsx
+|   |           
+|   +---(auth)
+|   |   |   layout.tsx
+|   |   |   
+|   |   +---forgot
+|   |   |       page.tsx
+|   |   |       
+|   |   +---login
+|   |   |       AdminLoginClient.tsx
+|   |   |       page.tsx
+|   |   |       
+|   |   \---reset
+|   |           page.tsx
+|   |           ResetClient.tsx
+|   |           
+|   \---taxonomy
+|       \---requests
+|               page.tsx
+|               RequestsClient.tsx
+|               
++---api
+|   +---account
+|   |   +---auth
+|   |   |   +---forgot
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---login
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---logout
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---me
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---register
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   \---reset
+|   |   |           route.ts
+|   |   |           
+|   |   \---wishlist
+|   |       |   route.ts
+|   |       |   
+|   |       +---items
+|   |       |       route.ts
+|   |       |       
+|   |       \---[productId]
+|   |               route.ts
+|   |               
+|   +---admin
+|   |   +---analytics
+|   |   |   +---audience
+|   |   |   |   |   route.ts
+|   |   |   |   |   
+|   |   |   |   +---age
+|   |   |   |   |   \---[ageBand]
+|   |   |   |   |           route.ts
+|   |   |   |   |           
+|   |   |   |   \---country
+|   |   |   |       \---[countryCode]
+|   |   |   |               route.ts
+|   |   |   |               
+|   |   |   +---brand
+|   |   |   |   \---[brandSlug]
+|   |   |   |           route.ts
+|   |   |   |           
+|   |   |   +---clicks-by-brand
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---clicks-by-colour
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---clicks-by-context-type
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---clicks-by-country
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---clicks-by-expanded-state
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---clicks-by-page-number
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---clicks-by-position
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---clicks-by-product
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---clicks-by-product-type
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---clicks-by-section
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---clicks-by-shopper-country
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---clicks-by-source-page
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---clicks-by-style
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---diary
+|   |   |   |   +---by-country
+|   |   |   |   |       route.ts
+|   |   |   |   |       
+|   |   |   |   +---by-day
+|   |   |   |   |       route.ts
+|   |   |   |   |       
+|   |   |   |   +---by-post
+|   |   |   |   |       route.ts
+|   |   |   |   |       
+|   |   |   |   +---overview
+|   |   |   |   |       route.ts
+|   |   |   |   |       
+|   |   |   |   +---post-performance
+|   |   |   |   |       route.ts
+|   |   |   |   |       
+|   |   |   |   +---product-clicks
+|   |   |   |   |       route.ts
+|   |   |   |   |       
+|   |   |   |   \---[id]
+|   |   |   |       \---product-breakdown
+|   |   |   |               route.ts
+|   |   |   |               
+|   |   |   +---earnings
+|   |   |   |   |   route.ts
+|   |   |   |   |   
+|   |   |   |   \---upsert
+|   |   |   |           route.ts
+|   |   |   |           
+|   |   |   +---estimated
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---estimated-by-brand
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---estimated-by-product
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---estimated-by-shopper-country
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---index-overview
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---insights
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---payouts
+|   |   |   |   |   route.ts
+|   |   |   |   |   
+|   |   |   |   \---upsert
+|   |   |   |           route.ts
+|   |   |   |           
+|   |   |   +---regions
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   \---summary
+|   |   |           route.ts
+|   |   |           
+|   |   +---auth
+|   |   |   +---forgot
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---login
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---logout
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   \---reset
+|   |   |           route.ts
+|   |   |           
+|   |   +---brand-applications
+|   |   |   +---create-manual
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   \---[id]
+|   |   |       +---contract
+|   |   |       |   \---upload
+|   |   |       |           route.ts
+|   |   |       |           
+|   |   |       +---invite
+|   |   |       |       route.ts
+|   |   |       |       
+|   |   |       +---notes
+|   |   |       |       route.ts
+|   |   |       |       
+|   |   |       \---status
+|   |   |               route.ts
+|   |   |               
+|   |   +---brand-invites
+|   |   |   +---create
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---list
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---resend
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   \---revoke
+|   |   |           route.ts
+|   |   |           
+|   |   +---brands
+|   |   |   |   route.ts
+|   |   |   |   
+|   |   |   +---search
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   \---[id]
+|   |   |       +---affiliate
+|   |   |       |       route.ts
+|   |   |       |       
+|   |   |       +---brands-menu
+|   |   |       |       route.ts
+|   |   |       |       
+|   |   |       +---force-reset
+|   |   |       |       route.ts
+|   |   |       |       
+|   |   |       +---homepage
+|   |   |       |   |   route.ts
+|   |   |       |   |   
+|   |   |       |   \---reorder
+|   |   |       |           route.ts
+|   |   |       |           
+|   |   |       \---notes
+|   |   |               route.ts
+|   |   |               
+|   |   +---category-merchandising
+|   |   |       route.ts
+|   |   |       
+|   |   +---complete-the-look
+|   |   |       route.ts
+|   |   |       
+|   |   +---continents
+|   |   |   \---[id]
+|   |   |           route.ts
+|   |   |           
+|   |   +---diary
+|   |   |   |   route.ts
+|   |   |   |   
+|   |   |   \---[id]
+|   |   |           route.ts
+|   |   |           
+|   |   +---features
+|   |   |   \---seed
+|   |   |           route.ts
+|   |   |           
+|   |   +---import
+|   |   |   |   route.ts
+|   |   |   |   
+|   |   |   +---history
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   \---validate
+|   |   |           route.ts
+|   |   |           
+|   |   +---instagram
+|   |   |   \---sync
+|   |   |           route.ts
+|   |   |           
+|   |   +---merchandising
+|   |   |   |   route.ts
+|   |   |   |   
+|   |   |   +---products
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   \---[id]
+|   |   |           route.ts
+|   |   |           
+|   |   +---navigation-promos
+|   |   |   |   route.ts
+|   |   |   |   
+|   |   |   \---[key]
+|   |   |           route.ts
+|   |   |           
+|   |   +---newsletter
+|   |   |   +---export
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---remind
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   \---remind-all
+|   |   |           route.ts
+|   |   |           
+|   |   +---personal
+|   |   |   +---calendar
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---notes
+|   |   |   |   |   route.ts
+|   |   |   |   |   
+|   |   |   |   \---[id]
+|   |   |   |           route.ts
+|   |   |   |           
+|   |   |   +---todos
+|   |   |   |   |   route.ts
+|   |   |   |   |   
+|   |   |   |   \---[id]
+|   |   |   |           route.ts
+|   |   |   |           
+|   |   |   \---wellness
+|   |   |       +---ayat
+|   |   |       |       route.ts
+|   |   |       |       
+|   |   |       +---journal
+|   |   |       |       route.ts
+|   |   |       |       
+|   |   |       \---prayers
+|   |   |               route.ts
+|   |   |               
+|   |   +---products
+|   |   |   |   route.ts
+|   |   |   |   
+|   |   |   \---[id]
+|   |   |       +---active
+|   |   |       |       route.ts
+|   |   |       |       
+|   |   |       +---affiliate
+|   |   |       |       route.ts
+|   |   |       |       
+|   |   |       +---publish
+|   |   |       |       route.ts
+|   |   |       |       
+|   |   |       \---review
+|   |   |               route.ts
+|   |   |               
+|   |   +---snapshots
+|   |   |   \---daily
+|   |   |           route.ts
+|   |   |           
+|   |   +---storefront
+|   |   |   |   route.ts
+|   |   |   |   
+|   |   |   +---hero
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---style-feed
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   \---[sectionId]
+|   |   |           route.ts
+|   |   |           
+|   |   +---taxonomy
+|   |   |   +---lookup
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   \---requests
+|   |   |       |   route.ts
+|   |   |       |   
+|   |   |       +---bulk-approve
+|   |   |       |       route.ts
+|   |   |       |       
+|   |   |       +---bulk-reject
+|   |   |       |       route.ts
+|   |   |       |       
+|   |   |       \---[id]
+|   |   |           +---approve
+|   |   |           |       route.ts
+|   |   |           |       
+|   |   |           \---reject
+|   |   |                   route.ts
+|   |   |                   
+|   |   \---upload
+|   |       \---style-feed
+|   |               route.ts
+|   |               
+|   +---auth
+|   |   +---login
+|   |   |       route.ts
+|   |   |       
+|   |   \---logout
+|   |           route.ts
+|   |           
+|   +---brand
+|   |   +---auth
+|   |   |   +---forgot
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---login
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---logout
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   \---reset
+|   |   |           route.ts
+|   |   |           
+|   |   +---billing
+|   |   |   +---portal
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   \---subscribe
+|   |   |           route.ts
+|   |   |           
+|   |   +---contract
+|   |   |   \---accept
+|   |   |           route.ts
+|   |   |           
+|   |   +---features
+|   |   |   +---checkout
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   \---slots
+|   |   |           route.ts
+|   |   |           
+|   |   +---import
+|   |   |   |   route.ts
+|   |   |   |   
+|   |   |   +---history
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   \---validate
+|   |   |           route.ts
+|   |   |           
+|   |   +---onboarding
+|   |   |       route.ts
+|   |   |       
+|   |   +---products
+|   |   |   +---bulk-delete
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---import
+|   |   |   +---list
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---template
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   \---[id]
+|   |   |       |   route.ts
+|   |   |       |   
+|   |   |       +---delete
+|   |   |       |       route.ts
+|   |   |       |       
+|   |   |       \---submit
+|   |   |               route.ts
+|   |   |               
+|   |   +---profile
+|   |   |   |   route.ts
+|   |   |   |   
+|   |   |   \---cover-upload
+|   |   |           route.ts
+|   |   |           
+|   |   +---revenue
+|   |   |   +---clicks-by-product
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   +---export
+|   |   |   |   \---clicks-by-product
+|   |   |   |           route.ts
+|   |   |   |           
+|   |   |   \---summary
+|   |   |           route.ts
+|   |   |           
+|   |   \---taxonomy
+|   |       +---categories
+|   |       |       route.ts
+|   |       |       
+|   |       +---colours
+|   |       |       route.ts
+|   |       |       
+|   |       +---materials
+|   |       |       route.ts
+|   |       |       
+|   |       +---occasions
+|   |       |       route.ts
+|   |       |       
+|   |       +---requests
+|   |       |       route.ts
+|   |       |       
+|   |       +---sizes
+|   |       |       route.ts
+|   |       |       
+|   |       \---styles
+|   |               route.ts
+|   |               
+|   +---brand-apply
+|   |       route.ts
+|   |       
+|   +---campaign
+|   |   \---graduation-login
+|   |           route.ts
+|   |           
+|   +---clicks
+|   |   \---product-view
+|   |           route.ts
+|   |           
+|   +---contact
+|   |       route.ts
+|   |       
+|   +---cron
+|   |   \---stylefeed-sync
+|   |           route.ts
+|   |           
+|   +---currency
+|   |   +---ecb
+|   |   |       route.ts
+|   |   |       
+|   |   \---set
+|   |           route.ts
+|   |           
+|   +---diary
+|   |   \---read
+|   |           route.ts
+|   |           
+|   +---events
+|   |   +---brand-view
+|   |   |       route.ts
+|   |   |       
+|   |   +---product-impression
+|   |   |       route.ts
+|   |   |       
+|   |   +---product-view
+|   |   |       route.ts
+|   |   |       
+|   |   +---search
+|   |   |       route.ts
+|   |   |       
+|   |   +---session
+|   |   |       route.ts
+|   |   |       
+|   |   \---wishlist
+|   |           route.ts
+|   |           
+|   +---newsletter
+|   |   |   route.ts
+|   |   |   
+|   |   +---confirm
+|   |   |       route.ts
+|   |   |       
+|   |   +---subscribe
+|   |   |       route.ts
+|   |   |       
+|   |   \---unsubscribe
+|   |       |   route.ts
+|   |       |   
+|   |       \---confirm
+|   |               route.ts
+|   |               
+|   +---out
+|   |   \---[id]
+|   |           route.ts
+|   |           
+|   +---search
+|   |       route.ts
+|   |       
+|   +---shopper-preferences
+|   |   \---set
+|   |           route.ts
+|   |           
+|   +---storefront
+|   |   +---brands
+|   |   |       route.ts
+|   |   |       
+|   |   +---count
+|   |   |       route.ts
+|   |   |       
+|   |   +---filters
+|   |   |       route.ts
+|   |   |       
+|   |   +---products
+|   |   |       by-region.ts
+|   |   |       route.ts
+|   |   |       
+|   |   \---style-feed
+|   |           route.ts
+|   |           
+|   +---stripe
+|   |   \---webhook
+|   |           route.ts
+|   |           
+|   \---waitlist
+|           route.ts
+|           
++---b
+|   \---[brandSlug]
+|       \---p
+|           \---[productSlug]
+|                   Accordion.tsx
+|                   ImageGallery.tsx
+|                   page.tsx
+|                   ProductViewTracker.tsx
+|                   
++---brand
+|   +---(authed)
+|   |   |   layout.tsx
+|   |   |   page.tsx
+|   |   |   
+|   |   +---import
+|   |   |       page.tsx
+|   |   |       
+|   |   +---products
+|   |   |   |   page.tsx
+|   |   |   |   ProductsClient.tsx
+|   |   |   |   
+|   |   |   \---[id]
+|   |   |           page.tsx
+|   |   |           ProductEditClient.tsx
+|   |   |           
+|   |   +---profile
+|   |   |       page.tsx
+|   |   |       
+|   |   \---revenue
+|   |       |   page.tsx
+|   |       |   
+|   |       \---products
+|   |           |   page.tsx
+|   |           |   
+|   |           \---[productId]
+|   |                   page.tsx
+|   |                   
+|   +---forgot
+|   |       page.tsx
+|   |       
+|   +---login
+|   |       BrandLoginClient.tsx
+|   |       page.tsx
+|   |       
+|   +---onboarding
+|   |       BrandOnboardingClient.tsx
+|   |       layout.tsx
+|   |       page.tsx
+|   |       
+|   \---reset
+|           page.tsx
+|           ResetClient.tsx
+|           
++---brands
+|   |   page.tsx
+|   |   
+|   +---apply
+|   |   |   BrandApplyForm.tsx
+|   |   |   page.tsx
+|   |   |   
+|   |   \---success
+|   |           page.tsx
+|   |           
+|   +---emerging
+|   |       page.tsx
+|   |       
+|   \---[slug]
+|           page.tsx
+|           
++---campaign
+|   \---graduation
+|       |   page.tsx
+|       |   
+|       +---occasion
+|       |   \---graduation
+|       |           page.tsx
+|       |           
+|       +---out
+|       |   \---[slug]
+|       |           page.tsx
+|       |           
+|       \---product
+|           \---[slug]
+|                   page.tsx
+|                   
++---categories
+|   +---abayas
+|   |       page.tsx
+|   |       
+|   +---accessories
+|   |       page.tsx
+|   |       
+|   +---brands
+|   |       page.tsx
+|   |       
+|   +---clothing
+|   |       page.tsx
+|   |       
+|   +---occasion
+|   |   |   page.tsx
+|   |   |   
+|   |   \---[slug]
+|   |           page.tsx
+|   |           
+|   \---[category]
+|           page.tsx
+|           
++---contact
+|   |   ContactForm.tsx
+|   |   page.tsx
+|   |   
+|   \---thanks
+|           page.tsx
+|           
++---continent
+|   \---[slug]
+|           page.tsx
+|           
++---cookie-policy
+|       page.tsx
+|       
++---diary
+|   |   page.tsx
+|   |   
+|   \---[slug]
+|           not-found.tsx
+|           page.tsx
+|           
++---ethics
+|       page.tsx
+|       
++---live
+|       page.tsx
+|       
++---new-in
+|       page.tsx
+|       
++---newsletter
+|   +---confirm
+|   |       ConfirmClient.tsx
+|   |       page.tsx
+|   |       
+|   +---unsubscribe
+|   |       page.tsx
+|   |       UnsubscribeClient.tsx
+|   |       
+|   \---unsubscribed
+|           page.tsx
+|           UnsubscribedClient.tsx
+|           
++---next-day-delivery
+|       page.tsx
+|       
++---out
+|   \---[id]
+|           page.tsx
+|           RedirectClient.tsx
+|           
++---p
+|   \---[slug]
+|           page.tsx
+|           
++---privacy-policy
+|       page.tsx
+|       
++---products
+|       page.tsx
+|       
++---sale
+|       page.tsx
+|       
++---search
+|       page.tsx
+|       
++---shipping-returns
+|       page.tsx
+|       
++---terms
+|       page.tsx
+|       
+\---_site_disabled
+    |   layout.tsx
+    |   
+    \---brands
+        |   page.tsx
+        |   
+        \---apply
+            |   BrandApplyForm.tsx
+            |   page.tsx
+            |   
+            \---success
+                    page.tsx
+                    
+Folder PATH listing for volume Windows
+Volume serial number is 0000029F 72A8:D728
+C:\USERS\ASIYA\PROJECTS\DALRA\COMPONENTS
+|   AdminShell.tsx
+|   AuthShell.tsx
+|   BrandFilters.tsx
+|   BrandMosaic.tsx
+|   BrandShell.tsx
+|   ContinentFilters.tsx
+|   CookieBanner.tsx
+|   DalrasDiary.tsx
+|   HeaderNav.tsx
+|   HeaderNavClient.tsx
+|   Headers.tsx
+|   HeaderSearch.tsx
+|   Hero.tsx
+|   LiveHome.tsx
+|   LocationSwitcher.tsx
+|   MobileMenu.tsx
+|   MoneyLabel.tsx
+|   NewsletterSignup.tsx
+|   ProductGrid.tsx
+|   ProductRow.tsx
+|   SaleTicker.tsx
+|   SectionTitle.tsx
+|   ShopperPreferencesModal.tsx
+|   SiteShell.tsx
+|   SloganAndContinents.tsx
+|   StickyHeader.tsx
+|   StorefrontFilters.tsx
+|   StorefrontPagination.tsx
+|   StyleFeed.tsx
+|   WishlistButton.tsx
+|   
++---admin
+|   |   AdminHeader.tsx
+|   |   AdminTable.tsx
+|   |   AdminTopBar.tsx
+|   |   CountryMultiSelect.tsx
+|   |   CountrySelect.tsx
+|   |   
+|   +---editor
+|   |       RichTextEditor.tsx
+|   |       
+|   \---wellness
+|           MealsTab.tsx
+|           PrayerTab.tsx
+|           ProgressTab.tsx
+|           ScheduleTab.tsx
+|           WellnessDashboard.tsx
+|           wellnessData.tsx
+|           WorkoutsTab.tsx
+|           
++---analytics
+|       AnalyticsNav.tsx
+|       BrandProfileTrackingLink.tsx
+|       BrandViewTracker.tsx
+|       CountryHeatmapGrid.tsx
+|       GoogleAnalytics.tsx
+|       HeroCtaTrackingLink.tsx
+|       MarketSignalTable.tsx
+|       MetricTrendChart.tsx
+|       ProductClickTrackingLink.tsx
+|       ProductImpressionTracker.tsx
+|       ProductViewTracker.tsx
+|       SearchAnalyticsTracker.tsx
+|       WorldChoropleth.tsx
+|       
++---brand
+|       BrandHeader.tsx
+|       BrandProfileForm.tsx
+|       CoverImagePositionEditor.tsx
+|       
++---campaign
+|       GraduationCampaignHome.tsx
+|       GraduationCampaignLogin.tsx
+|       
++---diary
+|       DiaryReadTracker.tsx
+|       
++---import
+|       ImportClient.tsx
+|       
+\---newsletter
+        NewsletterModal.tsx
+        
+Folder PATH listing for volume Windows
+Volume serial number is 00000128 72A8:D728
+C:\USERS\ASIYA\PROJECTS\DALRA\LIB
+|   adminTime.ts
+|   brandAuth.ts
+|   cities-by-country.json
+|   country-codes.json
+|   country-to-region.json
+|   env.ts
+|   formatDate.ts
+|   formatMoney.ts
+|   geo.ts
+|   navigationPromos.ts
+|   prisma.ts
+|   rateLimit.ts
+|   shopperPreferences.ts
+|   shopperPreferencesClient.ts
+|   storefrontSections.ts
+|   stripe.ts
+|   supabaseAdmin.ts
+|   
++---affiliate
+|       tracking.ts
+|       url.ts
+|       
++---analytics
+|       ageBands.ts
+|       clientSession.ts
+|       discoverySource.ts
+|       gaEvents.ts
+|       session.ts
+|       
++---auth
+|       AdminSession.ts
+|       BrandSession.ts
+|       http.ts
+|       passwordReset.ts
+|       passwordStrength.ts
+|       
++---brand
+|       getCurrentBrand.ts
+|       
++---country
++---currency
+|       codes.ts
+|       rates.ts
+|       utils.ts
+|       
++---date
+|       month.ts
+|       
++---email
+|       resend.ts
+|       sendResetEmail.ts
+|       sendShopperResetEmail.ts
+|       sendShopperWelcomeEmail.ts
+|       
++---geo
+|       countries.ts
+|       iso.ts
+|       world-50m.json
+|       
++---resend
+|   |   client.ts
+|   |   newsletter.ts
+|   |   send.ts
+|   |   sendContactEmails.ts
+|   |   
+|   \---templates
+|       +---base
+|       |       veiloraBase.ts
+|       |       
+|       +---brand
+|       |       applicationReceived.ts
+|       |       contractSent.ts
+|       |       contractSigned.ts
+|       |       invitedZoom.ts
+|       |       rejected.ts
+|       |       
+|       +---contact
+|       |       contactAdminNotification.ts
+|       |       contactAutoReply.ts
+|       |       
+|       +---marketing
+|       |       newsletterConfirm.ts
+|       |       newsletterUnsubscribed.ts
+|       |       newsletterWelcome.ts
+|       |       waitlistWelcome.ts
+|       |       
+|       \---onboarding
+|               brandInvite.ts
+|               
++---revenue
+|       ranges.ts
+|       
++---security
+|       rateLimit.ts
+|       
++---sizing
+|       order.ts
+|       
++---storage
+|       styleFeed.ts
+|       
++---storefront
+|       buildStorefrontWhere.ts
+|       getAvailableStyles.ts
+|       getCategoryMerchProducts.ts
+|       getContinentPageOneProducts.ts
+|       getHomepageContienents.ts
+|       getMerchPageOneProducts.ts
+|       getStorefrontHero.ts
+|       invalidate-product.ts
+|       pagination.ts
+|       parseFilters.ts
+|       product-detail.ts
+|       
++---supabase
+|       admin.ts
+|       
+\---taxonomy
+        productTypes.ts
+        

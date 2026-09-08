@@ -141,75 +141,6 @@ const shouldUseLegacyClothingMerch =
   });
   const clothingCatIds = clothingCats.map((c) => c.id);
 
-  const brandsRaw = await prisma.brand.findMany({
-    where: {
-      accountStatus: BrandAccountStatus.ACTIVE,
-      affiliateStatus: AffiliateStatus.ACTIVE,
-      products: {
-        some: {
-          status: "APPROVED",
-          isActive: true,
-          publishedAt: { not: null },
-          OR: [
-  ...(clothingCatIds.length
-    ? [{ categoryId: { in: clothingCatIds } }]
-    : []),
-  {
-    categoryId: null,
-    productType: { in: CLOTHING_PRODUCT_TYPES },
-  },
-],
-        },
-      },
-    },
-    orderBy: { name: "asc" },
-    select: { slug: true, name: true, baseCountryCode: true },
-    take: 1000,
-  });
-
-  const brandOptions: Opt[] = brandsRaw.map((b) => ({
-    value: b.slug,
-    label: b.name,
-  }));
-
-  const countryOptions: Opt[] = Array.from(
-    new Set(brandsRaw.map((b) => b.baseCountryCode).filter(Boolean))
-  )
-    .sort()
-    .map((cc) => ({
-      value: String(cc),
-      label: countryNameFromIso2(String(cc)),
-    }));
-
-    const typeOptions: Opt[] = CLOTHING_PRODUCT_TYPES.map((t) => ({
-    value: t,
-    label: titleCaseLabel(t),
-  }));
-
-  const styleOptions: Opt[] = await getAvailableStyles(types);
-
-  const coloursRaw = await prisma.colour.findMany({
-    orderBy: { name: "asc" },
-    select: { slug: true, name: true },
-    take: 300,
-  });
-
-  const colorOptions: Opt[] = coloursRaw.map((c) => ({
-    value: c.slug,
-    label: c.name.toLowerCase(),
-  }));
-
-  const sizesRaw = await prisma.size.findMany({
-    orderBy: { name: "asc" },
-    select: { slug: true, name: true },
-    take: 500,
-  });
-
-  const sizeOptions = sizesRaw.sort(sortSizes).map((s) => ({
-    value: s.slug,
-    label: formatSizeLabel(s.name),
-  }));
-
   const where = {
   ...buildStorefrontWhere({
     filters,
@@ -229,7 +160,116 @@ const shouldUseLegacyClothingMerch =
   ],
 };
 
-  const totalCount = await prisma.product.count({ where });
+ const [
+  brandsRaw,
+  styleOptions,
+  coloursRaw,
+  sizesRaw,
+  totalCount,
+] = await Promise.all([
+  prisma.brand.findMany({
+    where: {
+      accountStatus: BrandAccountStatus.ACTIVE,
+      affiliateStatus: AffiliateStatus.ACTIVE,
+      products: {
+        some: {
+          status: "APPROVED",
+          isActive: true,
+          publishedAt: { not: null },
+          OR: [
+            ...(clothingCatIds.length
+              ? [
+                  {
+                    categoryId: {
+                      in: clothingCatIds,
+                    },
+                  },
+                ]
+              : []),
+            {
+              categoryId: null,
+              productType: {
+                in: CLOTHING_PRODUCT_TYPES,
+              },
+            },
+          ],
+        },
+      },
+    },
+    orderBy: {
+      name: "asc",
+    },
+    select: {
+      slug: true,
+      name: true,
+      baseCountryCode: true,
+    },
+    take: 1000,
+  }),
+
+  getAvailableStyles(types),
+
+  prisma.colour.findMany({
+    orderBy: {
+      name: "asc",
+    },
+    select: {
+      slug: true,
+      name: true,
+    },
+    take: 300,
+  }),
+
+  prisma.size.findMany({
+    orderBy: {
+      name: "asc",
+    },
+    select: {
+      slug: true,
+      name: true,
+    },
+    take: 500,
+  }),
+
+  prisma.product.count({
+    where,
+  }),
+]);
+  const brandOptions: Opt[] = brandsRaw.map((b) => ({
+    value: b.slug,
+    label: b.name,
+  }));
+
+  const countryOptions: Opt[] = Array.from(
+    new Set(brandsRaw.map((b) => b.baseCountryCode).filter(Boolean))
+  )
+    .sort()
+    .map((cc) => ({
+      value: String(cc),
+      label: countryNameFromIso2(String(cc)),
+    }));
+
+    const typeOptions: Opt[] = CLOTHING_PRODUCT_TYPES.map((t) => ({
+    value: t,
+    label: titleCaseLabel(t),
+  }));
+
+  
+
+  const colorOptions: Opt[] = coloursRaw.map((c) => ({
+    value: c.slug,
+    label: c.name.toLowerCase(),
+  }));
+
+ 
+
+  const sizeOptions = sizesRaw.sort(sortSizes).map((s) => ({
+    value: s.slug,
+    label: formatSizeLabel(s.name),
+  }));
+
+  
+
 
   let mapped: GridProduct[] = [];
 

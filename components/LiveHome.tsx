@@ -96,14 +96,124 @@ export default async function LiveHome({ region, country }: LiveHomeProps) {
   const selectedRegion = normalizeRegion(region);
   const selectedCountry = normalizeCountry(country);
 
-  const rawHero = await getStorefrontHero();
-  const hero = normalizeHero(rawHero);
+  const [
+  rawHero,
+  finalSection,
+  continentsDb,
+  homepageStyleFeedDb,
+  brandsDb,
+  diaryPosts,
+] = await Promise.all([
+  getStorefrontHero(),
 
-  /* --------------------------- */
-  /* SHOP TRENDY / PERSONALISED SLOT */
-  /* --------------------------- */
+  resolveHomepageStorefrontSection(selectedCountry),
 
-  const finalSection = await resolveHomepageStorefrontSection(selectedCountry);
+  prisma.continent.findMany({
+    where: {
+      isActive: true,
+    },
+    orderBy: [
+      { sortOrder: "asc" },
+      { createdAt: "asc" },
+    ],
+    select: {
+      slug: true,
+      name: true,
+      imageUrl: true,
+    },
+  }),
+
+  prisma.homepageStyleFeedItem.findMany({
+    where: {
+      isActive: true,
+    },
+    orderBy: [
+      { sortOrder: "asc" },
+      { createdAt: "asc" },
+    ],
+    take: 4,
+    select: {
+      id: true,
+      imageUrl: true,
+      imageAlt: true,
+      imageFocalX: true,
+      imageFocalY: true,
+      postUrl: true,
+      caption: true,
+      sortOrder: true,
+      title: true,
+      instagramHandle: true,
+
+      products: {
+        orderBy: {
+          position: "asc",
+        },
+        select: {
+          product: {
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+              price: true,
+              currency: true,
+
+              brand: {
+                select: {
+                  name: true,
+                  slug: true,
+                },
+              },
+
+              images: {
+                orderBy: {
+                  sortOrder: "asc",
+                },
+                take: 1,
+                select: {
+                  url: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  }),
+
+  prisma.brand.findMany({
+    where: {
+      showOnHomepage: true,
+      coverImageUrl: {
+        not: null,
+      },
+    },
+    orderBy: [
+      { homepageOrder: "asc" },
+      { createdAt: "desc" },
+    ],
+    take: 6,
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      coverImageUrl: true,
+    },
+  }),
+
+  prisma.diaryPost.findMany({
+    where: {
+      status: "PUBLISHED",
+    },
+    orderBy: {
+      publishedAt: "desc",
+    },
+    take: 3,
+  }),
+]);
+
+const hero = normalizeHero(rawHero);
+
+ 
 
   /* map to UI */
  const trendy: StorefrontProduct[] =
@@ -158,74 +268,7 @@ export default async function LiveHome({ region, country }: LiveHomeProps) {
   })) ?? [];
 
 
-    const continentsDb = await prisma.continent.findMany({
-  where: {
-    isActive: true,
-  },
-  orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-  select: {
-    slug: true,
-    name: true,
-    imageUrl: true,
-  },
-});
-  /* --------------------------- */
-/* STYLE FEED (MANUAL) */
-/* --------------------------- */
 
-const homepageStyleFeedDb = await prisma.homepageStyleFeedItem.findMany({
-  where: {
-    isActive: true,
-  },
-  orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-  take: 4,
-  select: {
-    id: true,
-    imageUrl: true,
-    imageAlt: true,
-    imageFocalX: true,
-    imageFocalY: true,
-    postUrl: true,
-    caption: true,
-    sortOrder: true,
-    title: true,
-    instagramHandle: true,
-
-    products: {
-      orderBy: {
-        position: "asc",
-      },
-      select: {
-        product: {
-          select: {
-            id: true,
-            title: true,
-            slug: true,
-            price: true,
-            currency: true,
-
-            brand: {
-              select: {
-                name: true,
-                slug: true,
-              },
-            },
-
-            images: {
-              orderBy: {
-                sortOrder: "asc",
-              },
-              take: 1,
-              select: {
-                url: true,
-              },
-            },
-          },
-        },
-      },
-    },
-  },
-});
 
 const liveStyleFeed: StyleFeedPost[] = homepageStyleFeedDb.map((p) => ({
   id: p.id,
@@ -267,20 +310,7 @@ const styleFeedToShow =
   /* Brand Mosaic */
   /* --------------------------- */
 
-  const brandsDb = await prisma.brand.findMany({
-    where: {
-      showOnHomepage: true,
-      coverImageUrl: { not: null },
-    },
-    orderBy: [{ homepageOrder: "asc" }, { createdAt: "desc" }],
-    take: 6,
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      coverImageUrl: true,
-    },
-  });
+ 
 
   const mosaicTiles: StorefrontBrandTile[] = brandsDb.map((b) => ({
     id: b.id,
@@ -289,16 +319,7 @@ const styleFeedToShow =
     imageUrl: b.coverImageUrl!,
   }));
 
-  const diaryPosts = await prisma.diaryPost.findMany({
-    where: {
-      status: "PUBLISHED",
-    },
-    orderBy: {
-      publishedAt: "desc",
-    },
-    take: 3,
-  });
-
+  
   const diaryCards = diaryPosts.map((post) => ({
     id: post.id,
     title: post.title,
