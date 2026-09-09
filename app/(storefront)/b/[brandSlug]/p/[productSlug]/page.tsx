@@ -5,7 +5,6 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import SiteShell from "@/components/SiteShell";
 import MoneyLabel from "@/components/MoneyLabel";
 import ProductClickTrackingLink from "@/components/analytics/ProductClickTrackingLink";
 import { buildTrackedOutboundUrl } from "@/lib/affiliate/tracking";
@@ -152,11 +151,11 @@ const discoveryPosition =
     brand.affiliateStatus !== AffiliateStatus.ACTIVE
   ) {
     return (
-      <SiteShell>
+      
         <div className="mx-auto w-full max-w-[1800px] px-8 py-12 text-sm text-black/60">
           This product is not currently available.
         </div>
-      </SiteShell>
+      
     );
   }
 
@@ -237,7 +236,7 @@ const shippingToLabels = getShippingToLabel(
     : formatReturnsPaidBy(brand.returnsPaidBy);
 
   return (
-  <SiteShell>
+  <>
     <ProductViewTracker productId={product.id} />
     <div className="mx-auto w-full max-w-[1800px] px-4 py-8 md:px-8 md:py-10">
 
@@ -736,6 +735,6 @@ const shippingToLabels = getShippingToLabel(
   </section>
 )}
       </div>
-    </SiteShell>
+    </>
   );
 }
