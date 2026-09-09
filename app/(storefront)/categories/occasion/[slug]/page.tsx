@@ -3,7 +3,6 @@ export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
 import { notFound } from "next/navigation";
-import SiteShell from "@/components/SiteShell";
 import ContinentFilters from "@/components/ContinentFilters";
 import StorefrontPagination from "@/components/StorefrontPagination";
 import { ProductGrid, type GridProduct } from "@/components/ProductGrid";
@@ -336,7 +335,6 @@ if (
   
 
   return (
-    <SiteShell>
       <main className="min-h-screen w-full bg-white">
         <div className="mx-auto w-full max-w-[1800px] px-8 py-10 space-y-8">
           <header className="text-center">
@@ -372,6 +370,5 @@ if (
           )}
         </div>
       </main>
-    </SiteShell>
   );
 }

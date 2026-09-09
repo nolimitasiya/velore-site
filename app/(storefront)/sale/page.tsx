@@ -1,23 +1,22 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
-import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
-import SiteShell from "@/components/SiteShell";
 import ContinentFilters from "@/components/ContinentFilters";
 import StorefrontPagination from "@/components/StorefrontPagination";
 import { ProductGrid, type GridProduct } from "@/components/ProductGrid";
+import { prisma } from "@/lib/prisma";
 import {
   AffiliateStatus,
   BrandAccountStatus,
   ProductType,
 } from "@prisma/client";
 import { sortSizes, formatSizeLabel } from "@/lib/sizing/order";
-import { getAvailableStyles } from "@/lib/storefront/getAvailableStyles";
 import { parseStorefrontFilters } from "@/lib/storefront/parseFilters";
+import { getAvailableStyles } from "@/lib/storefront/getAvailableStyles";
 import { buildStorefrontWhere } from "@/lib/storefront/buildStorefrontWhere";
 import { countryNameFromIso2 } from "@/lib/geo/countries";
-import { getContinentPageOneProducts } from "@/lib/storefront/getContinentPageOneProducts";
+import { getMerchPageOneProducts } from "@/lib/storefront/getMerchPageOneProducts";
 import { getStorefrontPaginationState } from "@/lib/storefront/pagination";
 
 import {  buildTrackedOutboundUrl,} from "@/lib/affiliate/tracking";
@@ -25,6 +24,10 @@ import {  buildTrackedOutboundUrl,} from "@/lib/affiliate/tracking";
 type Opt = { value: string; label: string };
 
 function titleCaseLabel(s: string) {
+  if (s === "COATS_JACKETS") return "Coats & Jackets";
+  if (s === "HOODIE_SWEATSHIRT") return "Hoodie & Sweatshirt";
+  if (s === "T_SHIRT") return "T-Shirt";
+
   return s
     .toLowerCase()
     .replaceAll("_", " ")
@@ -34,25 +37,12 @@ function titleCaseLabel(s: string) {
     .join(" ");
 }
 
-export default async function ContinentPage({
-  params,
+export default async function SalePage({
   searchParams,
 }: {
-  params: Promise<{ slug: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { slug } = await params;
   const sp = (await searchParams) ?? {};
-
-  const continent = await prisma.continent.findUnique({
-    where: { slug: slug.toLowerCase() },
-  });
-
-  if (!continent || !continent.isActive) return notFound();
-
-  const region = continent.region;
-  const title = continent.name;
-
   const filters = parseStorefrontFilters(sp);
   const { types, sort } = filters;
 
@@ -67,7 +57,7 @@ export default async function ContinentPage({
     filters.max != null ||
     filters.saleOn;
 
-  const shouldUseBalancedPageOne = !hasActiveFilters && sort === "new";
+  const shouldUseMerchPageOne = !hasActiveFilters && sort === "new";
 
   const pagination = getStorefrontPaginationState(sp);
   const { currentPage, isExpandedPageOne, pageOneVisibleCount, take } =
@@ -82,7 +72,6 @@ export default async function ContinentPage({
 
   const brandsRaw = await prisma.brand.findMany({
     where: {
-      baseRegion: region,
       accountStatus: BrandAccountStatus.ACTIVE,
       affiliateStatus: AffiliateStatus.ACTIVE,
       products: {
@@ -90,12 +79,13 @@ export default async function ContinentPage({
           status: "APPROVED",
           isActive: true,
           publishedAt: { not: null },
+          badges: { has: "sale" },
         },
       },
     },
     orderBy: { name: "asc" },
     select: { slug: true, name: true, baseCountryCode: true },
-    take: 500,
+    take: 1000,
   });
 
   const brandOptions: Opt[] = brandsRaw.map((b) => ({
@@ -122,7 +112,7 @@ export default async function ContinentPage({
   const coloursRaw = await prisma.colour.findMany({
     orderBy: { name: "asc" },
     select: { slug: true, name: true },
-    take: 200,
+    take: 300,
   });
 
   const colorOptions: Opt[] = coloursRaw.map((c) => ({
@@ -141,24 +131,26 @@ export default async function ContinentPage({
     label: formatSizeLabel(s.name),
   }));
 
-  const where = buildStorefrontWhere({
-    filters,
-    region,
-  });
+  const where = {
+    ...buildStorefrontWhere({
+      filters,
+    }),
+    badges: { has: "sale" as any },
+  };
 
   const totalCount = await prisma.product.count({ where });
 
   let mapped: GridProduct[] = [];
 
-  if (shouldUseBalancedPageOne && currentPage === 1) {
-    mapped = await getContinentPageOneProducts(region, pageOneVisibleCount);
+  if (shouldUseMerchPageOne && currentPage === 1) {
+    mapped = await getMerchPageOneProducts("SALE", pageOneVisibleCount);
   } else {
     let whereForPage = where;
     let skip = 0;
 
-    if (shouldUseBalancedPageOne && currentPage >= 2) {
-      const protectedPageOneProducts = await getContinentPageOneProducts(
-        region,
+    if (shouldUseMerchPageOne && currentPage >= 2) {
+      const protectedPageOneProducts = await getMerchPageOneProducts(
+        "SALE",
         48
       );
 
@@ -183,14 +175,12 @@ export default async function ContinentPage({
       take,
       select: {
         id: true,
-        slug: true,
+        slug: true, // ← ADDED
         title: true,
         price: true,
         currency: true,
-        affiliateUrl: true,
-        sourceUrl: true,
         badges: true,
-        brand: { select: { name: true, slug: true } },  // ← add slug: true
+        brand: { select: { name: true, slug: true } }, // ← slug ADDED
         images: {
           orderBy: { sortOrder: "asc" },
           take: 1,
@@ -202,18 +192,24 @@ export default async function ContinentPage({
    mapped = products.map((p, index) => ({
   id: p.id,
   title: p.title,
+
   brandName:
     p.brand?.name ?? null,
+
   brandSlug:
     p.brand?.slug ?? null,
+
   productSlug:
     p.slug ?? null,
+
   imageUrl:
     p.images?.[0]?.url ?? null,
+
   price:
     p.price
       ? p.price.toString()
       : null,
+
   currency:
     String(p.currency),
 
@@ -221,23 +217,11 @@ export default async function ContinentPage({
     buildTrackedOutboundUrl(
       p.id,
       {
-        sourcePage:
-          "CONTINENT",
-
-        sectionKey:
-          `continent_${slug}`,
-
-        position:
-          index + 1,
-
-        pageNumber:
-          currentPage,
-
-        contextType:
-          shouldUseBalancedPageOne &&
-          currentPage >= 2
-            ? "GRID_AFTER_BALANCED"
-            : "CONTINENT_GRID",
+        sourcePage: "SALE",
+        sectionKey: "sale_grid",
+        position: index + 1,
+        pageNumber: currentPage,
+        contextType: "SALE",
       }
     ),
 
@@ -246,10 +230,10 @@ export default async function ContinentPage({
 
   analytics: {
     sourcePage:
-      "CONTINENT" as const,
+      "SALE" as const,
 
     sectionKey:
-      `continent_${slug}`,
+      "sale_grid",
 
     position:
       index + 1,
@@ -263,26 +247,22 @@ export default async function ContinentPage({
         : false,
 
     contextType:
-      shouldUseBalancedPageOne &&
-      currentPage >= 2
-        ? "GRID_AFTER_BALANCED"
-        : "CONTINENT_GRID",
+      "SALE",
   },
 }));
   }
 
   return (
-    <SiteShell>
       <main className="min-h-screen w-full bg-white">
         <div className="mx-auto w-full max-w-[1800px] space-y-8 px-8 py-10">
-          <div className="text-center">
-            <div className="font-display text-4xl tracking-[0.2em] md:text-5xl">
-              {title.toUpperCase()}
-            </div>
-            <div className="mt-3 text-sm text-black/60">
-              Curated brands based in {title}.
-            </div>
-          </div>
+          <header className="text-center">
+            <h1 className="font-display text-4xl tracking-[0.12em] md:text-5xl">
+              Sale
+            </h1>
+            <p className="mt-3 text-sm text-black/60 md:text-base">
+              Discover reduced pieces.
+            </p>
+          </header>
 
           <ContinentFilters
             brands={brandOptions}
@@ -301,7 +281,7 @@ export default async function ContinentPage({
             <section id="products">
               <ProductGrid products={mapped} />
               <StorefrontPagination
-                pathname={`/continent/${slug}`}
+                pathname="/sale"
                 searchParams={sp}
                 totalItems={totalCount}
                 currentPage={currentPage}
@@ -311,6 +291,5 @@ export default async function ContinentPage({
           )}
         </div>
       </main>
-    </SiteShell>
   );
 }

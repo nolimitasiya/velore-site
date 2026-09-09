@@ -4,7 +4,6 @@ export const fetchCache = "force-no-store";
 
 import Image from "next/image";
 import Link from "next/link";
-import SiteShell from "@/components/SiteShell";
 import { prisma } from "@/lib/prisma";
 
 function formatDate(value: Date | string | null) {
@@ -34,7 +33,6 @@ export default async function DiaryIndexPage() {
   });
 
   return (
-    <SiteShell>
       <main className="min-h-screen w-full bg-white text-black">
         <section className="border-b border-black/8 bg-white">
   <div className="mx-auto w-full max-w-[1800px] px-8 py-14 text-center md:py-20">
@@ -107,6 +105,5 @@ export default async function DiaryIndexPage() {
           )}
         </section>
       </main>
-    </SiteShell>
   );
 }

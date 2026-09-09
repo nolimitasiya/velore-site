@@ -2,7 +2,6 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
-import SiteShell from "@/components/SiteShell";
 import ContinentFilters from "@/components/ContinentFilters";
 import { ProductGrid, type GridProduct } from "@/components/ProductGrid";
 import { prisma } from "@/lib/prisma";
@@ -215,7 +214,6 @@ export default async function NewInPage({
   }));
 
   return (
-    <SiteShell>
       <main className="min-h-screen w-full bg-white">
         <div className="mx-auto w-full max-w-[1800px] px-8 py-10 space-y-8">
           <header className="text-center">
@@ -245,6 +243,5 @@ export default async function NewInPage({
           )}
         </div>
       </main>
-    </SiteShell>
   );
 }

@@ -5,7 +5,6 @@ export const revalidate = 0;
 import { headers, cookies } from "next/headers";
 import Gate from "@/app/(gate)/Gate";
 import LiveHome from "@/components/LiveHome";
-import SiteShell from "@/components/SiteShell";
 import { getShopperPreferences } from "@/lib/shopperPreferences";
 
 export default async function Page({
@@ -37,8 +36,7 @@ export default async function Page({
   }
 
   return (
-    <SiteShell>
+    
       <LiveHome region={region} country={country} />
-    </SiteShell>
   );
 }

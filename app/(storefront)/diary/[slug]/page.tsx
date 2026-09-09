@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import DiaryReadTracker from "@/components/diary/DiaryReadTracker";
-import SiteShell from "@/components/SiteShell";
 import WishlistButton from "@/components/WishlistButton";
 import ProductImpressionTracker from "@/components/analytics/ProductImpressionTracker";
 import { buildTrackedOutboundUrl } from "@/lib/affiliate/tracking";
@@ -104,7 +103,6 @@ export default async function DiaryPostPage({ params }: PageProps) {
   const readTime = estimateReadTimeMinutes(html);
 
   return (
-    <SiteShell>
       <main className="bg-white text-black">
         <DiaryReadTracker diaryPostId={post.id} />
 
@@ -364,6 +362,5 @@ const outUrl = buildTrackedOutboundUrl(
           </section>
         ) : null}
       </main>
-    </SiteShell>
   );
 }

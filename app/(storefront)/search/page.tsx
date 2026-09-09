@@ -3,7 +3,6 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
-import SiteShell from "@/components/SiteShell";
 import ContinentFilters from "@/components/ContinentFilters";
 import { ProductGrid, type GridProduct } from "@/components/ProductGrid";
 import { prisma } from "@/lib/prisma";
@@ -720,7 +719,7 @@ const searchIntent = {
 
 
   return (
-    <SiteShell>
+    <>
       {q ? (
   <SearchAnalyticsTracker
     query={q}
@@ -762,6 +761,6 @@ const searchIntent = {
           )}
         </div>
       </main>
-    </SiteShell>
+      </>
   );
 }
