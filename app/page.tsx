@@ -6,6 +6,8 @@ import { headers, cookies } from "next/headers";
 import Gate from "@/app/(gate)/Gate";
 import LiveHome from "@/components/LiveHome";
 import { getShopperPreferences } from "@/lib/shopperPreferences";
+import SiteShell from "@/components/SiteShell";
+
 
 export default async function Page({
   searchParams,
@@ -36,7 +38,9 @@ export default async function Page({
   }
 
   return (
+     <SiteShell>
     
       <LiveHome region={region} country={country} />
+       </SiteShell>
   );
 }
