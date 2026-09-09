@@ -445,9 +445,10 @@ const activeRow =
               const active = isActive(item.href);
               return (
                 <Link
-                  key={item.href}
-                  href={item.href}
-                  className={[
+  key={item.href}
+  href={item.href}
+  prefetch={false}
+  className={[
                     rowBase,
                     rowHover,
                     active ? `${activeRow} ${leftAccent}` : "",

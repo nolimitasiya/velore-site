@@ -267,10 +267,11 @@ function DropdownMenu({
             <div className={dropdownGrid}>
               {items.map((item) => (
                 <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`${dropdownItem} whitespace-nowrap`}
-                >
+  key={item.href}
+  href={item.href}
+  prefetch={false}
+  className={`${dropdownItem} whitespace-nowrap`}
+>
                   {item.label}
                 </Link>
               ))}
