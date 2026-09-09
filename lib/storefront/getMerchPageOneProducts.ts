@@ -336,8 +336,13 @@ export async function getMerchPageOneProducts(
   );
 
   if (merchGridProducts.length >= targetCount) return merchGridProducts;
+  const missingCount =
+  targetCount - merchGridProducts.length;
 
   const fallbackWhere: Prisma.ProductWhereInput = {
+    id: {
+  notIn: Array.from(usedProductIds),
+},
     status: "APPROVED",
     isActive: true,
     publishedAt: { not: null },
@@ -370,7 +375,7 @@ export async function getMerchPageOneProducts(
   const fallbackProducts = await prisma.product.findMany({
     where: fallbackWhere,
     orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
-    take: 240,
+    take: missingCount,
     select: {
       id: true,
       slug: true,
@@ -404,17 +409,17 @@ export async function getMerchPageOneProducts(
     },
   });
 
-  const filler = (fallbackProducts as unknown as FallbackProductRecord[])
-    .filter((product) => !usedProductIds.has(product.id))
-    .slice(0, targetCount - merchGridProducts.length)
-    .map((product, index) =>
-      mapFallbackToGridProduct(
-        product,
-        merchGridProducts.length + index,
-        pageKey,
-        isExpandedPageOne
-      )
-    );
+  const filler =
+  (
+    fallbackProducts as unknown as FallbackProductRecord[]
+  ).map((product, index) =>
+    mapFallbackToGridProduct(
+      product,
+      merchGridProducts.length + index,
+      pageKey,
+      isExpandedPageOne
+    )
+  );
 
   return [...merchGridProducts, ...filler];
 }

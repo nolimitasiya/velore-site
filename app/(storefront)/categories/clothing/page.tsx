@@ -160,12 +160,193 @@ const shouldUseLegacyClothingMerch =
   ],
 };
 
+const mappedPromise: Promise<GridProduct[]> = (async () => {
+  if (
+    shouldUseCategoryMerch &&
+    selectedMerchType &&
+    currentPage === 1
+  ) {
+    return getCategoryMerchProducts({
+      scopeType: "PRODUCT_TYPE",
+      scopeKey: selectedMerchType,
+      visibleCount: pageOneVisibleCount,
+    });
+  }
+
+  if (
+    shouldUseLegacyClothingMerch &&
+    currentPage === 1
+  ) {
+    return getMerchPageOneProducts(
+      "CLOTHING",
+      pageOneVisibleCount
+    );
+  }
+
+  let whereForPage = where;
+  let skip = 0;
+
+  if (
+    shouldUseCategoryMerch &&
+    selectedMerchType &&
+    currentPage >= 2
+  ) {
+    const protectedIds =
+      await getCategoryMerchLiveIds({
+        scopeType: "PRODUCT_TYPE",
+        scopeKey: selectedMerchType,
+      });
+
+    whereForPage = {
+      ...where,
+      id: {
+        notIn: protectedIds,
+      },
+    };
+
+    skip = (currentPage - 2) * 24;
+  } else if (
+    shouldUseLegacyClothingMerch &&
+    currentPage >= 2
+  ) {
+    const protectedPageOneProducts =
+      await getMerchPageOneProducts(
+        "CLOTHING",
+        48
+      );
+
+    const protectedIds =
+      protectedPageOneProducts.map(
+        (product) => product.id
+      );
+
+    whereForPage = {
+      ...where,
+      id: {
+        notIn: protectedIds,
+      },
+    };
+
+    skip = (currentPage - 2) * 24;
+  } else if (currentPage === 1) {
+    skip = 0;
+  } else {
+    skip =
+      48 +
+      (currentPage - 2) * 24;
+  }
+
+  const products = await prisma.product.findMany({
+    where: whereForPage,
+    orderBy,
+    skip,
+    take,
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      price: true,
+      currency: true,
+      badges: true,
+      brand: {
+        select: {
+          name: true,
+          slug: true,
+        },
+      },
+      images: {
+        orderBy: {
+          sortOrder: "asc",
+        },
+        take: 1,
+        select: {
+          url: true,
+        },
+      },
+    },
+  });
+
+  return products.map((p, index) => ({
+    id: p.id,
+    title: p.title,
+
+    brandName: p.brand?.name ?? null,
+    brandSlug: p.brand?.slug ?? null,
+    productSlug: p.slug ?? null,
+
+    imageUrl:
+      p.images?.[0]?.url ?? null,
+
+    price:
+      p.price
+        ? p.price.toString()
+        : null,
+
+    currency:
+      String(p.currency),
+
+    buyUrl:
+      buildTrackedOutboundUrl(
+        p.id,
+        {
+          sourcePage: "CATEGORY",
+
+          sectionKey:
+            selectedMerchType
+              ? `product_type_${selectedMerchType.toLowerCase()}`
+              : "clothing_grid",
+
+          position:
+            index + 1,
+
+          pageNumber:
+            currentPage,
+
+          contextType:
+            selectedMerchType
+              ? "PRODUCT_TYPE"
+              : "CLOTHING",
+        }
+      ),
+
+    badges:
+      (p.badges ?? []) as any,
+
+    analytics: {
+      sourcePage:
+        "CATEGORY" as const,
+
+      sectionKey:
+        selectedMerchType
+          ? `product_type_${selectedMerchType.toLowerCase()}`
+          : "clothing_grid",
+
+      position:
+        index + 1,
+
+      pageNumber:
+        currentPage,
+
+      isExpandedPageOne:
+        currentPage === 1
+          ? isExpandedPageOne
+          : false,
+
+      contextType:
+        selectedMerchType
+          ? "PRODUCT_TYPE"
+          : "CLOTHING",
+    },
+  }));
+})();
+
  const [
   brandsRaw,
   styleOptions,
   coloursRaw,
   sizesRaw,
   totalCount,
+  mapped,
 ] = await Promise.all([
   prisma.brand.findMany({
     where: {
@@ -234,6 +415,7 @@ const shouldUseLegacyClothingMerch =
   prisma.product.count({
     where,
   }),
+  mappedPromise,
 ]);
   const brandOptions: Opt[] = brandsRaw.map((b) => ({
     value: b.slug,
@@ -271,182 +453,7 @@ const shouldUseLegacyClothingMerch =
   
 
 
-  let mapped: GridProduct[] = [];
-
-  if (
-  shouldUseCategoryMerch &&
-  selectedMerchType &&
-  currentPage === 1
-) {
-  mapped = await getCategoryMerchProducts({
-    scopeType: "PRODUCT_TYPE",
-    scopeKey: selectedMerchType,
-    visibleCount: pageOneVisibleCount,
-  });
-} else if (
-  shouldUseLegacyClothingMerch &&
-  currentPage === 1
-) {
-  mapped = await getMerchPageOneProducts(
-    "CLOTHING",
-    pageOneVisibleCount
-  );
-
-  } else {
-  let whereForPage = where;
-  let skip = 0;
-
-  if (
-    shouldUseCategoryMerch &&
-    selectedMerchType &&
-    currentPage >= 2
-  ) {
-    const protectedIds =
-      await getCategoryMerchLiveIds({
-        scopeType: "PRODUCT_TYPE",
-        scopeKey: selectedMerchType,
-      });
-
-    whereForPage = {
-      ...where,
-      id: {
-        notIn: protectedIds,
-      },
-    };
-
-    skip = (currentPage - 2) * 24;
-  } else if (
-    shouldUseLegacyClothingMerch &&
-    currentPage >= 2
-  ) {
-    const protectedPageOneProducts =
-      await getMerchPageOneProducts(
-        "CLOTHING",
-        48
-      );
-
-    const protectedIds =
-      protectedPageOneProducts.map(
-        (product) => product.id
-      );
-
-    whereForPage = {
-      ...where,
-      id: {
-        notIn: protectedIds,
-      },
-    };
-
-    skip = (currentPage - 2) * 24;
-  } else if (currentPage === 1) {
-    skip = 0;
-  } else {
-    skip =
-      48 +
-      (currentPage - 2) * 24;
-  }
-
-
-
-    const products = await prisma.product.findMany({
-      where: whereForPage,
-      orderBy,
-      skip,
-      take,
-      select: {
-        id: true,
-        slug: true, // ← ADDED
-        title: true,
-        price: true,
-        currency: true,
-        badges: true,
-        brand: { select: { name: true, slug: true } }, // ← slug ADDED
-        images: {
-          orderBy: { sortOrder: "asc" },
-          take: 1,
-          select: { url: true },
-        },
-      },
-    });
-
-    mapped = products.map((p, index) => ({
-  id: p.id,
-  title: p.title,
-
-  brandName:
-    p.brand?.name ?? null,
-
-  brandSlug:
-    p.brand?.slug ?? null,
-
-  productSlug:
-    p.slug ?? null,
-
-  imageUrl:
-    p.images?.[0]?.url ?? null,
-
-  price:
-    p.price
-      ? p.price.toString()
-      : null,
-
-  currency:
-    String(p.currency),
-
-  buyUrl:
-    buildTrackedOutboundUrl(
-      p.id,
-      {
-        sourcePage: "CATEGORY",
-
-        sectionKey:
-          selectedMerchType
-            ? `product_type_${selectedMerchType.toLowerCase()}`
-            : "clothing_grid",
-
-        position:
-          index + 1,
-
-        pageNumber:
-          currentPage,
-
-        contextType:
-          selectedMerchType
-            ? "PRODUCT_TYPE"
-            : "CLOTHING",
-      }
-    ),
-
-  badges:
-    (p.badges ?? []) as any,
-
-  analytics: {
-    sourcePage:
-      "CATEGORY" as const,
-
-    sectionKey:
-      selectedMerchType
-        ? `product_type_${selectedMerchType.toLowerCase()}`
-        : "clothing_grid",
-
-    position:
-      index + 1,
-
-    pageNumber:
-      currentPage,
-
-    isExpandedPageOne:
-      currentPage === 1
-        ? isExpandedPageOne
-        : false,
-
-    contextType:
-      selectedMerchType
-        ? "PRODUCT_TYPE"
-        : "CLOTHING",
-  },
-}));
-  }
+ 
 
   return (
     
