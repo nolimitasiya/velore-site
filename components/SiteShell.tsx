@@ -139,9 +139,9 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
           <Link href="/new-in" className="block font-body text-[15px] text-black/65 transition-colors hover:text-[#7B2D3E]">
             New In
           </Link>
-          <Link href="/categories" className="block font-body text-[15px] text-black/65 transition-colors hover:text-[#7B2D3E]">
+          <Link href="/categories/clothing" className="block font-body text-[15px] text-black/65 transition-colors hover:text-[#7B2D3E]">
             Categories
-          </Link>
+            </Link>
           <Link href="/brands" className="block font-body text-[15px] text-black/65 transition-colors hover:text-[#7B2D3E]">
             Brands
           </Link>

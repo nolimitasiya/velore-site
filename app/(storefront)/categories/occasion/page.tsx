@@ -14,6 +14,7 @@ import { buildStorefrontWhere } from "@/lib/storefront/buildStorefrontWhere";
 import { countryNameFromIso2 } from "@/lib/geo/countries";
 import { getMerchPageOneProducts } from "@/lib/storefront/getMerchPageOneProducts";
 import { getStorefrontPaginationState } from "@/lib/storefront/pagination";
+import { unstable_cache } from "next/cache";
 
 import {  buildTrackedOutboundUrl,} from "@/lib/affiliate/tracking";
 
@@ -58,6 +59,51 @@ function titleCaseLabel(s: string) {
     .join(" ");
 }
 
+const getCachedOccasionBrandFacets = unstable_cache(
+  async () =>
+    prisma.brand.findMany({
+      where: {
+        products: {
+          some: {
+            status: "APPROVED",
+            isActive: true,
+            publishedAt: { not: null },
+
+            AND: [
+              {
+                productOccasions: {
+                  some: {
+                    occasion: {
+                      slug: {
+                        in: [...PUBLIC_OCCASION_SLUGS],
+                      },
+                    },
+                  },
+                },
+              },
+              {
+                productOccasions: {
+                  none: {
+                    occasion: {
+                      slug: "activewear",
+                    },
+                  },
+                },
+              },
+            ],
+
+            productType: { in: OCCASION_PRODUCT_TYPES },
+          },
+        },
+      },
+      orderBy: { name: "asc" },
+      select: { slug: true, name: true, baseCountryCode: true },
+      take: 1000,
+    }),
+  ["occasion-brand-facets"],
+  { tags: ["storefront-products"], revalidate: 300 }
+);
+
 export default async function OccasionPage({
   searchParams,
 }: {
@@ -91,87 +137,9 @@ export default async function OccasionPage({
       ? [{ price: "desc" as const }, { publishedAt: "desc" as const }]
       : [{ publishedAt: "desc" as const }];
 
-  const brandsRaw = await prisma.brand.findMany({
-  where: {
-    products: {
-      some: {
-        status: "APPROVED",
-        isActive: true,
-        publishedAt: { not: null },
-
-        AND: [
-          {
-  productOccasions: {
-    some: {
-      occasion: {
-        slug: {
-          in: [...PUBLIC_OCCASION_SLUGS],
-        },
-      },
-    },
-  },
-},
-          {
-            productOccasions: {
-              none: {
-                occasion: {
-                  slug: "activewear",
-                },
-              },
-            },
-          },
-        ],
-
-        productType: { in: OCCASION_PRODUCT_TYPES },
-      },
-    },
-  },
-  orderBy: { name: "asc" },
-  select: { slug: true, name: true, baseCountryCode: true },
-  take: 1000,
-});
-
-  const brandOptions: Opt[] = brandsRaw.map((b) => ({
-    value: b.slug,
-    label: b.name,
-  }));
-
-  const countryOptions: Opt[] = Array.from(
-    new Set(brandsRaw.map((b) => b.baseCountryCode).filter(Boolean))
-  )
-    .sort()
-    .map((cc) => ({
-      value: String(cc),
-      label: countryNameFromIso2(String(cc)),
-    }));
-
   const typeOptions: Opt[] = OCCASION_PRODUCT_TYPES.map((t) => ({
-  value: t,
-  label: titleCaseLabel(t),
-}));
-
-  const styleOptions: Opt[] = await getAvailableStyles(types);
-
-  const coloursRaw = await prisma.colour.findMany({
-    orderBy: { name: "asc" },
-    select: { slug: true, name: true },
-    take: 300,
-  });
-
-  const colorOptions: Opt[] = coloursRaw.map((c) => ({
-    value: c.slug,
-    label: c.name.toLowerCase(),
-  }));
-
-  const sizesRaw = await prisma.size.findMany({
-    orderBy: { name: "asc" },
-    select: { slug: true, name: true },
-    take: 500,
-  });
-
-  const sizeOptions = sizesRaw.sort(sortSizes).map((s) => ({
-    value: s.slug,
-    label: formatSizeLabel(s.name),
+    value: t,
+    label: titleCaseLabel(t),
   }));
 
   const where = {
@@ -205,13 +173,16 @@ export default async function OccasionPage({
     : { in: OCCASION_PRODUCT_TYPES },
 };
 
-  const totalCount = await prisma.product.count({ where });
+  // Everything below is independent of every other query in this list, so
+  // it all runs concurrently instead of as a chain of sequential round
+  // trips to the database (this previously ran one-after-another, which is
+  // most of why this route felt slow even though each individual query is
+  // fast on its own).
+  const mappedPromise: Promise<GridProduct[]> = (async () => {
+    if (shouldUseMerchPageOne && currentPage === 1) {
+      return getMerchPageOneProducts("OCCASION", pageOneVisibleCount);
+    }
 
-  let mapped: GridProduct[] = [];
-
-  if (shouldUseMerchPageOne && currentPage === 1) {
-    mapped = await getMerchPageOneProducts("OCCASION", pageOneVisibleCount);
-  } else {
     let whereForPage = where;
     let skip = 0;
 
@@ -242,12 +213,12 @@ export default async function OccasionPage({
       take,
       select: {
         id: true,
-        slug: true, // ← ADDED
+        slug: true,
         title: true,
         price: true,
         currency: true,
         badges: true,
-        brand: { select: { name: true, slug: true } }, // ← slug ADDED
+        brand: { select: { name: true, slug: true } },
         images: {
           orderBy: { sortOrder: "asc" },
           take: 1,
@@ -256,59 +227,101 @@ export default async function OccasionPage({
       },
     });
 
-    mapped = products.map((p, index) => ({
-  id: p.id,
-  title: p.title,
+    return products.map((p, index) => ({
+      id: p.id,
+      title: p.title,
 
-  brandName:
-    p.brand?.name ?? null,
+      brandName:
+        p.brand?.name ?? null,
 
-  brandSlug:
-    p.brand?.slug ?? null,
+      brandSlug:
+        p.brand?.slug ?? null,
 
-  productSlug:
-    p.slug ?? null,
+      productSlug:
+        p.slug ?? null,
 
-  imageUrl:
-    p.images?.[0]?.url ?? null,
+      imageUrl:
+        p.images?.[0]?.url ?? null,
 
-  price:
-    p.price
-      ? p.price.toString()
-      : null,
+      price:
+        p.price
+          ? p.price.toString()
+          : null,
 
-  currency:
-    String(p.currency),
+      currency:
+        String(p.currency),
 
-  buyUrl: buildTrackedOutboundUrl(
-    p.id,
-    {
-      sourcePage: "CATEGORY",
-      sectionKey: "occasion_grid",
-      position: index + 1,
-      pageNumber: currentPage,
-      contextType: "OCCASION",
-    }
-  ),
+      buyUrl: buildTrackedOutboundUrl(
+        p.id,
+        {
+          sourcePage: "CATEGORY",
+          sectionKey: "occasion_grid",
+          position: index + 1,
+          pageNumber: currentPage,
+          contextType: "OCCASION",
+        }
+      ),
 
-  badges:
-    (p.badges ?? []) as any,
+      badges:
+        (p.badges ?? []) as any,
 
-  analytics: {
-    sourcePage: "CATEGORY" as const,
-    sectionKey: "occasion_grid",
-    position: index + 1,
-    pageNumber: currentPage,
+      analytics: {
+        sourcePage: "CATEGORY" as const,
+        sectionKey: "occasion_grid",
+        position: index + 1,
+        pageNumber: currentPage,
 
-    isExpandedPageOne:
-      currentPage === 1
-        ? isExpandedPageOne
-        : false,
+        isExpandedPageOne:
+          currentPage === 1
+            ? isExpandedPageOne
+            : false,
 
-    contextType: "OCCASION",
-  },
-}));
-  }
+        contextType: "OCCASION",
+      },
+    }));
+  })();
+
+  const [brandsRaw, styleOptions, coloursRaw, sizesRaw, totalCount, mapped] =
+    await Promise.all([
+      getCachedOccasionBrandFacets(),
+      getAvailableStyles(types),
+      prisma.colour.findMany({
+        orderBy: { name: "asc" },
+        select: { slug: true, name: true },
+        take: 300,
+      }),
+      prisma.size.findMany({
+        orderBy: { name: "asc" },
+        select: { slug: true, name: true },
+        take: 500,
+      }),
+      prisma.product.count({ where }),
+      mappedPromise,
+    ]);
+
+  const brandOptions: Opt[] = brandsRaw.map((b) => ({
+    value: b.slug,
+    label: b.name,
+  }));
+
+  const countryOptions: Opt[] = Array.from(
+    new Set(brandsRaw.map((b) => b.baseCountryCode).filter(Boolean))
+  )
+    .sort()
+    .map((cc) => ({
+      value: String(cc),
+      label: countryNameFromIso2(String(cc)),
+    }));
+
+  const colorOptions: Opt[] = coloursRaw.map((c) => ({
+    value: c.slug,
+    label: c.name.toLowerCase(),
+  }));
+
+  const sizeOptions = sizesRaw.sort(sortSizes).map((s) => ({
+    value: s.slug,
+    label: formatSizeLabel(s.name),
+  }));
 
   return (
       <main className="min-h-screen w-full bg-white">

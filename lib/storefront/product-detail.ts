@@ -315,7 +315,7 @@ export async function getProductDiaryPosts(
     }
   )();
 }
-export async function getRelatedProducts({
+async function fetchRelatedProducts({
   productId,
   brandId,
   categoryId,
@@ -399,4 +399,35 @@ export async function getRelatedProducts({
       },
     },
   });
+}
+
+
+export async function getRelatedProducts(args: {
+  productId: string;
+  brandId: string;
+  categoryId: string | null;
+  productType: ProductType | null;
+}) {
+  return unstable_cache(
+    () => fetchRelatedProducts(args),
+    [
+      "product-related",
+      args.productId,
+      args.brandId,
+      args.categoryId ?? "none",
+      args.productType ?? "none",
+    ],
+    {
+      tags: [
+        `product:${args.productId}`,
+        "storefront-products",
+      ],
+      // Tag invalidation (above) is the primary freshness mechanism and
+      // fires immediately on every product/brand mutation that affects
+      // eligibility. This revalidate is a bounded safety backstop only,
+      // in case a future mutation path is ever added without wiring the
+      // corresponding revalidateTag call.
+      revalidate: 300,
+    }
+  )();
 }

@@ -8,6 +8,7 @@ import {
   ProductType,
   Region,
 } from "@prisma/client";
+import { revalidateTag } from "next/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -477,6 +478,15 @@ export async function POST(req: NextRequest) {
           ),
         });
       });
+
+            // The public storefront's automatic-fill pool
+      // (getCategoryMerchProducts / getCachedEligibleProducts) is tagged
+      // "category-merch" defensively. It does not currently read
+      // CategoryMerchPlacement rows, so this is belt-and-suspenders rather
+      // than a fix for a known staleness bug -- but it means a future
+      // change to that query doesn't silently reintroduce stale curated
+      // placements without someone having to rediscover this dependency.
+      revalidateTag("category-merch", "max");
 
       return NextResponse.json({
         ok: true,

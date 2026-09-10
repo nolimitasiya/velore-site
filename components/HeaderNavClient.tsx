@@ -233,6 +233,7 @@ function DropdownMenu({
     >
       <Link
         href={href}
+        prefetch={false}
         className={navLink(active)}
         aria-controls={menuId}
         aria-expanded={open}

@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
+import { revalidateTag } from "next/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -99,6 +100,19 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       affiliateBaseUrl: true,
     },
   });
+
+    // A brand's affiliateStatus is a direct eligibility input for the
+  // storefront's cached brand-facet queries (clothing/occasion/accessories)
+  // and the category-merch automatic-fill pool -- neither of those caches
+  // is scoped to one product, so this needs the broad tags, not a
+  // per-product one. This was previously safe to skip because those
+  // queries were uncached (live on every request); now that they're
+  // cached, this call is what keeps a brand pause/reactivation instant
+  // instead of waiting out the cache's TTL.
+  if (nextStatus !== undefined) {
+    revalidateTag("storefront-products", "max");
+    revalidateTag("category-merch", "max");
+  }
 
   return NextResponse.json({ ok: true, brand: updated });
 }

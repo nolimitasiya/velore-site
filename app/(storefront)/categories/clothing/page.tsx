@@ -18,6 +18,7 @@ import { buildStorefrontWhere } from "@/lib/storefront/buildStorefrontWhere";
 import { countryNameFromIso2 } from "@/lib/geo/countries";
 import { getMerchPageOneProducts } from "@/lib/storefront/getMerchPageOneProducts";
 import { getStorefrontPaginationState } from "@/lib/storefront/pagination";
+import { unstable_cache } from "next/cache";
 
 import {
   getCategoryMerchProducts,
@@ -75,6 +76,47 @@ const CLOTHING_PRODUCT_TYPES: ProductType[] = [
   ProductType.BLAZER,
   ProductType.T_SHIRT,
 ];
+
+const getCachedClothingCategoryIds = unstable_cache(
+  async () => {
+    const rows = await prisma.category.findMany({
+      where: { slug: { in: CLOTHING_CATEGORY_SLUGS } },
+      select: { id: true },
+    });
+    return rows.map((c) => c.id);
+  },
+  ["clothing-category-ids"],
+  { tags: ["storefront-products"], revalidate: 3600 }
+);
+
+const getCachedClothingBrandFacets = unstable_cache(
+  async (catIds: string[]) =>
+    prisma.brand.findMany({
+      where: {
+        accountStatus: BrandAccountStatus.ACTIVE,
+        affiliateStatus: AffiliateStatus.ACTIVE,
+        products: {
+          some: {
+            status: "APPROVED",
+            isActive: true,
+            publishedAt: { not: null },
+            OR: [
+              ...(catIds.length ? [{ categoryId: { in: catIds } }] : []),
+              {
+                categoryId: null,
+                productType: { in: CLOTHING_PRODUCT_TYPES },
+              },
+            ],
+          },
+        },
+      },
+      orderBy: { name: "asc" },
+      select: { slug: true, name: true, baseCountryCode: true },
+      take: 1000,
+    }),
+  ["clothing-brand-facets"],
+  { tags: ["storefront-products"], revalidate: 300 }
+);
 
 export default async function ClothingPage({
   searchParams,
@@ -134,11 +176,7 @@ const shouldUseLegacyClothingMerch =
       ? [{ price: "desc" as const }, { publishedAt: "desc" as const }]
       : [{ publishedAt: "desc" as const }];
 
-  const clothingCats = await prisma.category.findMany({
-    where: { slug: { in: CLOTHING_CATEGORY_SLUGS } },
-    select: { id: true },
-  });
-  const clothingCatIds = clothingCats.map((c) => c.id);
+  const clothingCatIds = await getCachedClothingCategoryIds();
 
   const where = {
   ...buildStorefrontWhere({
@@ -347,45 +385,7 @@ const mappedPromise: Promise<GridProduct[]> = (async () => {
   totalCount,
   mapped,
 ] = await Promise.all([
-  prisma.brand.findMany({
-    where: {
-      accountStatus: BrandAccountStatus.ACTIVE,
-      affiliateStatus: AffiliateStatus.ACTIVE,
-      products: {
-        some: {
-          status: "APPROVED",
-          isActive: true,
-          publishedAt: { not: null },
-          OR: [
-            ...(clothingCatIds.length
-              ? [
-                  {
-                    categoryId: {
-                      in: clothingCatIds,
-                    },
-                  },
-                ]
-              : []),
-            {
-              categoryId: null,
-              productType: {
-                in: CLOTHING_PRODUCT_TYPES,
-              },
-            },
-          ],
-        },
-      },
-    },
-    orderBy: {
-      name: "asc",
-    },
-    select: {
-      slug: true,
-      name: true,
-      baseCountryCode: true,
-    },
-    take: 1000,
-  }),
+  getCachedClothingBrandFacets(clothingCatIds),
 
   getAvailableStyles(types),
 

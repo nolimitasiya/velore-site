@@ -50,16 +50,18 @@ function buildHref(
 function PageLink({
   href,
   active,
+  scroll = true,
   children,
 }: {
   href: string;
   active?: boolean;
+  scroll?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <Link
       href={href}
-      scroll={false}
+      scroll={scroll}
       className={[
         "inline-flex min-w-10 items-center justify-center rounded-full border px-4 py-2 text-sm transition",
         active
@@ -90,12 +92,13 @@ export default function StorefrontPagination({
   return (
     <div className="mt-10 flex flex-col items-center gap-4">
       {showLoadMore ? (
-        <PageLink
-          href={buildHref(pathname, searchParams, 1, true)}
-        >
-          Load More
-        </PageLink>
-      ) : null}
+  <PageLink
+    href={buildHref(pathname, searchParams, 1, true)}
+    scroll={false}
+  >
+    Load More
+  </PageLink>
+) : null}
 
       {showPagination ? (
         <div className="flex flex-wrap items-center justify-center gap-2">

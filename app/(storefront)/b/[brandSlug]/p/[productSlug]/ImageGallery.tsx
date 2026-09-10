@@ -41,7 +41,7 @@ export default function ImageGallery({
             alt={title}
             fill
             className="object-cover transition-opacity duration-200"
-            sizes="(max-width: 1024px) 100vw, 60vw"
+            sizes="(max-width: 1024px) 100vw, 480px"
             priority
           />
         ) : (

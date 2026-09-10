@@ -13,6 +13,7 @@ import { getAvailableStyles } from "@/lib/storefront/getAvailableStyles";
 import { buildStorefrontWhere } from "@/lib/storefront/buildStorefrontWhere";
 import { countryNameFromIso2 } from "@/lib/geo/countries";
 import { getStorefrontPaginationState } from "@/lib/storefront/pagination";
+import { unstable_cache } from "next/cache";
 
 import {  buildTrackedOutboundUrl,} from "@/lib/affiliate/tracking";
 
@@ -64,6 +65,63 @@ const ACCESSORIES_PRODUCT_TYPES: ProductType[] = [
   ProductType.ACCESSORIES,
 ];
 
+const ACCESSORY_COLOUR_SLUGS = [
+  "gold",
+  "silver",
+  "rose-gold",
+  "platinum",
+  "pearl",
+  "black",
+];
+
+const getCachedAccessoryCategories = unstable_cache(
+  async () =>
+    prisma.category.findMany({
+      where: { slug: { in: ACCESSORY_CATEGORY_SLUGS } },
+      select: { id: true, slug: true, parentId: true },
+    }),
+  ["accessory-categories"],
+  { tags: ["storefront-products"], revalidate: 3600 }
+);
+
+const getCachedAccessoriesBrandFacets = unstable_cache(
+  async (
+    selectedCategoryId: string | null,
+    categoryIds: string[]
+  ) =>
+    prisma.brand.findMany({
+      where: {
+        accountStatus: BrandAccountStatus.ACTIVE,
+        affiliateStatus: AffiliateStatus.ACTIVE,
+        products: {
+          some: selectedCategoryId
+            ? {
+                status: "APPROVED",
+                isActive: true,
+                publishedAt: { not: null },
+                categoryId: selectedCategoryId,
+              }
+            : {
+                status: "APPROVED",
+                isActive: true,
+                publishedAt: { not: null },
+                OR: [
+                  ...(categoryIds.length
+                    ? [{ categoryId: { in: categoryIds } }]
+                    : []),
+                  { productType: ProductType.ACCESSORIES },
+                ],
+              },
+        },
+      },
+      orderBy: { name: "asc" },
+      select: { slug: true, name: true, baseCountryCode: true },
+      take: 1000,
+    }),
+  ["accessories-brand-facets"],
+  { tags: ["storefront-products"], revalidate: 300 }
+);
+
 export default async function AccessoriesPage({
   searchParams,
 }: {
@@ -79,8 +137,6 @@ export default async function AccessoriesPage({
   const pagination = getStorefrontPaginationState(sp);
   const { currentPage, isExpandedPageOne, take } = pagination;
 
-  const shouldUseMerchPageOne = false;
-
   const pageTitle = accessoryTitleFromSlug(selectedAccessoryCategory);
 
   const orderBy =
@@ -90,10 +146,9 @@ export default async function AccessoriesPage({
       ? [{ price: "desc" as const }, { publishedAt: "desc" as const }]
       : [{ publishedAt: "desc" as const }];
 
-  const accessoryCategories = await prisma.category.findMany({
-    where: { slug: { in: ACCESSORY_CATEGORY_SLUGS } },
-    select: { id: true, slug: true, parentId: true },
-  });
+  // This resolution step has to happen first: brandsRaw and `where` below
+  // both need to know which category row (if any) is selected.
+  const accessoryCategories = await getCachedAccessoryCategories();
 
   const accessoryRoot = accessoryCategories.find(
     (c) => c.slug === ACCESSORIES_ROOT_SLUG
@@ -114,117 +169,45 @@ export default async function AccessoriesPage({
         ...accessoryChildCategoryIds,
       ];
 
-  const brandsRaw = await prisma.brand.findMany({
-  where: {
-    accountStatus: BrandAccountStatus.ACTIVE,
-    affiliateStatus: AffiliateStatus.ACTIVE,
-    products: {
-      some: selectedAccessoryCategoryRow
-        ? {
-            status: "APPROVED",
-            isActive: true,
-            publishedAt: { not: null },
-            categoryId: selectedAccessoryCategoryRow.id,
-          }
-        : {
-            status: "APPROVED",
-            isActive: true,
-            publishedAt: { not: null },
-            OR: [
-              ...(accessoryCategoryIds.length
-                ? [{ categoryId: { in: accessoryCategoryIds } }]
-                : []),
-              { productType: ProductType.ACCESSORIES },
-            ],
-          },
-    },
-  },
-  orderBy: { name: "asc" },
-  select: { slug: true, name: true, baseCountryCode: true },
-  take: 1000,
-});
-
-  const brandOptions: Opt[] = brandsRaw.map((b) => ({
-    value: b.slug,
-    label: b.name,
-  }));
-
-  const countryOptions: Opt[] = Array.from(
-    new Set(brandsRaw.map((b) => b.baseCountryCode).filter(Boolean))
-  )
-    .sort()
-    .map((cc) => ({
-      value: String(cc),
-      label: countryNameFromIso2(String(cc)),
-    }));
-
   const typeOptions: Opt[] = ACCESSORIES_PRODUCT_TYPES.map((t) => ({
     value: t,
     label: titleCaseLabel(t),
   }));
 
   const accessoryTypesForFilters =
-  types.length > 0 ? types : [ProductType.ACCESSORIES];
-
-const styleOptions: Opt[] = await getAvailableStyles(accessoryTypesForFilters);
-
-  const ACCESSORY_COLOUR_SLUGS = [
-  "gold",
-  "silver",
-  "rose-gold",
-  "platinum",
-  "pearl",
-  "black",
-];
-
-const coloursRaw = await prisma.colour.findMany({
-  where: {
-    slug: { in: ACCESSORY_COLOUR_SLUGS },
-  },
-  orderBy: { name: "asc" },
-  select: { slug: true, name: true },
-  take: 300,
-});
-
-  const colorOptions: Opt[] = coloursRaw.map((c) => ({
-    value: c.slug,
-    label: c.name.toLowerCase(),
-  }));
-
-  
+    types.length > 0 ? types : [ProductType.ACCESSORIES];
 
   const where = selectedAccessoryCategoryRow
-  ? {
-      ...buildStorefrontWhere({
-        filters: {
-          ...filters,
-          types: filters.types.length ? filters.types : [ProductType.ACCESSORIES],
-        },
-      }),
-      categoryId: selectedAccessoryCategoryRow.id,
-    }
-  : {
-      ...buildStorefrontWhere({
-        filters: {
-          ...filters,
-          types: filters.types.length ? filters.types : [ProductType.ACCESSORIES],
-        },
-      }),
-      AND: [
-        {
-          OR: [
-            { categoryId: { in: accessoryCategoryIds } },
-            { productType: ProductType.ACCESSORIES },
-          ],
-        },
-      ],
-    };
+    ? {
+        ...buildStorefrontWhere({
+          filters: {
+            ...filters,
+            types: filters.types.length ? filters.types : [ProductType.ACCESSORIES],
+          },
+        }),
+        categoryId: selectedAccessoryCategoryRow.id,
+      }
+    : {
+        ...buildStorefrontWhere({
+          filters: {
+            ...filters,
+            types: filters.types.length ? filters.types : [ProductType.ACCESSORIES],
+          },
+        }),
+        AND: [
+          {
+            OR: [
+              { categoryId: { in: accessoryCategoryIds } },
+              { productType: ProductType.ACCESSORIES },
+            ],
+          },
+        ],
+      };
 
-  const totalCount = await prisma.product.count({ where });
-
-  let mapped: GridProduct[] = [];
-
-  {
+  // Everything below is independent of everything else in this list, so it
+  // all runs concurrently instead of as five sequential round trips to the
+  // database.
+  const mappedPromise: Promise<GridProduct[]> = (async () => {
     let whereForPage = where;
     let skip = 0;
 
@@ -241,12 +224,12 @@ const coloursRaw = await prisma.colour.findMany({
       take,
       select: {
         id: true,
-        slug: true, // ← ADDED
+        slug: true,
         title: true,
         price: true,
         currency: true,
         badges: true,
-        brand: { select: { name: true, slug: true } }, // ← slug ADDED
+        brand: { select: { name: true, slug: true } },
         images: {
           orderBy: { sortOrder: "asc" },
           take: 1,
@@ -255,77 +238,114 @@ const coloursRaw = await prisma.colour.findMany({
       },
     });
 
-    mapped = products.map((p, index) => ({
-  id: p.id,
-  title: p.title,
+    return products.map((p, index) => ({
+      id: p.id,
+      title: p.title,
 
-  brandName:
-    p.brand?.name ?? null,
+      brandName:
+        p.brand?.name ?? null,
 
-  brandSlug:
-    p.brand?.slug ?? null,
+      brandSlug:
+        p.brand?.slug ?? null,
 
-  productSlug:
-    p.slug ?? null,
+      productSlug:
+        p.slug ?? null,
 
-  imageUrl:
-    p.images?.[0]?.url ?? null,
+      imageUrl:
+        p.images?.[0]?.url ?? null,
 
-  price:
-    p.price
-      ? p.price.toString()
-      : null,
+      price:
+        p.price
+          ? p.price.toString()
+          : null,
 
-  currency:
-    String(p.currency),
+      currency:
+        String(p.currency),
 
-  buyUrl: buildTrackedOutboundUrl(
-    p.id,
-    {
-      sourcePage: "CATEGORY",
+      buyUrl: buildTrackedOutboundUrl(
+        p.id,
+        {
+          sourcePage: "CATEGORY",
 
-      sectionKey:
-        selectedAccessoryCategory
-          ? `accessories_${selectedAccessoryCategory}_grid`
-          : "accessories_grid",
+          sectionKey:
+            selectedAccessoryCategory
+              ? `accessories_${selectedAccessoryCategory}_grid`
+              : "accessories_grid",
 
-      position: index + 1,
-      pageNumber: currentPage,
+          position: index + 1,
+          pageNumber: currentPage,
 
-      contextType:
-        selectedAccessoryCategory
-          ? "ACCESSORY_TYPE"
-          : "ACCESSORIES",
-    }
-  ),
+          contextType:
+            selectedAccessoryCategory
+              ? "ACCESSORY_TYPE"
+              : "ACCESSORIES",
+        }
+      ),
 
-  // KEEP BADGES
-  badges:
-    (p.badges ?? []) as any,
+      badges:
+        (p.badges ?? []) as any,
 
-  analytics: {
-    sourcePage: "CATEGORY" as const,
+      analytics: {
+        sourcePage: "CATEGORY" as const,
 
-    sectionKey:
-      selectedAccessoryCategory
-        ? `accessories_${selectedAccessoryCategory}_grid`
-        : "accessories_grid",
+        sectionKey:
+          selectedAccessoryCategory
+            ? `accessories_${selectedAccessoryCategory}_grid`
+            : "accessories_grid",
 
-    position: index + 1,
-    pageNumber: currentPage,
+        position: index + 1,
+        pageNumber: currentPage,
 
-    isExpandedPageOne:
-      currentPage === 1
-        ? isExpandedPageOne
-        : false,
+        isExpandedPageOne:
+          currentPage === 1
+            ? isExpandedPageOne
+            : false,
 
-    contextType:
-      selectedAccessoryCategory
-        ? "ACCESSORY_TYPE"
-        : "ACCESSORIES",
-  },
-}));
-  }
+        contextType:
+          selectedAccessoryCategory
+            ? "ACCESSORY_TYPE"
+            : "ACCESSORIES",
+      },
+    }));
+  })();
+
+  const [brandsRaw, styleOptions, coloursRaw, totalCount, mapped] =
+    await Promise.all([
+      getCachedAccessoriesBrandFacets(
+        selectedAccessoryCategoryRow?.id ?? null,
+        accessoryCategoryIds
+      ),
+      getAvailableStyles(accessoryTypesForFilters),
+      prisma.colour.findMany({
+        where: {
+          slug: { in: ACCESSORY_COLOUR_SLUGS },
+        },
+        orderBy: { name: "asc" },
+        select: { slug: true, name: true },
+        take: 300,
+      }),
+      prisma.product.count({ where }),
+      mappedPromise,
+    ]);
+
+  const brandOptions: Opt[] = brandsRaw.map((b) => ({
+    value: b.slug,
+    label: b.name,
+  }));
+
+  const countryOptions: Opt[] = Array.from(
+    new Set(brandsRaw.map((b) => b.baseCountryCode).filter(Boolean))
+  )
+    .sort()
+    .map((cc) => ({
+      value: String(cc),
+      label: countryNameFromIso2(String(cc)),
+    }));
+
+  const colorOptions: Opt[] = coloursRaw.map((c) => ({
+    value: c.slug,
+    label: c.name.toLowerCase(),
+  }));
 
   return (
     

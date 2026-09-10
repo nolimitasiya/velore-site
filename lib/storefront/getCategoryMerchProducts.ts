@@ -10,6 +10,7 @@ import {
 import {
   buildTrackedOutboundUrl,
 } from "@/lib/affiliate/tracking";
+import { unstable_cache } from "next/cache";
 
 const MANUAL_LIMIT = 48;
 
@@ -108,54 +109,20 @@ function buildScopeWhere(
   };
 }
 
-export async function getCategoryMerchProducts({
-  scopeType,
-  scopeKey,
-  visibleCount = 24,
-}: {
-  scopeType: ScopeType;
-  scopeKey: string;
-  visibleCount?: number;
-}): Promise<GridProduct[]> {
-  const targetCount = Math.max(
-    1,
-    Math.min(visibleCount, MANUAL_LIMIT)
-  );
+// Fetching up to 300 fully-joined products (brand + image) on every request
+// for the default, unfiltered landing view of every clothing/occasion type
+// page is the single most expensive query on those routes. It doesn't need
+// to be live: curated merchandising positions and the eligible-product pool
+// don't change second-to-second, so a short time-based cache turns most
+// requests into a cache hit while keeping admin changes visible within a
+// minute. If instant admin reflection is needed later, add a
+// revalidateTag("category-merch") call to the merchandising save route and
+// switch this to tag-based invalidation instead.
+const getCachedEligibleProducts = unstable_cache(
+  async (scopeType: ScopeType, scopeKey: string) => {
+    const scopeWhere = buildScopeWhere(scopeType, scopeKey);
 
-  const isExpandedPageOne = targetCount > 24;
-
-  const placements =
-    await prisma.categoryMerchPlacement.findMany({
-      where: {
-        scopeType:
-          scopeType === "PRODUCT_TYPE"
-            ? MerchandisingScopeType.PRODUCT_TYPE
-            : MerchandisingScopeType.OCCASION,
-        scopeKey,
-        version: MerchandisingVersion.LIVE,
-        position: {
-          lte: MANUAL_LIMIT,
-        },
-      },
-      orderBy: {
-        position: "asc",
-      },
-      select: {
-        productId: true,
-        position: true,
-      },
-    });
-
-  const scopeWhere = buildScopeWhere(
-    scopeType,
-    scopeKey
-  );
-
-  /*
-   * Fetch all products currently eligible for this storefront scope.
-   */
-  const eligibleProducts =
-    await prisma.product.findMany({
+    return prisma.product.findMany({
       where: {
         status: "APPROVED",
         isActive: true,
@@ -210,6 +177,54 @@ export async function getCategoryMerchProducts({
         },
       },
     });
+  },
+  ["category-merch-eligible-products"],
+  { tags: ["storefront-products", "category-merch"], revalidate: 60 }
+);
+
+export async function getCategoryMerchProducts({
+  scopeType,
+  scopeKey,
+  visibleCount = 24,
+}: {
+  scopeType: ScopeType;
+  scopeKey: string;
+  visibleCount?: number;
+}): Promise<GridProduct[]> {
+  const targetCount = Math.max(
+    1,
+    Math.min(visibleCount, MANUAL_LIMIT)
+  );
+
+  const isExpandedPageOne = targetCount > 24;
+
+  const placements =
+    await prisma.categoryMerchPlacement.findMany({
+      where: {
+        scopeType:
+          scopeType === "PRODUCT_TYPE"
+            ? MerchandisingScopeType.PRODUCT_TYPE
+            : MerchandisingScopeType.OCCASION,
+        scopeKey,
+        version: MerchandisingVersion.LIVE,
+        position: {
+          lte: MANUAL_LIMIT,
+        },
+      },
+      orderBy: {
+        position: "asc",
+      },
+      select: {
+        productId: true,
+        position: true,
+      },
+    });
+
+  /*
+   * Fetch all products currently eligible for this storefront scope.
+   * Cached for 60s — see getCachedEligibleProducts above.
+   */
+  const eligibleProducts = await getCachedEligibleProducts(scopeType, scopeKey);
 
   const productMap = new Map(
     eligibleProducts.map((product) => [
