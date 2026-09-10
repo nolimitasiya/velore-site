@@ -1,5 +1,6 @@
 import LocationSwitcher from "@/components/LocationSwitcher";
 import MobileMenu from "@/components/MobileMenu";
+import MobileSearch from "@/components/MobileSearch";
 import HeaderNav from "@/components/HeaderNav";
 import HeaderSearch from "@/components/HeaderSearch";
 import StickyHeader from "@/components/StickyHeader";
@@ -20,12 +21,12 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
           <div className="mx-auto w-full max-w-[1800px] px-8">
             <div className="flex items-center py-4">
               <div className="flex items-center gap-3">
-                <div className="relative z-50 md:hidden">
+                <div className="relative z-50 flex items-center gap-1 md:hidden">
                   <MobileMenu />
+                  <MobileSearch />
                 </div>
                 <LocationSwitcher />
               </div>
-
               <div className="ml-auto hidden md:flex">
                 <HeaderSearch />
               </div>

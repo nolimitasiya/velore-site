@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { createPortal } from "react-dom";
+import { usePathname } from "next/navigation";
+import MobileSearch from "@/components/MobileSearch";
 
 type LinkItem = { label: string; href: string };
 
@@ -10,18 +12,31 @@ type Screen =
   | { type: "root" }
   | { type: "group"; title: string; items: LinkItem[] };
 
-const RECENTS_KEY = "dalra_recent_searches";
-const MAX_RECENTS = 6;
-
 export default function MobileMenu() {
-  const router = useRouter();
   const pathname = usePathname();
 
   const [open, setOpen] = useState(false);
   const [screen, setScreen] = useState<Screen>({ type: "root" });
 
-  const [query, setQuery] = useState("");
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  // The slide-out menu and its backdrop are portaled to document.body (below)
+  // so they always cover the true viewport rather than being clipped/positioned
+  // relative to the header, which has a CSS transform (StickyHeader's
+  // translate-y show/hide animation) and therefore becomes the containing
+  // block for any `position: fixed` descendant. Portals only work client-side,
+  // hence the mounted flag.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  // Belt-and-suspenders: close the drawer the moment the route actually
+  // changes. Regular in-menu links already call closeMenu() on click, but
+  // the search button embedded in the top bar navigates via its own
+  // router.push and has no reference to this component's state — this
+  // effect is what makes the drawer close in that case too.
+  useEffect(() => {
+    closeMenu();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
 
   const [brands, setBrands] = useState<LinkItem[]>([]);
   const [brandsLoaded, setBrandsLoaded] = useState(false);
@@ -116,62 +131,6 @@ useEffect(() => {
     .catch(() => {});
 }, [open, brandsLoaded]);
 
-  // --- Load recent searches
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(RECENTS_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        setRecentSearches(parsed.filter((x) => typeof x === "string"));
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  function saveRecents(next: string[]) {
-    setRecentSearches(next);
-    try {
-      localStorage.setItem(RECENTS_KEY, JSON.stringify(next));
-    } catch {
-      // ignore
-    }
-  }
-
-  function addRecent(term: string) {
-    const cleaned = term.trim();
-    if (!cleaned) return;
-
-    const next = [cleaned, ...recentSearches.filter((x) => x !== cleaned)].slice(
-      0,
-      MAX_RECENTS
-    );
-    saveRecents(next);
-  }
-
-  function clearRecents() {
-    saveRecents([]);
-    try {
-      localStorage.removeItem(RECENTS_KEY);
-    } catch {
-      // ignore
-    }
-  }
-
-  function goSearch(term: string) {
-    const q = term.trim();
-    if (!q) return;
-    addRecent(q);
-    router.push(`/search?q=${encodeURIComponent(q)}`);
-    closeMenu();
-  }
-
-  function onSearchSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    goSearch(query);
-  }
-
   // --- Render helpers
   const isRoot = screen.type === "root";
   const title = screen.type === "group" ? screen.title : "Menu";
@@ -207,6 +166,8 @@ const activeRow =
         <span className="h-px w-6 bg-black" />
       </button>
 
+      {mounted && createPortal(
+        <>
       {/* Overlay */}
       {open && (
   <div
@@ -262,120 +223,39 @@ const activeRow =
     </span>
   </div>
 
-  <button
-    type="button"
-    onClick={closeMenu}
-    aria-label="Close menu"
-    className="
-      flex h-10 w-10 items-center justify-center rounded-full
-      text-black/45 transition
-      hover:bg-black/[0.04] hover:text-black
-    "
-  >
-    <svg
-      width="19"
-      height="19"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
+    <div className="flex items-center gap-1">
+    {/* Lets a shopper search without having to close the menu first —
+        this is a separate MobileSearch instance from the one in the
+        collapsed header; its overlay portals at a higher z-index than
+        this drawer, so it always renders on top of it. */}
+    <MobileSearch onNavigate={closeMenu} />
+
+    <button
+      type="button"
+      onClick={closeMenu}
+      aria-label="Close menu"
+      className="
+        flex h-10 w-10 items-center justify-center rounded-full
+        text-black/45 transition
+        hover:bg-black/[0.04] hover:text-black
+      "
     >
-      <path
-        d="M6 6l12 12M18 6 6 18"
-        strokeLinecap="round"
-      />
-    </svg>
-  </button>
-</div>
-
-        {/* Search inside menu — root only */}
-{isRoot && (
-  <div className="border-b border-black/10 px-5 py-5">
-    <form onSubmit={onSearchSubmit}>
-      <div className="relative">
-        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-black/40">
-          <svg
-            width="17"
-            height="17"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          >
-            <circle cx="11" cy="11" r="7" />
-            <path d="m16 16 5 5" strokeLinecap="round" />
-          </svg>
-        </span>
-
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search products and brands"
-          className="
-            w-full rounded-full border border-black/10 bg-white
-            py-3 pl-11 pr-20
-            font-body text-sm text-black
-            placeholder:text-black/35
-            outline-none transition
-            hover:border-black/20
-            focus:border-[#7B2D3E]/40
-            focus:ring-2 focus:ring-[#7B2D3E]/10
-          "
+      <svg
+        width="19"
+        height="19"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      >
+        <path
+          d="M6 6l12 12M18 6 6 18"
+          strokeLinecap="round"
         />
-
-        <button
-          type="submit"
-          className="
-            absolute right-1.5 top-1/2 -translate-y-1/2
-            rounded-full bg-[#7B2D3E] px-4 py-2
-            font-body text-xs font-medium text-white
-            transition hover:bg-[#692536]
-          "
-        >
-          Search
-        </button>
-      </div>
-    </form>
-
-    {recentSearches.length > 0 && (
-      <div className="mt-5">
-        <div className="mb-3 flex items-center justify-between">
-          <span className="font-body text-[11px] font-medium uppercase tracking-[0.16em] text-black/40">
-            Recent searches
-          </span>
-
-          <button
-            type="button"
-            onClick={clearRecents}
-            className="font-body text-xs text-black/45 transition hover:text-[#7B2D3E]"
-          >
-            Clear
-          </button>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {recentSearches.map((term) => (
-            <button
-              key={term}
-              type="button"
-              onClick={() => goSearch(term)}
-              className="
-                rounded-full border border-black/10 bg-white
-                px-3 py-1.5 font-body text-xs text-black/65
-                transition
-                hover:border-[#7B2D3E]/20
-                hover:bg-[#7B2D3E]/5
-                hover:text-[#7B2D3E]
-              "
-            >
-              {term}
-            </button>
-          ))}
-        </div>
-      </div>
-    )}
+      </svg>
+    </button>
   </div>
-)}
+</div>
 
         {/* Content */}
         <nav className="flex flex-col bg-white flex-1">
@@ -387,49 +267,49 @@ const activeRow =
     {/* New In */}
     <Link href="/new-in" onClick={closeMenu}
       className="flex items-center justify-between px-5 py-4 border-b border-black/6 hover:bg-black/[0.02] transition-colors">
-      <span className={isActive("/new-in") ? "font-medium text-black" : "text-black"}>New In</span>
+      <span className={isActive("/new-in") ? "font-display font-medium text-black" : "font-display text-black"}>New In</span>
       <span className="text-black/30">›</span>
     </Link>
 
     {/* Clothing group */}
     <button onClick={() => setScreen({ type: "group", title: "Clothing", items: groups["Clothing"] })}
       className="flex items-center justify-between px-5 py-4 border-b border-black/6 hover:bg-black/[0.02] transition-colors w-full">
-      <span className="text-black">Clothing</span>
+      <span className="font-display text-black">Clothing</span>
       <span className="text-black/30">›</span>
     </button>
 
     {/* Accessories group */}
     <button onClick={() => setScreen({ type: "group", title: "Accessories", items: groups["Accessories"] })}
       className="flex items-center justify-between px-5 py-4 border-b border-black/6 hover:bg-black/[0.02] transition-colors w-full">
-      <span className="text-black">Accessories</span>
+      <span className="font-display text-black">Accessories</span>
       <span className="text-black/30">›</span>
     </button>
 
     {/* Occasion group */}
     <button onClick={() => setScreen({ type: "group", title: "Occasion", items: groups["Occasion"] })}
       className="flex items-center justify-between px-5 py-4 border-b border-black/6 hover:bg-black/[0.02] transition-colors w-full">
-      <span className="text-black">Occasion</span>
+      <span className="font-display text-black">Occasion</span>
       <span className="text-black/30">›</span>
     </button>
 
     {/* Shop by Brands */}
     <button onClick={() => setScreen({ type: "group", title: "Shop by Brands", items: brands })}
   className="flex items-center justify-between px-5 py-4 border-b border-black/6 hover:bg-black/[0.02] transition-colors w-full">
-  <span className="text-black">Shop by Brands</span>
+  <span className="font-display text-black">Shop by Brands</span>
   <span className="text-black/30">›</span>
 </button>
 
     {/* Editorial */}
     <Link href="/diary" onClick={closeMenu}
       className="flex items-center justify-between px-5 py-4 border-b border-black/6 hover:bg-black/[0.02] transition-colors">
-      <span className={isActive("/diary") ? "font-medium text-black" : "text-black"}>Editorial</span>
+      <span className={isActive("/diary") ? "font-display font-medium text-black" : "font-display text-black"}>Editorial</span>
       <span className="text-black/30">›</span>
     </Link>
 
     {/* Sale */}
     <Link href="/sale" onClick={closeMenu}
       className="flex items-center justify-between px-5 py-4 border-b border-black/6 hover:bg-black/[0.02] transition-colors">
-      <span className="text-[#7B2D3E]">Sale</span>
+      <span className="font-display text-[#7B2D3E]">Sale</span>
       <span className="text-[#7B2D3E]/40">›</span>
     </Link>
   </>
@@ -457,7 +337,7 @@ const activeRow =
                 >
                   <span
   className={[
-    "font-body text-[15px] tracking-[0.02em] transition-colors",
+    "font-display text-[15px] tracking-[0.02em] transition-colors",
     active
       ? "font-medium text-[#7B2D3E]"
       : "text-black/75 group-hover:text-[#7B2D3E]",
@@ -533,6 +413,9 @@ const activeRow =
 )}
         </nav>
       </div>
+        </>,
+        document.body
+      )}
     </>
   );
 }
