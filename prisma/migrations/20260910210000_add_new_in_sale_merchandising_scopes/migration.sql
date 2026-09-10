@@ -1,0 +1,5 @@
+ALTER TYPE "MerchandisingScopeType"
+ADD VALUE IF NOT EXISTS 'NEW_IN';
+
+ALTER TYPE "MerchandisingScopeType"
+ADD VALUE IF NOT EXISTS 'SALE';

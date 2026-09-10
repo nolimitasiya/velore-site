@@ -513,6 +513,31 @@ const primaryAgeGroup =
   ]}
 />
 
+<AnalyticsAreaCard
+  eyebrow="Brands"
+  title="Brand portfolio"
+  description="Review catalogue depth, live product coverage and launch readiness across every Veilora brand."
+  href="/admin/analytics/brands"
+  stats={[
+    {
+      label: "Active brands",
+      value: summary?.brandCount ?? 0,
+    },
+    {
+      label: "Active products",
+      value: summary?.productCount ?? 0,
+    },
+    {
+      label: "Catalogue health",
+      value: "View",
+    },
+    {
+      label: "Affiliate readiness",
+      value: "View",
+    },
+  ]}
+/>
+
     <AnalyticsAreaCard
       eyebrow="Commerce"
       title="Commercial performance"

@@ -3,12 +3,15 @@ import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
 import {
+  Badge,
   MerchandisingScopeType,
   MerchandisingVersion,
   ProductType,
   Region,
 } from "@prisma/client";
 import { revalidateTag } from "next/cache";
+
+
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,7 +24,9 @@ function isScopeType(value: unknown): value is MerchandisingScopeType {
   return (
     value === MerchandisingScopeType.PRODUCT_TYPE ||
     value === MerchandisingScopeType.OCCASION ||
-    value === MerchandisingScopeType.CONTINENT
+    value === MerchandisingScopeType.CONTINENT ||
+    value === MerchandisingScopeType.NEW_IN ||
+    value === MerchandisingScopeType.SALE
   );
 }
 
@@ -61,30 +66,26 @@ function buildScopeWhere(
   scopeKey: string
 ) {
   if (
-    scopeType ===
-    MerchandisingScopeType.PRODUCT_TYPE
+    scopeType === MerchandisingScopeType.PRODUCT_TYPE
   ) {
     return {
       OR: [
         {
           productTypes: {
             some: {
-              productType:
-                scopeKey as ProductType,
+              productType: scopeKey as ProductType,
             },
           },
         },
         {
-          productType:
-            scopeKey as ProductType,
+          productType: scopeKey as ProductType,
         },
       ],
     };
   }
 
   if (
-    scopeType ===
-    MerchandisingScopeType.OCCASION
+    scopeType === MerchandisingScopeType.OCCASION
   ) {
     return {
       productOccasions: {
@@ -97,17 +98,37 @@ function buildScopeWhere(
     };
   }
 
+  if (
+  scopeType === MerchandisingScopeType.NEW_IN
+) {
+  const fourteenDaysAgo = new Date();
+  fourteenDaysAgo.setDate(
+    fourteenDaysAgo.getDate() - 14
+  );
+
   return {
-    AND: [
-      {
-        brand: {
-          is: {
-            baseRegion:
-              scopeKey as Region,
-          },
-        },
+    publishedAt: {
+      gte: fourteenDaysAgo,
+    },
+  };
+}
+
+  if (
+  scopeType === MerchandisingScopeType.SALE
+) {
+  return {
+    badges: {
+      has: Badge.sale,
+    },
+  };
+}
+
+  return {
+    brand: {
+      is: {
+        baseRegion: scopeKey as Region,
       },
-    ],
+    },
   };
 }
 
@@ -157,6 +178,32 @@ async function validateScope(
 
     return { ok: true as const };
   }
+
+  if (
+  scopeType === MerchandisingScopeType.NEW_IN
+) {
+  if (scopeKey !== "new-in") {
+    return {
+      ok: false as const,
+      error: "Invalid New In scope.",
+    };
+  }
+
+  return { ok: true as const };
+}
+
+if (
+  scopeType === MerchandisingScopeType.SALE
+) {
+  if (scopeKey !== "sale") {
+    return {
+      ok: false as const,
+      error: "Invalid Sale scope.",
+    };
+  }
+
+  return { ok: true as const };
+}
 
   const validRegion =
     Object.values(Region).includes(

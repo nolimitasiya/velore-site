@@ -8,6 +8,8 @@ import { prisma } from "@/lib/prisma";
 import {
   AffiliateStatus,
   BrandAccountStatus,
+  MerchandisingScopeType,
+  MerchandisingVersion,
   Prisma,
   ProductStatus,
   ProductType,
@@ -132,7 +134,7 @@ export default async function NewInPage({
   },
 };
 
-  const products = await prisma.product.findMany({
+  let products = await prisma.product.findMany({
     where,
     orderBy,
     take: 120,
@@ -151,6 +153,79 @@ export default async function NewInPage({
       },
     },
   });
+
+  const hasActiveFilters =
+  filters.brands.length > 0 ||
+  filters.countries.length > 0 ||
+  filters.types.length > 0 ||
+  filters.styles.length > 0 ||
+  filters.colors.length > 0 ||
+  filters.sizes.length > 0 ||
+  filters.min != null ||
+  filters.max != null ||
+  filters.saleOn;
+
+const shouldUseMerch =
+  !hasActiveFilters && sort === "new";
+
+if (shouldUseMerch) {
+  const placements =
+    await prisma.categoryMerchPlacement.findMany({
+      where: {
+        scopeType:
+          MerchandisingScopeType.NEW_IN,
+        scopeKey: "new-in",
+        version:
+          MerchandisingVersion.LIVE,
+      },
+      orderBy: {
+        position: "asc",
+      },
+      select: {
+        productId: true,
+        position: true,
+      },
+    });
+
+  if (placements.length > 0) {
+    const productsById = new Map(
+      products.map((product) => [
+        product.id,
+        product,
+      ])
+    );
+
+    const manualProducts = placements
+      .map((placement) =>
+        productsById.get(
+          placement.productId
+        )
+      )
+      .filter(
+        (
+          product
+        ): product is (typeof products)[number] =>
+          Boolean(product)
+      );
+
+    const manualIds = new Set(
+      manualProducts.map(
+        (product) => product.id
+      )
+    );
+
+    const automaticProducts =
+      products.filter(
+        (product) =>
+          !manualIds.has(product.id)
+      );
+
+    products = [
+      ...manualProducts,
+      ...automaticProducts,
+    ];
+  }
+}
 
   const mapped: GridProduct[] =
   products.map((p, index) => ({

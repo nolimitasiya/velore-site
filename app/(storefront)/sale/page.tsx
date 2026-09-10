@@ -8,15 +8,20 @@ import { ProductGrid, type GridProduct } from "@/components/ProductGrid";
 import { prisma } from "@/lib/prisma";
 import {
   AffiliateStatus,
+  Badge,
   BrandAccountStatus,
+  MerchandisingScopeType,
+  MerchandisingVersion,
+  Prisma,
   ProductType,
 } from "@prisma/client";
+
+
 import { sortSizes, formatSizeLabel } from "@/lib/sizing/order";
 import { parseStorefrontFilters } from "@/lib/storefront/parseFilters";
 import { getAvailableStyles } from "@/lib/storefront/getAvailableStyles";
 import { buildStorefrontWhere } from "@/lib/storefront/buildStorefrontWhere";
 import { countryNameFromIso2 } from "@/lib/geo/countries";
-import { getMerchPageOneProducts } from "@/lib/storefront/getMerchPageOneProducts";
 import { getStorefrontPaginationState } from "@/lib/storefront/pagination";
 
 import {  buildTrackedOutboundUrl,} from "@/lib/affiliate/tracking";
@@ -36,6 +41,8 @@ function titleCaseLabel(s: string) {
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
 }
+
+
 
 export default async function SalePage({
   searchParams,
@@ -79,7 +86,7 @@ export default async function SalePage({
           status: "APPROVED",
           isActive: true,
           publishedAt: { not: null },
-          badges: { has: "sale" },
+          badges: { has: Badge.sale },
         },
       },
     },
@@ -131,126 +138,276 @@ export default async function SalePage({
     label: formatSizeLabel(s.name),
   }));
 
-  const where = {
-    ...buildStorefrontWhere({
-      filters,
-    }),
-    badges: { has: "sale" as any },
-  };
-
+  const where: Prisma.ProductWhereInput = {
+  ...buildStorefrontWhere({
+    filters,
+  }),
+  badges: {
+    has: Badge.sale,
+  },
+};
   const totalCount = await prisma.product.count({ where });
 
-  let mapped: GridProduct[] = [];
+  const salePlacements =
+  shouldUseMerchPageOne
+    ? await prisma.categoryMerchPlacement.findMany({
+        where: {
+          scopeType:
+            MerchandisingScopeType.SALE,
+          scopeKey: "sale",
+          version:
+            MerchandisingVersion.LIVE,
+        },
+        orderBy: {
+          position: "asc",
+        },
+        select: {
+          productId: true,
+          position: true,
+        },
+      })
+    : [];
 
-  if (shouldUseMerchPageOne && currentPage === 1) {
-    mapped = await getMerchPageOneProducts("SALE", pageOneVisibleCount);
-  } else {
-    let whereForPage = where;
-    let skip = 0;
 
-    if (shouldUseMerchPageOne && currentPage >= 2) {
-      const protectedPageOneProducts = await getMerchPageOneProducts(
-        "SALE",
-        48
-      );
+let whereForPage = where;
+let skip = 0;
 
-      const protectedIds = protectedPageOneProducts.map((p) => p.id);
+const curatedIds = salePlacements.map(
+  (placement) => placement.productId
+);
 
-      whereForPage = {
-        ...where,
-        id: { notIn: protectedIds },
-      };
+if (
+  shouldUseMerchPageOne &&
+  currentPage >= 2
+) {
+  whereForPage = {
+    ...where,
+    id: {
+      notIn: curatedIds,
+    },
+  };
 
-      skip = (currentPage - 2) * 24;
-    } else if (currentPage === 1) {
-      skip = 0;
-    } else {
-      skip = 48 + (currentPage - 2) * 24;
-    }
+  skip =
+    (currentPage - 2) * 24;
+} else if (currentPage === 1) {
+  skip = 0;
+} else {
+  skip =
+    48 +
+    (currentPage - 2) * 24;
+}
 
-    const products = await prisma.product.findMany({
-      where: whereForPage,
-      orderBy,
-      skip,
-      take,
-      select: {
-        id: true,
-        slug: true, // ← ADDED
-        title: true,
-        price: true,
-        currency: true,
-        badges: true,
-        brand: { select: { name: true, slug: true } }, // ← slug ADDED
-        images: {
-          orderBy: { sortOrder: "asc" },
-          take: 1,
-          select: { url: true },
+let products =
+  await prisma.product.findMany({
+    where: whereForPage,
+    orderBy,
+    skip,
+    take:
+      shouldUseMerchPageOne &&
+      currentPage === 1
+        ? Math.max(
+            pageOneVisibleCount,
+            48
+          )
+        : take,
+
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      price: true,
+      currency: true,
+      badges: true,
+
+      brand: {
+        select: {
+          name: true,
+          slug: true,
         },
       },
-    });
 
-   mapped = products.map((p, index) => ({
-  id: p.id,
-  title: p.title,
+      images: {
+        orderBy: {
+          sortOrder: "asc",
+        },
+        take: 1,
+        select: {
+          url: true,
+        },
+      },
+    },
+  });
 
-  brandName:
-    p.brand?.name ?? null,
+if (
+  shouldUseMerchPageOne &&
+  currentPage === 1 &&
+  salePlacements.length > 0
+) {
+  const productsById = new Map(
+    products.map((product) => [
+      product.id,
+      product,
+    ])
+  );
 
-  brandSlug:
-    p.brand?.slug ?? null,
+  /*
+   * A manually-curated product may sit outside
+   * the first automatic newest-first results,
+   * so fetch any missing curated products.
+   */
+  const missingCuratedIds =
+    curatedIds.filter(
+      (id) =>
+        !productsById.has(id)
+    );
 
-  productSlug:
-    p.slug ?? null,
+  if (missingCuratedIds.length > 0) {
+    const missingProducts =
+      await prisma.product.findMany({
+        where: {
+          ...where,
+          id: {
+            in: missingCuratedIds,
+          },
+        },
 
-  imageUrl:
-    p.images?.[0]?.url ?? null,
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          price: true,
+          currency: true,
+          badges: true,
 
-  price:
-    p.price
-      ? p.price.toString()
-      : null,
+          brand: {
+            select: {
+              name: true,
+              slug: true,
+            },
+          },
 
-  currency:
-    String(p.currency),
+          images: {
+            orderBy: {
+              sortOrder: "asc",
+            },
+            take: 1,
+            select: {
+              url: true,
+            },
+          },
+        },
+      });
 
-  buyUrl:
-    buildTrackedOutboundUrl(
-      p.id,
-      {
-        sourcePage: "SALE",
-        sectionKey: "sale_grid",
-        position: index + 1,
-        pageNumber: currentPage,
-        contextType: "SALE",
-      }
-    ),
-
-  badges:
-    (p.badges ?? []) as any,
-
-  analytics: {
-    sourcePage:
-      "SALE" as const,
-
-    sectionKey:
-      "sale_grid",
-
-    position:
-      index + 1,
-
-    pageNumber:
-      currentPage,
-
-    isExpandedPageOne:
-      currentPage === 1
-        ? isExpandedPageOne
-        : false,
-
-    contextType:
-      "SALE",
-  },
-}));
+    for (
+      const product of missingProducts
+    ) {
+      productsById.set(
+        product.id,
+        product
+      );
+    }
   }
+
+  const manualProducts =
+    salePlacements
+      .map((placement) =>
+        productsById.get(
+          placement.productId
+        )
+      )
+      .filter(
+        (
+          product
+        ): product is (typeof products)[number] =>
+          Boolean(product)
+      );
+
+  const manualIds = new Set(
+    manualProducts.map(
+      (product) => product.id
+    )
+  );
+
+  const automaticProducts =
+    products.filter(
+      (product) =>
+        !manualIds.has(product.id)
+    );
+
+  products = [
+    ...manualProducts,
+    ...automaticProducts,
+  ].slice(
+    0,
+    pageOneVisibleCount
+  );
+}
+
+const mapped: GridProduct[] =
+  products.map((p, index) => ({
+    id: p.id,
+    title: p.title,
+
+    brandName:
+      p.brand?.name ?? null,
+
+    brandSlug:
+      p.brand?.slug ?? null,
+
+    productSlug:
+      p.slug ?? null,
+
+    imageUrl:
+      p.images?.[0]?.url ?? null,
+
+    price:
+      p.price
+        ? p.price.toString()
+        : null,
+
+    currency:
+      String(p.currency),
+
+    buyUrl:
+      buildTrackedOutboundUrl(
+        p.id,
+        {
+          sourcePage: "SALE",
+          sectionKey: "sale_grid",
+          position:
+            index + 1,
+          pageNumber:
+            currentPage,
+          contextType: "SALE",
+        }
+      ),
+
+    badges:
+      (p.badges ?? []) as any,
+
+    analytics: {
+      sourcePage:
+        "SALE" as const,
+
+      sectionKey:
+        "sale_grid",
+
+      position:
+        index + 1,
+
+      pageNumber:
+        currentPage,
+
+      isExpandedPageOne:
+        currentPage === 1
+          ? isExpandedPageOne
+          : false,
+
+      contextType:
+        "SALE",
+    },
+  }));
+  
 
   return (
       <main className="min-h-screen w-full bg-white">

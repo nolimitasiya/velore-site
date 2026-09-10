@@ -6,6 +6,12 @@ import MerchandisingTabs from "./MerchandisingTabs";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+type CollectionOption = {
+  value: "NEW_IN" | "SALE";
+  scopeKey: string;
+  label: string;
+};
+
 function formatProductType(value: string) {
   if (value === "COATS_JACKETS") {
     return "Coats & Jackets";
@@ -90,11 +96,26 @@ const continents = continentRows.map(
   })
 );
 
+
+const collections: CollectionOption[] = [
+  {
+    value: "NEW_IN",
+    scopeKey: "new-in",
+    label: "New In",
+  },
+  {
+    value: "SALE",
+    scopeKey: "sale",
+    label: "Sale",
+  },
+] as const;
+
   return (
   <MerchandisingTabs
     productTypes={productTypes}
     occasions={occasions}
     continents={continents}
+    collections={collections}
   />
 );
 }

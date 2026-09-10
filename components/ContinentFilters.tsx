@@ -257,7 +257,11 @@ const [countLoading, setCountLoading] = useState(false);
       if (draft.sort.trim()) qs.set("sort", draft.sort.trim());
       if (draft.sale.trim()) qs.set("sale", draft.sale.trim());
 
-      const res = await fetch(`/api/storefront/count?${qs.toString()}`, {
+if (draft.polyesterFree) {
+  qs.set("polyester_free", "1");
+}
+
+const res = await fetch(`/api/storefront/count?${qs.toString()}`, {
         cache: "no-store",
         signal: controller.signal,
       });
@@ -291,7 +295,7 @@ const [countLoading, setCountLoading] = useState(false);
   draft.max,
   draft.sort,
   draft.sale,
- 
+  draft.polyesterFree, 
 ]);
 
   function syncDraftFromUrl() {

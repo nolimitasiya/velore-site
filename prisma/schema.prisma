@@ -1361,6 +1361,8 @@ enum MerchandisingScopeType {
   PRODUCT_TYPE
   OCCASION
   CONTINENT
+  NEW_IN
+  SALE
 }
 
 enum MerchandisingVersion {

@@ -326,11 +326,65 @@ async function fetchRelatedProducts({
   categoryId: string | null;
   productType: ProductType | null;
 }) {
-  return prisma.product.findMany({
+  // If we do not know the product type, there is no reliable
+  // "similar product" pool to recommend from.
+  if (!productType) {
+    return [];
+  }
+
+  const currentProduct = await prisma.product.findUnique({
+    where: {
+      id: productId,
+    },
+
+    select: {
+      brandId: true,
+
+      productColours: {
+        select: {
+          colourId: true,
+        },
+      },
+
+      productStyles: {
+        select: {
+          styleId: true,
+        },
+      },
+
+      productOccasions: {
+        select: {
+          occasionId: true,
+        },
+      },
+    },
+  });
+
+  if (!currentProduct) {
+    return [];
+  }
+
+  const currentColourIds = new Set(
+    currentProduct.productColours.map((item) => item.colourId)
+  );
+
+  const currentStyleIds = new Set(
+    currentProduct.productStyles.map((item) => item.styleId)
+  );
+
+  const currentOccasionIds = new Set(
+    currentProduct.productOccasions.map((item) => item.occasionId)
+  );
+
+  const candidates = await prisma.product.findMany({
     where: {
       id: {
         not: productId,
       },
+
+      // HARD REQUIREMENT:
+      // related products must be the same kind of product.
+      productType,
 
       isActive: true,
 
@@ -344,34 +398,14 @@ async function fetchRelatedProducts({
         accountStatus: BrandAccountStatus.ACTIVE,
         affiliateStatus: AffiliateStatus.ACTIVE,
       },
-
-      OR: [
-        {
-          brandId,
-        },
-
-        categoryId
-          ? {
-              categoryId,
-            }
-          : {},
-
-        productType
-          ? {
-              productType,
-            }
-          : {},
-      ].filter(
-        (item) =>
-          Object.keys(item).length > 0
-      ),
     },
 
     orderBy: {
       publishedAt: "desc",
     },
 
-    take: 4,
+    // Pull a slightly larger pool so we can rank intelligently.
+    take: 40,
 
     select: {
       id: true,
@@ -380,6 +414,8 @@ async function fetchRelatedProducts({
       price: true,
       currency: true,
       badges: true,
+      brandId: true,
+      publishedAt: true,
 
       brand: {
         select: {
@@ -397,8 +433,82 @@ async function fetchRelatedProducts({
           url: true,
         },
       },
+
+      productColours: {
+        select: {
+          colourId: true,
+        },
+      },
+
+      productStyles: {
+        select: {
+          styleId: true,
+        },
+      },
+
+      productOccasions: {
+        select: {
+          occasionId: true,
+        },
+      },
     },
   });
+
+  const scored = candidates.map((candidate) => {
+    let score = 0;
+
+    const sameColour = candidate.productColours.some((item) =>
+      currentColourIds.has(item.colourId)
+    );
+
+    const sameStyle = candidate.productStyles.some((item) =>
+      currentStyleIds.has(item.styleId)
+    );
+
+    const sameOccasion = candidate.productOccasions.some((item) =>
+      currentOccasionIds.has(item.occasionId)
+    );
+
+    // Similarity weighting.
+    if (sameStyle) score += 4;
+    if (sameOccasion) score += 3;
+    if (sameColour) score += 2;
+
+    // Same brand is useful, but should not overpower actual similarity.
+    if (candidate.brandId === currentProduct.brandId) {
+      score += 1;
+    }
+
+    return {
+      candidate,
+      score,
+    };
+  });
+
+  scored.sort((a, b) => {
+    if (b.score !== a.score) {
+      return b.score - a.score;
+    }
+
+    // Keep newer products ahead when similarity scores tie.
+    return (
+      (b.candidate.publishedAt?.getTime() ?? 0) -
+      (a.candidate.publishedAt?.getTime() ?? 0)
+    );
+  });
+
+  return scored.slice(0, 4).map(({ candidate }) => ({
+    id: candidate.id,
+    title: candidate.title,
+    slug: candidate.slug,
+    price: candidate.price,
+    currency: candidate.currency,
+    badges: candidate.badges,
+
+    brand: candidate.brand,
+
+    images: candidate.images,
+  }));
 }
 
 

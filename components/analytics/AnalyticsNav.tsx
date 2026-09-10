@@ -21,6 +21,10 @@ const items = [
     href: "/admin/analytics/audience",
   },
   {
+    label: "Brands",
+    href: "/admin/analytics/brands",
+  },
+  {
     label: "Commerce",
     href: "/admin/analytics/commerce",
   },

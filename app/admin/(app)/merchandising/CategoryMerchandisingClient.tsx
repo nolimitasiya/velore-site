@@ -11,7 +11,9 @@ import {
 type ScopeType =
   | "PRODUCT_TYPE"
   | "OCCASION"
-  | "CONTINENT";
+  | "CONTINENT"
+  | "NEW_IN"
+  | "SALE";
 
 type ProductTypeOption = {
   value: string;
@@ -26,6 +28,12 @@ type OccasionOption = {
 
 type ContinentOption = {
   value: string;
+  label: string;
+};
+
+type CollectionOption = {
+  value: "NEW_IN" | "SALE";
+  scopeKey: string;
   label: string;
 };
 
@@ -108,10 +116,12 @@ export default function CategoryMerchandisingClient({
   productTypes,
   occasions,
   continents,
+  collections,
 }: {
   productTypes: ProductTypeOption[];
   occasions: OccasionOption[];
   continents: ContinentOption[];
+  collections: CollectionOption[];
 }) {
   const initialProductType =
     productTypes[0]?.value ?? "ABAYA";
@@ -190,10 +200,20 @@ export default function CategoryMerchandisingClient({
         value: item.slug,
         label: item.name,
       }))
-    : continents.map((item) => ({
+    : scopeType === "CONTINENT"
+    ? continents.map((item) => ({
         value: item.value,
         label: item.label,
-      }));
+      }))
+    : collections
+        .filter(
+          (item) =>
+            item.value === scopeType
+        )
+        .map((item) => ({
+          value: item.scopeKey,
+          label: item.label,
+        }));
 
   async function load(
     nextScopeType = scopeType,
@@ -290,11 +310,16 @@ export default function CategoryMerchandisingClient({
     }
 
     const nextKey =
-    nextType === "PRODUCT_TYPE"
+  nextType === "PRODUCT_TYPE"
     ? productTypes[0]?.value ?? ""
     : nextType === "OCCASION"
     ? occasions[0]?.slug ?? ""
-    : continents[0]?.value ?? "";
+    : nextType === "CONTINENT"
+    ? continents[0]?.value ?? ""
+    : collections.find(
+        (item) =>
+          item.value === nextType
+      )?.scopeKey ?? "";
 
     if (!nextKey) return;
 
@@ -626,6 +651,14 @@ export default function CategoryMerchandisingClient({
   <option value="CONTINENT">
     Continent
   </option>
+
+  <option value="NEW_IN">
+  New In
+</option>
+
+<option value="SALE">
+  Sale
+</option>
 </select>
           </label>
 

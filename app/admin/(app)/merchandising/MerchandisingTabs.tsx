@@ -21,14 +21,22 @@ type ContinentOption = {
   label: string;
 };
 
+type CollectionOption = {
+  value: "NEW_IN" | "SALE";
+  scopeKey: string;
+  label: string;
+};
+
 export default function MerchandisingTabs({
   productTypes,
   occasions,
   continents,
+  collections,
 }: {
   productTypes: ProductTypeOption[];
   occasions: OccasionOption[];
   continents: ContinentOption[];
+  collections: CollectionOption[];
 }) {
   const [tab, setTab] = useState<
     "CATEGORY" | "LOOK"
@@ -73,6 +81,7 @@ export default function MerchandisingTabs({
           productTypes={productTypes}
           occasions={occasions}
           continents={continents}
+          collections={collections}
         />
       ) : (
         <CompleteTheLookClient />
