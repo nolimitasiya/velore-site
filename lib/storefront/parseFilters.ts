@@ -6,6 +6,7 @@ export type StorefrontFilters = {
   brands: string[];
   countries: string[];
   types: ProductType[];
+  occasions: string[];
   styles: string[];
   colors: string[];
   sizes: string[];
@@ -64,6 +65,10 @@ export function parseStorefrontFilters(sp: RawSearchParams): StorefrontFilters {
     isProductType
   ) as ProductType[];
 
+  const occasions = unique(
+  values(sp.occasion).map((v) => v.toLowerCase())
+);
+
   const styles = unique(values(sp.style).map((v) => v.toLowerCase()));
   const colors = unique(values(sp.color).map((v) => v.toLowerCase()));
   const sizes = unique(values(sp.size).map((v) => v.toLowerCase()));
@@ -79,6 +84,7 @@ export function parseStorefrontFilters(sp: RawSearchParams): StorefrontFilters {
     brands,
     countries,
     types,
+    occasions,
     styles,
     colors,
     sizes,

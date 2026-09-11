@@ -126,12 +126,13 @@ export default async function ClothingPage({
   const sp = (await searchParams) ?? {};
 
   const filters = parseStorefrontFilters(sp);
-  const { types, sort } = filters;
+  const { types, occasions, sort } = filters;
 
   const hasActiveFilters =
     filters.brands.length > 0 ||
     filters.countries.length > 0 ||
     filters.types.length > 0 ||
+    filters.occasions.length > 0 ||
     filters.styles.length > 0 ||
     filters.colors.length > 0 ||
     filters.sizes.length > 0 ||
@@ -142,6 +143,7 @@ export default async function ClothingPage({
   const hasNonTypeFilters =
   filters.brands.length > 0 ||
   filters.countries.length > 0 ||
+  filters.occasions.length > 0 ||
   filters.styles.length > 0 ||
   filters.colors.length > 0 ||
   filters.sizes.length > 0 ||
@@ -167,7 +169,12 @@ const shouldUseLegacyClothingMerch =
   const { currentPage, isExpandedPageOne, pageOneVisibleCount, take } =
     pagination;
 
-  const pageTitle = types.length === 1 ? titleCaseLabel(types[0]) : "Clothing";
+  const pageTitle =
+  types.length === 1
+    ? titleCaseLabel(types[0])
+    : occasions.length === 1
+    ? titleCaseLabel(occasions[0])
+    : "Clothing";
 
   const orderBy =
     sort === "price_asc"

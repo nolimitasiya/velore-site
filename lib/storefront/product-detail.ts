@@ -326,11 +326,7 @@ async function fetchRelatedProducts({
   categoryId: string | null;
   productType: ProductType | null;
 }) {
-  // If we do not know the product type, there is no reliable
-  // "similar product" pool to recommend from.
-  if (!productType) {
-    return [];
-  }
+  
 
   const currentProduct = await prisma.product.findUnique({
     where: {
@@ -339,24 +335,42 @@ async function fetchRelatedProducts({
 
     select: {
       brandId: true,
+      productType: true,
+      
+      productTypes: {
+          select: {
+              productType: true,
+              },
+            },
 
-      productColours: {
-        select: {
-          colourId: true,
-        },
-      },
+     productColours: {
+  select: {
+    colourId: true,
+  },
+},
 
-      productStyles: {
-        select: {
-          styleId: true,
-        },
-      },
+productStyles: {
+  select: {
+    styleId: true,
+  },
+},
 
-      productOccasions: {
-        select: {
-          occasionId: true,
-        },
+productMaterials: {
+  select: {
+    materialId: true,
+  },
+},
+
+productOccasions: {
+  select: {
+    occasionId: true,
+    occasion: {
+      select: {
+        slug: true,
       },
+    },
+  },
+},
     },
   });
 
@@ -364,16 +378,43 @@ async function fetchRelatedProducts({
     return [];
   }
 
-  const currentColourIds = new Set(
-    currentProduct.productColours.map((item) => item.colourId)
-  );
+  const currentProductTypes = new Set<ProductType>([
+  ...(currentProduct.productType
+    ? [currentProduct.productType]
+    : []),
 
-  const currentStyleIds = new Set(
-    currentProduct.productStyles.map((item) => item.styleId)
-  );
+  ...currentProduct.productTypes.map(
+    (item) => item.productType
+  ),
+]);
 
-  const currentOccasionIds = new Set(
-    currentProduct.productOccasions.map((item) => item.occasionId)
+if (currentProductTypes.size === 0) {
+  return [];
+}
+
+const currentIsHijab =
+  currentProductTypes.has(ProductType.HIJAB);
+
+const currentColourIds = new Set(
+  currentProduct.productColours.map((item) => item.colourId)
+);
+
+const currentStyleIds = new Set(
+  currentProduct.productStyles.map((item) => item.styleId)
+);
+
+const currentMaterialIds = new Set(
+  currentProduct.productMaterials.map((item) => item.materialId)
+);
+
+const currentOccasionIds = new Set(
+  currentProduct.productOccasions.map((item) => item.occasionId)
+);
+
+const currentIsActivewear =
+  currentProduct.productOccasions.some(
+    (item) =>
+      item.occasion.slug.toLowerCase() === "activewear"
   );
 
   const candidates = await prisma.product.findMany({
@@ -384,7 +425,22 @@ async function fetchRelatedProducts({
 
       // HARD REQUIREMENT:
       // related products must be the same kind of product.
-      productType,
+      OR: [
+  {
+    productType: {
+      in: Array.from(currentProductTypes),
+    },
+  },
+  {
+    productTypes: {
+      some: {
+        productType: {
+          in: Array.from(currentProductTypes),
+        },
+      },
+    },
+  },
+],
 
       isActive: true,
 
@@ -424,6 +480,14 @@ async function fetchRelatedProducts({
         },
       },
 
+      productType: true,
+
+productTypes: {
+  select: {
+    productType: true,
+  },
+},
+
       images: {
         orderBy: {
           sortOrder: "asc",
@@ -435,49 +499,109 @@ async function fetchRelatedProducts({
       },
 
       productColours: {
-        select: {
-          colourId: true,
-        },
-      },
+  select: {
+    colourId: true,
+  },
+},
 
-      productStyles: {
-        select: {
-          styleId: true,
-        },
-      },
+productStyles: {
+  select: {
+    styleId: true,
+  },
+},
 
-      productOccasions: {
-        select: {
-          occasionId: true,
-        },
+productMaterials: {
+  select: {
+    materialId: true,
+  },
+},
+
+productOccasions: {
+  select: {
+    occasionId: true,
+    occasion: {
+      select: {
+        slug: true,
       },
+    },
+  },
+},
     },
   });
 
-  const scored = candidates.map((candidate) => {
+  const compatibleCandidates = candidates.filter((candidate) => {
+  const candidateProductTypes = new Set<ProductType>([
+    ...(candidate.productType
+      ? [candidate.productType]
+      : []),
+
+    ...candidate.productTypes.map(
+      (item) => item.productType
+    ),
+  ]);
+
+  const sharesProductType =
+    Array.from(candidateProductTypes).some(
+      (type) => currentProductTypes.has(type)
+    );
+
+  if (!sharesProductType) {
+    return false;
+  }
+
+  const candidateIsHijab =
+    candidateProductTypes.has(ProductType.HIJAB);
+
+  const candidateIsActivewear =
+    candidate.productOccasions.some(
+      (item) =>
+        item.occasion.slug.toLowerCase() === "activewear"
+    );
+
+  // Hijabs can cross Activewear / everyday contexts.
+  if (currentIsHijab && candidateIsHijab) {
+    return true;
+  }
+
+  // For all other garments, Activewear remains
+  // a strong recommendation boundary.
+  return candidateIsActivewear === currentIsActivewear;
+});
+
+const scored = compatibleCandidates.map((candidate) => {
     let score = 0;
 
-    const sameColour = candidate.productColours.some((item) =>
-      currentColourIds.has(item.colourId)
-    );
+   const sameOccasion = candidate.productOccasions.some((item) =>
+  currentOccasionIds.has(item.occasionId)
+);
 
-    const sameStyle = candidate.productStyles.some((item) =>
-      currentStyleIds.has(item.styleId)
-    );
+const sameStyle = candidate.productStyles.some((item) =>
+  currentStyleIds.has(item.styleId)
+);
 
-    const sameOccasion = candidate.productOccasions.some((item) =>
-      currentOccasionIds.has(item.occasionId)
-    );
+const sameMaterial = candidate.productMaterials.some((item) =>
+  currentMaterialIds.has(item.materialId)
+);
 
-    // Similarity weighting.
-    if (sameStyle) score += 4;
-    if (sameOccasion) score += 3;
-    if (sameColour) score += 2;
+const sameColour = candidate.productColours.some((item) =>
+  currentColourIds.has(item.colourId)
+);
 
-    // Same brand is useful, but should not overpower actual similarity.
-    if (candidate.brandId === currentProduct.brandId) {
-      score += 1;
-    }
+// Relevance weighting:
+//
+// Product type is already a hard requirement.
+// Occasion is the strongest contextual similarity.
+// Style and material refine the recommendation.
+// Colour is helpful but should not overpower context.
+if (sameOccasion) score += 5;
+if (sameStyle) score += 4;
+if (sameMaterial) score += 3;
+if (sameColour) score += 2;
+
+// Same brand is useful, but should not overpower actual similarity.
+if (candidate.brandId === currentProduct.brandId) {
+  score += 1;
+}
 
     return {
       candidate,

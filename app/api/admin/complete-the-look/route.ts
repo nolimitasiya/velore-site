@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
+import { revalidateTag } from "next/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -278,7 +279,17 @@ export async function POST(req: NextRequest) {
   new Set<string>(linkedProductIds)
 );
 
-   await prisma.$transaction(async (tx) => {
+   const previousLinks =
+  await prisma.productCompleteTheLook.findMany({
+    where: {
+      productId,
+    },
+    select: {
+      linkedProductId: true,
+    },
+  });
+
+await prisma.$transaction(async (tx) => {
   await tx.productCompleteTheLook.deleteMany({
     where: {
       productId,
@@ -298,10 +309,30 @@ export async function POST(req: NextRequest) {
   }
 });
 
-    return NextResponse.json({
-      ok: true,
-      savedCount: uniqueIds.length,
-    });
+const affectedProductIds = new Set([
+  productId,
+  ...previousLinks.map(
+    (link) => link.linkedProductId
+  ),
+  ...uniqueIds,
+]);
+
+for (const affectedProductId of affectedProductIds) {
+  revalidateTag(
+  `product:${affectedProductId}`,
+  "max"
+);
+}
+
+revalidateTag(
+  "storefront-products",
+  "max"
+);
+
+return NextResponse.json({
+  ok: true,
+  savedCount: uniqueIds.length,
+});
   } catch (error) {
     console.error("Complete the Look POST error:", error);
 
@@ -338,15 +369,42 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await prisma.productCompleteTheLook.deleteMany({
-      where: {
-        productId,
-      },
-    });
+   const existingLinks =
+  await prisma.productCompleteTheLook.findMany({
+    where: {
+      productId,
+    },
+    select: {
+      linkedProductId: true,
+    },
+  });
 
-    return NextResponse.json({
-      ok: true,
-    });
+await prisma.productCompleteTheLook.deleteMany({
+  where: {
+    productId,
+  },
+});
+
+revalidateTag(
+  `product:${productId}`,
+  "max"
+);
+
+for (const link of existingLinks) {
+  revalidateTag(
+    `product:${link.linkedProductId}`,
+    "max"
+  );
+}
+
+revalidateTag(
+  "storefront-products",
+  "max"
+);
+
+return NextResponse.json({
+  ok: true,
+});
   } catch (error) {
     console.error(
       "Complete the Look DELETE error:",

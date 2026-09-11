@@ -34,7 +34,7 @@ const saleLinks: NavItem[] = [
   { label: "Sale Skirts", href: "/sale?type=SKIRT" },
   { label: "Sale Tops", href: "/sale?type=TOP" },
   { label: "Sale Hijabs", href: "/sale?type=HIJAB" },
-  { label: "Sale Activewear", href: "/sale?type=ACTIVEWEAR" },
+  { label: "Sale Activewear", href: "/sale?occasion=ACTIVEWEAR" },
   { label: "Sale Sets", href: "/sale?type=SETS" },
   { label: "Sale Maternity", href: "/sale?type=MATERNITY" },
   { label: "Sale Khimars", href: "/sale?type=KHIMAR" },
@@ -61,7 +61,7 @@ const clothingLinks: NavItem[] = [
   { label: "Hijabs", href: "/categories/clothing?type=HIJAB" },
   { label: "Khimars", href: "/categories/clothing?type=KHIMAR" },
   { label: "Jilbabs", href: "/categories/clothing?type=JILBAB" },
-  { label: "Activewear", href: "/categories/clothing?type=ACTIVEWEAR" },
+  { label: "Activewear", href: "/categories/clothing?occasion=ACTIVEWEAR" },
   { label: "Maternity", href: "/categories/clothing?type=MATERNITY" },
 ];
 const accessoriesLinks: NavItem[] = [

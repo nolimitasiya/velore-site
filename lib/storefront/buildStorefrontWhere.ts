@@ -24,6 +24,7 @@ export function buildStorefrontWhere({
     brands,
     countries,
     types,
+    occasions,
     styles,
     colors,
     sizes,
@@ -66,17 +67,23 @@ export function buildStorefrontWhere({
       }
     : {};
 
-  const occasionWhere = occasionSlug
-    ? {
-        productOccasions: {
-          some: {
-            occasion: {
-              slug: occasionSlug,
+ const effectiveOccasions = occasionSlug
+  ? [occasionSlug.toLowerCase()]
+  : occasions;
+
+const occasionWhere = effectiveOccasions.length
+  ? {
+      productOccasions: {
+        some: {
+          occasion: {
+            slug: {
+              in: effectiveOccasions,
             },
           },
         },
-      }
-    : {};
+      },
+    }
+  : {};
 
   const typeWhere = types.length
     ? {
