@@ -50,21 +50,52 @@ export async function POST(req: Request) {
 
   try {
     // Save subscriber in Veilora DB
-    await prisma.waitlistSubscriber.upsert({
-      where: { email },
-      update: { name: friendlyName },
-      create: { name: friendlyName, email },
-    });
+    const existingSubscriber =
+  await prisma.waitlistSubscriber.findUnique({
+    where: { email },
+  });
 
-    // Sync subscriber to Klaviyo
-    try {
-      await syncWaitlistSubscriberToKlaviyo({
-        email,
+if (existingSubscriber) {
+  // Keep their name current in Veilora,
+  // but do not subscribe/send welcome flow again.
+  if (existingSubscriber.name !== friendlyName) {
+    await prisma.waitlistSubscriber.update({
+      where: { email },
+      data: {
         name: friendlyName,
-      });
-    } catch (err) {
-      console.error("[waitlist] Klaviyo sync failed", err);
-    }
+      },
+    });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    alreadyJoined: true,
+  });
+}
+
+await prisma.waitlistSubscriber.create({
+  data: {
+    name: friendlyName,
+    email,
+  },
+});
+
+try {
+  await syncWaitlistSubscriberToKlaviyo({
+    email,
+    name: friendlyName,
+  });
+} catch (err) {
+  console.error(
+    "[waitlist] Klaviyo sync failed",
+    err
+  );
+}
+
+return NextResponse.json({
+  ok: true,
+  alreadyJoined: false,
+});
 
     
 
