@@ -57,7 +57,6 @@ export default function Gate() {
       setShopperStatus("done");
       setName("");
       setEmail("");
-      setTimeout(() => router.push("/thanks"), 700);
     } catch {
       setShopperStatus("error");
       setShopperMsg("Network error. Try again.");
@@ -255,101 +254,130 @@ export default function Gate() {
       </section>
 
       {/* ══════════════ EARLY ACCESS (shoppers + brands) ══════════════ */}
-      <section id="shoppers" className="px-6 pb-24 pt-8 md:px-12">
-        <div className="mx-auto max-w-md text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#7A2A3A]">
-            Early Access
-          </p>
-          <h2 className="mt-4 font-heading text-3xl text-[#1a0a0e] md:text-4xl">
-            Be the first<br />to shop the edit.
-          </h2>
-          <p className="mt-3 text-sm leading-relaxed text-[#6b5c4e]">
-            Join our waitlist and get exclusive early access when we launch.
-          </p>
+      {/* ══════════════ EARLY ACCESS (shoppers + brands) ══════════════ */}
+<section id="shoppers" className="px-6 pb-24 pt-8 md:px-12">
+  <div className="mx-auto max-w-md text-center">
 
-          {mode === null && (
-            <div className="mt-8 flex flex-col gap-4 text-left">
+    {shopperStatus === "done" ? (
+      <div className="py-10 text-center">
+        <p className="font-heading text-4xl text-[#1a0a0e]">
+          You're on the list.
+        </p>
+
+        <p className="mt-4 text-s text-[#A89280]">
+          Keep an eye on your inbox. 💌
+        </p>
+      </div>
+    ) : (
+      <>
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#7A2A3A]">
+          Early Access
+        </p>
+
+        <h2 className="mt-4 font-heading text-3xl text-[#1a0a0e] md:text-4xl">
+          Be the first
+          <br />
+          to shop the edit.
+        </h2>
+
+        <p className="mt-3 text-sm leading-relaxed text-[#6b5c4e]">
+          Join our waitlist and get exclusive early access when we launch.
+        </p>
+
+        {mode === null && (
+          <div className="mt-8 flex flex-col gap-4 text-left">
+            <button
+              type="button"
+              onClick={() => setMode("shopper")}
+              className="flex items-center justify-between rounded bg-[#7A2A3A] px-6 py-5 text-sm font-semibold text-white transition hover:bg-[#5E1F2C]"
+            >
+              <span>I'm a shopper</span>
+              <span>→</span>
+            </button>
+
+            <button
+              type="button"
+              id="for-brands"
+              onClick={() => router.push("/brands/apply")}
+              className="flex items-center justify-between rounded border border-[#EDE6DC] px-6 py-5 text-sm font-semibold text-[#7A2A3A] transition hover:border-[#7A2A3A]"
+            >
+              <span>I'm a brand — Partner with us</span>
+              <span>→</span>
+            </button>
+          </div>
+        )}
+
+        {mode === "shopper" && (
+          <div className="mt-8 text-left">
+            <form onSubmit={submitShopper} className="space-y-4" noValidate>
+              <input
+                name="name"
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your name"
+                {...(shopperStatus === "error"
+                  ? { "aria-invalid": true }
+                  : {})}
+                className="w-full rounded border border-[#EDE6DC] bg-[#FAF8F5] px-4 py-3.5 text-sm text-[#1a0a0e] placeholder:text-[#a89280] outline-none focus:border-[#7A2A3A]"
+              />
+
+              <input
+                name="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Your email address"
+                {...(shopperStatus === "error"
+                  ? {
+                      "aria-invalid": true,
+                      "aria-describedby": "shopper-msg",
+                    }
+                  : {})}
+                className="w-full rounded border border-[#EDE6DC] bg-[#FAF8F5] px-4 py-3.5 text-sm text-[#1a0a0e] placeholder:text-[#a89280] outline-none focus:border-[#7A2A3A]"
+              />
+
+              <button
+                type="submit"
+                disabled={shopperStatus === "loading"}
+                className="w-full rounded bg-[#1a0a0e] px-4 py-3.5 text-sm font-bold uppercase tracking-[0.04em] text-white transition hover:opacity-90 disabled:opacity-60"
+              >
+                {shopperStatus === "loading"
+                  ? "Joining..."
+                  : "Get Early Access"}
+              </button>
+
               <button
                 type="button"
-                onClick={() => setMode("shopper")}
-                className="flex items-center justify-between rounded bg-[#7A2A3A] px-6 py-5 text-sm font-semibold text-white transition hover:bg-[#5E1F2C]"
+                onClick={resetChoice}
+                className="w-full text-center text-xs text-[#a89280] underline underline-offset-4 hover:text-[#7A2A3A]"
               >
-                <span>I'm a shopper</span>
-                <span>→</span>
+                ← Back
               </button>
-              <button
-                type="button"
-                id="for-brands"
-                onClick={() => router.push("/brands/apply")}
-                className="flex items-center justify-between rounded border border-[#EDE6DC] px-6 py-5 text-sm font-semibold text-[#7A2A3A] transition hover:border-[#7A2A3A]"
-              >
-                <span>I'm a brand — partner with us</span>
-                <span>→</span>
-              </button>
-            </div>
-          )}
 
-          {mode === "shopper" && (
-            <div className="mt-8 text-left">
-              {shopperStatus === "done" ? (
-                <div className="rounded border border-[#EDE6DC] bg-[#FAF8F5] px-6 py-8 text-center">
-                  <p className="font-heading text-lg text-[#1a0a0e]">You're on the list.</p>
-                  <p className="mt-1 text-sm text-[#6b5c4e]">Taking you to the confirmation page…</p>
-                </div>
-              ) : (
-                <form onSubmit={submitShopper} className="space-y-4" noValidate>
-                  <input
-                    name="name"
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Your name"
-                    {...(shopperStatus === "error" ? { "aria-invalid": true } : {})}
-                    className="w-full rounded border border-[#EDE6DC] bg-[#FAF8F5] px-4 py-3.5 text-sm text-[#1a0a0e] placeholder:text-[#a89280] outline-none focus:border-[#7A2A3A]"
-                  />
-                  <input
-                    name="email"
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Your email address"
-                    {...(shopperStatus === "error"
-                      ? { "aria-invalid": true, "aria-describedby": "shopper-msg" }
-                      : {})}
-                    className="w-full rounded border border-[#EDE6DC] bg-[#FAF8F5] px-4 py-3.5 text-sm text-[#1a0a0e] placeholder:text-[#a89280] outline-none focus:border-[#7A2A3A]"
-                  />
-                  <button
-                    type="submit"
-                    disabled={shopperStatus === "loading"}
-                    className="w-full rounded bg-[#1a0a0e] px-4 py-3.5 text-sm font-bold uppercase tracking-[0.04em] text-white transition hover:opacity-90 disabled:opacity-60"
-                  >
-                    {shopperStatus === "loading" ? "Joining..." : "Get Early Access"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={resetChoice}
-                    className="w-full text-center text-xs text-[#a89280] underline underline-offset-4 hover:text-[#7A2A3A]"
-                  >
-                    ← Back
-                  </button>
-                  {shopperMsg && (
-                    <p
-                      id="shopper-msg"
-                      role="status"
-                      aria-live="polite"
-                      className={`text-sm ${shopperStatus === "error" ? "text-red-600" : "text-green-700"}`}
-                    >
-                      {shopperMsg}
-                    </p>
-                  )}
-                </form>
+              {shopperMsg && (
+                <p
+                  id="shopper-msg"
+                  role="status"
+                  aria-live="polite"
+                  className={`text-sm ${
+                    shopperStatus === "error"
+                      ? "text-red-600"
+                      : "text-green-700"
+                  }`}
+                >
+                  {shopperMsg}
+                </p>
               )}
-            </div>
-          )}
-        </div>
-      </section>
+            </form>
+          </div>
+        )}
+      </>
+    )}
+  </div>
+</section>
 
       {/* ══════════════ FOOTER ══════════════ */}
       <footer className="border-t border-[#EDE6DC] px-6 py-11 md:px-12">

@@ -21,7 +21,7 @@ export default function ThanksPage() {
           You're on the list.
         </h1>
         <p className="mt-4 text-sm leading-relaxed text-[#6b5c4e]">
-          Thank you for joining — we'll be in touch with exclusive early access when Veilora Club launches. 💌
+          Thank you for joining, we'll be in touch with exclusive early access when Veilora Club launches. 💌
         </p>
 
         <p className="mt-3 text-xs text-[#a89280]">
