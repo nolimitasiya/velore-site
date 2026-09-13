@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
-import { brandApplicationReceivedEmail } from "@/lib/resend/templates/brand/applicationReceived";
+import { sendBrandApplicationToKlaviyo } from "@/lib/klaviyo/brandApplication";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -92,6 +92,33 @@ export async function POST(req: Request) {
       },
     });
 
+try {
+  await sendBrandApplicationToKlaviyo({
+    applicationId: created.id,
+
+    firstName: data.firstName,
+    lastName: data.lastName,
+    email: data.email,
+
+    companyName: data.companyName,
+    countryCode: data.countryCode,
+    city: data.city,
+
+    website: data.website,
+    socialMedia: data.socialMedia,
+
+    platformHosted:
+      data.platformHosted === "OTHER"
+        ? data.platformHostedOther || "OTHER"
+        : data.platformHosted,
+  });
+} catch (err) {
+  console.error(
+    "[brand-apply] Klaviyo event failed",
+    err
+  );
+}
+
     const resendKey = process.env.RESEND_API_KEY;
     const to = process.env.BRAND_APPLY_NOTIFY_TO; // your inbox
     const from = process.env.BRAND_APPLY_FROM || "onboarding@veiloraclub.com";
@@ -138,15 +165,6 @@ export async function POST(req: Request) {
         });
       }
 
-      // 2) Auto-reply to applicant (always)
-      const { subject, html } = brandApplicationReceivedEmail({ firstName: created.firstName });
-      await resend.emails.send({
-        from: `Veilora Club <${from.includes("<") ? from : from}>`,
-        to: created.email,
-        replyTo,
-        subject,
-        html,
-      });
     }
 
     return NextResponse.json({ ok: true, id: created.id });
