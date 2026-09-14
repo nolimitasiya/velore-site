@@ -57,28 +57,11 @@ export default function StatusSelect({
   const [pendingStatus, setPendingStatus] = useState<PendingStatus | null>(null);
   const [sendEmail, setSendEmail] = useState(true);
   const [schedulerUrl, setSchedulerUrl] = useState("");
+  const DEFAULT_SCHEDULER_URL =
+  "https://calendly.com/admin-veiloraclub/new-meeting";
 
-  const [rejectionSubject, setRejectionSubject] = useState(
-    "Your Veilora Club brand application"
-  );
-  const [rejectionMessage, setRejectionMessage] = useState(
-    `Hi,
+  const [rejectionReason, setRejectionReason] = useState("");
 
-Thank you so much for applying to Veilora Club.
-
-After reviewing your application, we are unable to move forward at this stage.
-
-Reason:
-[Add your reason here]
-
-We truly appreciate your interest and wish you all the best with your brand.
-
-Kind regards,
-Asiya
-Veilora Club`
-  );
-
-  const sentInputRef = useRef<HTMLInputElement | null>(null);
   const signedInputRef = useRef<HTMLInputElement | null>(null);
 
   async function patchStatus(payload: any) {
@@ -96,14 +79,21 @@ Veilora Club`
   }
 
   function openModal(next: string) {
-    if (next === value) return;
+  if (next === value) return;
 
-    if (!OPTIONS.includes(next as PendingStatus)) return;
+  if (!OPTIONS.includes(next as PendingStatus)) return;
 
-    setPendingStatus(next as PendingStatus);
-    setSendEmail(!["new", "contacted"].includes(next));
-    setSchedulerUrl("");
+  setPendingStatus(next as PendingStatus);
+  setSendEmail(!["new", "contacted"].includes(next));
+
+  setSchedulerUrl(
+    next === "invited" ? DEFAULT_SCHEDULER_URL : ""
+  );
+
+  if (next === "rejected") {
+    setRejectionReason("");
   }
+}
 
   function closeModal() {
     if (loading) return;
@@ -112,6 +102,15 @@ Veilora Club`
 
   async function confirmStatusChange() {
     if (!pendingStatus) return;
+
+    if (
+  pendingStatus === "rejected" &&
+  sendEmail &&
+  !rejectionReason.trim()
+) {
+  alert("Please add a rejection reason before sending the email.");
+  return;
+}
 
     setLoading(true);
 
@@ -138,11 +137,7 @@ Veilora Club`
         return;
       }
 
-      if (pendingStatus === "contract_sent") {
-        setPendingStatus(null);
-        sentInputRef.current?.click();
-        return;
-      }
+      
 
       if (pendingStatus === "contract_signed") {
         await patchStatus({
@@ -159,10 +154,10 @@ Veilora Club`
         status: pendingStatus,
         sendEmail,
         schedulerUrl: schedulerUrl.trim() || undefined,
-        emailSubject:
-          pendingStatus === "rejected" ? rejectionSubject.trim() : undefined,
-        emailText:
-          pendingStatus === "rejected" ? rejectionMessage.trim() : undefined,
+        rejectionReason:
+  pendingStatus === "rejected"
+    ? rejectionReason.trim()
+    : undefined,
       });
 
       setPendingStatus(null);
@@ -175,33 +170,7 @@ Veilora Club`
     }
   }
 
-  async function onSentFileChosen(file: File | null) {
-    if (!file) return;
-
-    setLoading(true);
-
-    try {
-      const path = await uploadContract({
-        applicationId: id,
-        kind: "sent",
-        file,
-      });
-
-      await patchStatus({
-        status: "contract_sent",
-        contractSentPath: path,
-        sendEmail,
-      });
-
-      router.refresh();
-    } catch (e) {
-      console.error(e);
-      alert("Contract upload failed. Check console for details.");
-    } finally {
-      setLoading(false);
-      if (sentInputRef.current) sentInputRef.current.value = "";
-    }
-  }
+ 
 
   async function onSignedFileChosen(file: File | null) {
     if (!file) return;
@@ -242,15 +211,7 @@ Veilora Club`
           Application stage
         </span>
 
-        <input
-          id={`contractSentFile-${id}`}
-          ref={sentInputRef}
-          type="file"
-          accept="application/pdf"
-          className="hidden"
-          aria-label="Upload contract PDF sent"
-          onChange={(e) => onSentFileChosen(e.target.files?.[0] ?? null)}
-        />
+        
 
         <input
           id={`contractSignedFile-${id}`}
@@ -355,46 +316,30 @@ Veilora Club`
             ) : null}
 
            {pendingStatus === "rejected" && sendEmail ? (
-  <div className="mt-4 space-y-4">
-    <div>
-      <label
-        htmlFor={`reject-subject-${id}`}
-        className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500"
-      >
-        Email subject
-      </label>
-      <input
-        id={`reject-subject-${id}`}
-        value={rejectionSubject}
-        onChange={(e) => setRejectionSubject(e.target.value)}
-        className="mt-2 h-11 w-full rounded-2xl border border-black/10 px-4 text-sm outline-none focus:border-black/20 focus:ring-2 focus:ring-black/5"
-      />
-    </div>
+  <div className="mt-4">
+    <label
+      htmlFor={`reject-reason-${id}`}
+      className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500"
+    >
+      Rejection reason
+    </label>
 
-    <div>
-      <label
-        htmlFor={`reject-message-${id}`}
-        className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500"
-      >
-        Email message
-      </label>
-      <textarea
-        id={`reject-message-${id}`}
-        value={rejectionMessage}
-        onChange={(e) => setRejectionMessage(e.target.value)}
-        rows={10}
-        className="mt-2 w-full rounded-2xl border border-black/10 p-4 text-sm leading-6 outline-none focus:border-black/20 focus:ring-2 focus:ring-black/5"
-      />
-    </div>
+    <textarea
+      id={`reject-reason-${id}`}
+      value={rejectionReason}
+      onChange={(e) => setRejectionReason(e.target.value)}
+      rows={5}
+      placeholder="Add the reason for rejecting this application..."
+      className="mt-2 w-full rounded-2xl border border-black/10 p-4 text-sm leading-6 outline-none focus:border-black/20 focus:ring-2 focus:ring-black/5"
+    />
   </div>
 ) : null}
 
             {pendingStatus === "contract_sent" ? (
-              <p className="mt-4 rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-sm leading-6 text-yellow-900">
-                After confirming, you’ll be asked to upload the contract PDF.
-                The status will update after the upload completes.
-              </p>
-            ) : null}
+  <p className="mt-4 rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-sm leading-6 text-yellow-900">
+    This will mark the contract as being prepared and send the brand a confirmation email requesting their company details.
+  </p>
+) : null}
 
             {pendingStatus === "contract_signed" ? (
               <p className="mt-4 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm leading-6 text-green-900">

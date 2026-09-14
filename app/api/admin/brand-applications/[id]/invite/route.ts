@@ -4,7 +4,10 @@ import { requireAdminSession } from "@/lib/auth/AdminSession";
 import { regionFromCountry } from "@/lib/geo";
 import crypto from "crypto";
 import { Role } from "@prisma/client";
-import { sendBrandInviteEmail } from "@/lib/resend/templates/onboarding/brandInvite";
+import {
+  syncBrandProfileToKlaviyo,
+  sendBrandLifecycleEventToKlaviyo,
+} from "@/lib/klaviyo/brandLifecycle";
 
 function sha256(s: string) {
   return crypto.createHash("sha256").update(s).digest("hex");
@@ -48,20 +51,21 @@ export async function POST(
  const sendEmail = body.sendEmail !== false;
 
   const app = await prisma.brandApplication.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      status: true,
-      email: true,
-      website: true,
-      companyName: true,
-      countryCode: true,
-      city: true,
-      firstName: true,
-      lastName: true,
-      phone: true,
-    },
-  });
+  where: { id },
+  select: {
+    id: true,
+    status: true,
+    email: true,
+    website: true,
+    socialMedia: true,
+    companyName: true,
+    countryCode: true,
+    city: true,
+    firstName: true,
+    lastName: true,
+    phone: true,
+  },
+});
 
   if (!app) {
     return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
@@ -143,19 +147,82 @@ const contactPhone = String(app.phone ?? "").trim() || null;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
   const onboardingUrl = `${siteUrl}/brand/onboarding?token=${rawToken}`;
 
+  await prisma.brandApplication.update({
+  where: { id },
+  data: { status: "onboarded" },
+});
+
   if (sendEmail) {
-  await sendBrandInviteEmail({
-    to: email,
-    brandName: brand.name,
-    inviteLink: onboardingUrl,
-    senderName: "Asiya",
-  });
+  try {
+    await sendBrandLifecycleEventToKlaviyo({
+      eventName: "Brand Onboarded",
+
+      applicationId: app.id,
+
+      firstName: app.firstName,
+      lastName: app.lastName,
+      email: app.email,
+
+      companyName: app.companyName,
+      phone: app.phone,
+      website: app.website,
+      socialMedia: app.socialMedia,
+
+      countryCode: app.countryCode,
+      city: app.city,
+
+      stage: "onboarded",
+
+      onboardingUrl,
+    });
+
+    console.log(
+      "[brand-app invite] Klaviyo event accepted",
+      "Brand Onboarded"
+    );
+  } catch (e) {
+    console.error(
+      "[brand-app invite] Klaviyo onboarding event failed",
+      e
+    );
+  }
 }
 
   await prisma.brandApplication.update({
     where: { id },
     data: { status: "onboarded" },
   });
+
+  try {
+  await syncBrandProfileToKlaviyo({
+    applicationId: app.id,
+
+    firstName: app.firstName,
+    lastName: app.lastName,
+    email: app.email,
+
+    companyName: app.companyName,
+    phone: app.phone,
+    website: app.website,
+    socialMedia: app.socialMedia,
+
+    countryCode: app.countryCode,
+    city: app.city,
+
+    stage: "onboarded",
+  });
+
+  console.log(
+    "[brand-app invite] Klaviyo profile synced",
+    app.email,
+    "onboarded"
+  );
+} catch (e) {
+  console.error(
+    "[brand-app invite] Klaviyo profile sync failed",
+    e
+  );
+}
 
   return NextResponse.json({
     ok: true,

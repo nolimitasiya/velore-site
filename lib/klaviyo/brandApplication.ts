@@ -64,7 +64,7 @@ export async function sendBrandApplicationToKlaviyo(params: {
                 properties: {
                   relationship: "Brand",
                   brand_name: params.companyName,
-                  brand_application_status: "Applied",
+                  brand_stage: "new",
                   website: params.website,
                   social_media: params.socialMedia,
                   platform_hosted: params.platformHosted,
