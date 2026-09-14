@@ -74,16 +74,15 @@ export async function syncBrandProfileToKlaviyo(
     email: params.email.trim().toLowerCase(),
 
     properties: {
-      relationship: "Brand",
-      brand_application_id: params.applicationId,
-      brand_name: clean(params.companyName),
-      brand_stage: params.stage,
-      phone: clean(params.phone),
-      website: clean(params.website),
-      social_media: clean(params.socialMedia),
-      country_code: clean(params.countryCode),
-      city: clean(params.city),
-    },
+  brand_application_id: params.applicationId,
+  brand_name: clean(params.companyName),
+  brand_stage: params.stage,
+  phone: clean(params.phone),
+  website: clean(params.website),
+  social_media: clean(params.socialMedia),
+  country_code: clean(params.countryCode),
+  city: clean(params.city),
+},
   };
 
   const firstName = clean(params.firstName);
@@ -161,11 +160,10 @@ export async function sendBrandLifecycleEventToKlaviyo(
     email: params.email.trim().toLowerCase(),
 
     properties: {
-      relationship: "Brand",
-      brand_application_id: params.applicationId,
-      brand_name: clean(params.companyName),
-      brand_stage: params.stage,
-    },
+  brand_application_id: params.applicationId,
+  brand_name: clean(params.companyName),
+  brand_stage: params.stage,
+},
   };
 
   const firstName = clean(params.firstName);

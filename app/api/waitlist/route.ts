@@ -97,9 +97,6 @@ return NextResponse.json({
   alreadyJoined: false,
 });
 
-    
-
-    return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("[waitlist] DB error", e);
 

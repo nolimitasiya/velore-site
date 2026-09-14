@@ -188,11 +188,6 @@ const contactPhone = String(app.phone ?? "").trim() || null;
   }
 }
 
-  await prisma.brandApplication.update({
-    where: { id },
-    data: { status: "onboarded" },
-  });
-
   try {
   await syncBrandProfileToKlaviyo({
     applicationId: app.id,

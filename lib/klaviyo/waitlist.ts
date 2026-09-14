@@ -31,6 +31,9 @@ async function upsertKlaviyoProfile(params: {
           attributes: {
             email: params.email,
             first_name: params.name,
+            properties: {
+                waitlist_member: true,
+              },
           },
         },
       }),

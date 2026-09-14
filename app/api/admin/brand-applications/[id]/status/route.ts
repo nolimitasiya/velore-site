@@ -1,15 +1,7 @@
 // C:\Users\Asiya\projects\dalra\app\api\admin\brand-applications\[id]\status\route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { Resend } from "resend";
 
-import { brandInvitedZoomEmail } from "@/lib/resend/templates/brand/invitedZoom";
-import { brandRejectedEmail } from "@/lib/resend/templates/brand/rejected";
-
-import { brandContractSentEmail } from "@/lib/resend/templates/brand/contractSent";
-import { brandContractSignedEmail } from "@/lib/resend/templates/brand/contractSigned";
-import { veiloraEmailTemplate } from "@/lib/resend/templates/base/veiloraBase";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import {  syncBrandProfileToKlaviyo,  sendBrandLifecycleEventToKlaviyo,} from "@/lib/klaviyo/brandLifecycle";
 
 export const runtime = "nodejs";
@@ -29,126 +21,8 @@ type AllowedStatus = (typeof ALLOWED)[number];
 
 const safe = (x: unknown) => String(x ?? "").trim();
 
-async function makeSignedDownloadUrl(path: string) {
-
-  const supabaseAdmin = getSupabaseAdmin();
-  
-  const { data, error } = await supabaseAdmin.storage
-    .from("contracts")
-    .createSignedUrl(path, 60 * 60 * 24 * 7); // 7 days
-
-  if (error || !data?.signedUrl) throw new Error(error?.message || "Failed to create signed URL");
-  return data.signedUrl;
-}
-
-async function sendStatusEmail(args: {
-  status: AllowedStatus;
-  applicantEmail: string;
-  firstName?: string | null;
-  schedulerUrl?: string;
-  contractDownloadUrl?: string;
-  emailSubject?: string;
-  emailText?: string;
-}) {
-  if (args.status === "new" || args.status === "contacted") return;
-
-  const resendKey = process.env.RESEND_API_KEY;
-  if (!resendKey) return;
-
-  const from = process.env.BRAND_APPLY_FROM || "onboarding@veiloraclub.com";
-  const replyTo = process.env.BRAND_APPLY_REPLY_TO || "info@veiloraclub.com";
-
-  if (args.status === "invited") {
-    const resend = new Resend(resendKey);
-    const { subject, html } = brandInvitedZoomEmail({
-      firstName: args.firstName ?? undefined,
-      schedulerUrl: args.schedulerUrl ? safe(args.schedulerUrl) : undefined,
-    });
-
-    await resend.emails.send({
-      from: `Veilora Club <${from.includes("<") ? from : from}>`,
-      to: args.applicantEmail,
-      replyTo,
-      subject,
-      html,
-    });
-    return;
-  }
-
-  if (args.status === "contract_sent") {
-    const resend = new Resend(resendKey);
-    const url = safe(args.contractDownloadUrl);
-    if (!url) throw new Error("Missing contractDownloadUrl for contract_sent email");
-
-    const { subject, html } = brandContractSentEmail({
-      firstName: args.firstName ?? undefined,
-      contractUrl: url,
-    });
-
-    await resend.emails.send({
-      from: `Veilora Club <${from.includes("<") ? from : from}>`,
-      to: args.applicantEmail,
-      replyTo,
-      subject,
-      html,
-    });
-    return;
-  }
-
-  if (args.status === "contract_signed") {
-    const resend = new Resend(resendKey);
-    const { subject, html } = brandContractSignedEmail({
-      firstName: args.firstName ?? undefined,
-    });
-
-    await resend.emails.send({
-      from: `Veilora Club <${from.includes("<") ? from : from}>`,
-      to: args.applicantEmail,
-      replyTo,
-      subject,
-      html,
-    });
-    return;
-  }
-
-  // ✅ Onboarding emails are handled by /invite (token generation + email).
-if (args.status === "onboarded") return;
 
 
-  if (args.status === "rejected") {
-  const resend = new Resend(resendKey);
-
-  const customText = safe(args.emailText);
-
-  const html = veiloraEmailTemplate({
-    preheader:
-      "Thank you for your time — we’re unable to move forward right now.",
-    heading: "Thank you for your application",
-    bodyHtml: customText
-      ? customText
-          .split("\n")
-          .map(
-            (line) =>
-              `<p style="margin:0 0 12px 0;">${line || "&nbsp;"}</p>`
-          )
-          .join("")
-      : brandRejectedEmail().html,
-  });
-
-  const subject =
-    safe(args.emailSubject) || "Thank you for applying to Veilora Club";
-
-  await resend.emails.send({
-    from: `Veilora Club <${from.includes("<") ? from : from}>`,
-    to: args.applicantEmail,
-    replyTo,
-    subject,
-    html,
-  });
-
-  return;
-}
-}
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -391,23 +265,12 @@ if (status === "rejected") {
   );
 }
 
-    if (
-  status !== "invited" &&
-  status !== "contract_sent" &&
-  status !== "contract_signed" &&
-  status !== "rejected"
-) {
-      await sendStatusEmail({
-        status,
-        applicantEmail: current.email,
-        firstName: current.firstName,
-        schedulerUrl: safe(body.schedulerUrl) || undefined,
-        emailSubject: safe(body.emailSubject) || undefined,
-        emailText: safe(body.emailText) || undefined,
-      });
-    }
+ 
   } catch (e) {
-    console.error("[brand-app status] email failed", e);
+    console.error(
+  "[brand-app status] Klaviyo lifecycle event failed",
+  e
+);
   }
 }
 
