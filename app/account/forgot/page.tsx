@@ -45,7 +45,7 @@ export default function ShopperForgotPage() {
             <input
               type="email"
               required
-              placeholder="asiya@example.com"
+              placeholder="name@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="mt-1 w-full rounded border border-[#d8c9b5] bg-white px-4 py-3 text-sm text-[#1a0a0e] placeholder:text-[#c0b0a0] outline-none focus:border-[#7B2D3E]"
@@ -78,9 +78,9 @@ export default function ShopperForgotPage() {
       ) : (
         <div className="space-y-6 text-center">
           <div className="rounded-xl border border-[#e8ddd4] bg-[#faf8f4] px-6 py-6">
-            <div className="text-3xl mb-3">✦</div>
+            <div className="text-3xl mb-3"></div>
             <p className="text-sm text-[#6b5c4e] leading-relaxed">
-              If that email is registered with us, a reset link is on its way. Check your inbox — it expires in 60 minutes.
+              If that email is registered with us, a reset link is on its way. Check your inbox, the link will expire in 60 minutes.
             </p>
           </div>
           <a

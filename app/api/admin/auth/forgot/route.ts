@@ -30,10 +30,29 @@ export async function POST(req: Request) {
   if (!email) return NextResponse.json({ ok: true });
 
   const admin = await prisma.adminUser.findFirst({
-  where: { email: { equals: email, mode: "insensitive" } },
-  select: { email: true },
+  where: {
+    email: {
+      equals: email,
+      mode: "insensitive",
+    },
+  },
+  select: {
+    email: true,
+    name: true,
+  },
 });
+
+if (!admin) {
+  return NextResponse.json({ ok: true });
+}
+
 if (!admin) return NextResponse.json({ ok: true });
+await prisma.passwordResetToken.deleteMany({
+  where: {
+    userType: "ADMIN",
+    email,
+  },
+});
 
   const token = makeResetToken();
   const tokenHash = hashToken(token);
@@ -52,7 +71,17 @@ if (!admin) return NextResponse.json({ ok: true });
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
 const resetUrl = `${appUrl}/admin/reset?token=${token}&email=${encodeURIComponent(email)}`;
-  await sendResetEmail({ to: email, resetUrl, userType: "ADMIN" });
+  try {
+  await sendResetEmail({
+  to: admin.email,
+  resetUrl,
+  userType: "ADMIN",
+  name: admin.name,
+});
+} catch (err) {
+  console.error("[admin-reset-email]", err);
+}
 
-  return NextResponse.json({ ok: true });
+return NextResponse.json({ ok: true });
+
 }

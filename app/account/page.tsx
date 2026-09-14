@@ -298,18 +298,10 @@ export default function AccountPage() {
         )}
 
         {/* Orders placeholder */}
-        <div className="mt-8 rounded-2xl border border-[#e8ddd4] bg-white p-6 opacity-50">
-          <div className="flex items-center gap-3">
-            <span className="text-xl">📦</span>
-            <div>
-              <h3 className="font-heading text-base text-[#1a0a0e]">Orders</h3>
-              <p className="text-xs text-[#a89280]">Coming soon.</p>
-            </div>
-          </div>
-        </div>
+       
       </div>
 
-      <div className="py-6 text-center text-[11px] tracking-[0.12em] text-[#7B2D3E]/40">
+      <div className="pb-6 text-center text-[11px] tracking-[0.12em] text-[#7B2D3E]/40">
         © {new Date().getFullYear()} Veilora Club
       </div>
     </div>

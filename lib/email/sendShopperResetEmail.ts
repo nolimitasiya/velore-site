@@ -9,72 +9,292 @@ export async function sendShopperResetEmail(opts: {
   const from = process.env.RESEND_FROM_NO_REPLY;
   const replyTo = process.env.RESEND_REPLY_TO;
 
-  if (!apiKey) throw new Error("Missing RESEND_API_KEY");
-  if (!from) throw new Error("Missing RESEND_FROM_NO_REPLY");
+  if (!apiKey) {
+    throw new Error("Missing RESEND_API_KEY");
+  }
+
+  if (!from) {
+    throw new Error("Missing RESEND_FROM_NO_REPLY");
+  }
 
   const resend = new Resend(apiKey);
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.veiloraclub.com";
-  const greeting = opts.firstName ? `Hi ${opts.firstName},` : "Hi there,";
+
+  const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    "https://www.veiloraclub.com";
+
+  const rawFirstName =
+  opts.firstName?.trim().split(/\s+/)[0] || null;
+
+const firstName = rawFirstName
+  ? rawFirstName.charAt(0).toUpperCase() +
+    rawFirstName.slice(1).toLowerCase()
+  : null;
+
+const greeting = firstName
+  ? `Hi ${firstName},`
+  : "Hi there,";
+
+  const supportEmail =
+    replyTo || "support@veiloraclub.com";
 
   const html = `
-  <div style="background:#faf8f4;padding:40px 20px;font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial;">
-    <div style="max-width:520px;margin:0 auto;background:#ffffff;padding:40px 32px;border-radius:12px;border:1px solid #e8ddd4;">
+  <!doctype html>
+  <html>
+    <body
+      style="
+        margin:0;
+        padding:0;
+        background:#ffffff;
+        color:#161111;
+      "
+    >
+      <div
+        style="
+          width:100%;
+          background:#ffffff;
+          padding:42px 18px;
+        "
+      >
+        <div
+          style="
+            max-width:620px;
+            margin:0 auto;
+            background:#ffffff;
+          "
+        >
 
-      <div style="background:#7B2D3E;margin:-40px -32px 32px;padding:28px 32px;border-radius:12px 12px 0 0;text-align:center;">
-        <h1 style="margin:0;font-size:22px;letter-spacing:0.08em;color:#ffffff;font-weight:400;">
-          Veilora Club
-        </h1>
-        <p style="margin:4px 0 0;font-size:11px;letter-spacing:0.25em;color:rgba(255,255,255,0.5);text-transform:uppercase;">
-          My Account
-        </p>
+          <!-- TOP BRAND -->
+          <a
+            href="${baseUrl}"
+            style="
+              display:block;
+              background:#873247;
+              padding:38px 24px;
+              text-align:center;
+              text-decoration:none;
+            "
+          >
+            <div
+              style="
+                font-family:Georgia,'Times New Roman',serif;
+                font-size:58px;
+                line-height:1;
+                font-weight:700;
+                letter-spacing:-1px;
+                color:#ffffff;
+              "
+            >
+              Veilora Club
+            </div>
+          </a>
+
+          <!-- CONTENT -->
+          <div style="padding:26px 18px 0;">
+
+            <div
+              style="
+                margin:0 0 16px;
+                font-family:'Courier New',Courier,monospace;
+                font-size:13px;
+                letter-spacing:0.18em;
+                text-transform:uppercase;
+                color:#873247;
+              "
+            >
+              My Account
+            </div>
+
+            <h1
+              style="
+                margin:0 0 28px;
+                font-family:Georgia,'Times New Roman',serif;
+                font-size:38px;
+                line-height:1.2;
+                font-weight:500;
+                color:#111111;
+              "
+            >
+              Reset your password
+            </h1>
+
+            <p
+              style="
+                margin:0 0 22px;
+                font-family:'Courier New',Courier,monospace;
+                font-size:16px;
+                line-height:1.65;
+                color:#171717;
+              "
+            >
+              ${greeting}
+            </p>
+
+            <p
+              style="
+                margin:0 0 22px;
+                font-family:'Courier New',Courier,monospace;
+                font-size:16px;
+                line-height:1.65;
+                color:#171717;
+              "
+            >
+              We received a request to reset your Veilora Club password.
+            </p>
+
+            <p
+              style="
+                margin:0 0 30px;
+                font-family:'Courier New',Courier,monospace;
+                font-size:16px;
+                line-height:1.65;
+                color:#171717;
+              "
+            >
+              Click the button below to set a new password.
+              This link expires in 60 minutes.
+            </p>
+
+            <!-- CTA -->
+            <div style="margin:34px 0;">
+              <a
+                href="${opts.resetUrl}"
+                style="
+                  display:inline-block;
+                  background:#873247;
+                  color:#ffffff;
+                  text-decoration:none;
+                  font-family:'Courier New',Courier,monospace;
+                  font-size:15px;
+                  letter-spacing:0.12em;
+                  text-transform:uppercase;
+                  padding:18px 30px;
+                "
+              >
+                Reset my password →
+              </a>
+            </div>
+
+            <p
+              style="
+                margin:0 0 24px;
+                font-family:'Courier New',Courier,monospace;
+                font-size:16px;
+                line-height:1.65;
+                color:#171717;
+              "
+            >
+              If you didn't request this, you can safely ignore this email.
+              Your password will remain unchanged.
+            </p>
+
+            <p
+              style="
+                margin:28px 0 0;
+                font-family:'Courier New',Courier,monospace;
+                font-size:16px;
+                line-height:1.65;
+                color:#171717;
+              "
+            >
+              Best,<br />
+              The Veilora Club Team
+            </p>
+
+            <!-- DIVIDER -->
+            <div
+              style="
+                border-top:1px solid #a95a6c;
+                margin:34px 0 22px;
+              "
+            ></div>
+
+            <!-- HELP -->
+            <p
+              style="
+                margin:0 0 6px;
+                font-family:Arial,sans-serif;
+                font-size:11px;
+                text-transform:uppercase;
+                letter-spacing:0.08em;
+                color:#6f595f;
+              "
+            >
+              Need help?
+            </p>
+
+            <p
+              style="
+                margin:0;
+                font-family:Arial,sans-serif;
+                font-size:12px;
+                line-height:1.6;
+                color:#6f595f;
+              "
+            >
+              Reply to this email or contact us at
+              <a
+                href="mailto:${supportEmail}"
+                style="
+                  color:#873247;
+                "
+              >
+                ${supportEmail}
+              </a>.
+            </p>
+
+            <!-- BOTTOM BRAND -->
+            <div
+              style="
+                text-align:center;
+                padding:42px 0 12px;
+              "
+            >
+              <a
+                href="${baseUrl}"
+                style="
+                  text-decoration:none;
+                  display:inline-block;
+                "
+              >
+                <div
+                  style="
+                    font-family:Georgia,'Times New Roman',serif;
+                    font-size:44px;
+                    line-height:1;
+                    font-weight:700;
+                    color:#873247;
+                  "
+                >
+                  Veilora Club
+                </div>
+
+                <div
+                  style="
+                    margin-top:8px;
+                    font-family:Georgia,'Times New Roman',serif;
+                    font-size:11px;
+                    font-weight:700;
+                    color:#873247;
+                  "
+                >
+                  The Home of Global Modest Fashion
+                </div>
+              </a>
+            </div>
+
+          </div>
+        </div>
       </div>
-
-      <p style="margin:0 0 8px;font-size:13px;letter-spacing:0.18em;text-transform:uppercase;color:#7B2D3E;">
-        Password Reset
-      </p>
-
-      <h2 style="margin:0 0 16px;font-size:24px;font-weight:400;color:#1a0a0e;line-height:1.3;">
-        ${greeting}
-      </h2>
-
-      <p style="margin:0 0 16px;color:#6b5c4e;font-size:14px;line-height:1.7;">
-        We received a request to reset your Veilora Club password. Click the button below to set a new one.
-      </p>
-
-      <p style="margin:0 0 24px;color:#a89280;font-size:13px;line-height:1.7;">
-        This link expires in <strong style="color:#6b5c4e;">60 minutes</strong>. If you didn't request this, you can safely ignore this email.
-      </p>
-
-      <div style="text-align:center;margin:32px 0;">
-        <a href="${opts.resetUrl}"
-           style="display:inline-block;background:#7B2D3E;color:#ffffff;padding:14px 28px;text-decoration:none;font-size:13px;letter-spacing:0.08em;border-radius:4px;">
-          Reset my password →
-        </a>
-      </div>
-
-      <div style="background:#faf8f4;border-radius:8px;padding:14px 18px;margin:24px 0;">
-        <p style="margin:0;font-size:12px;color:#a89280;word-break:break-all;">
-          Or copy this link: <a href="${opts.resetUrl}" style="color:#7B2D3E;">${opts.resetUrl}</a>
-        </p>
-      </div>
-
-      <hr style="margin:28px 0;border:none;border-top:1px solid #e8ddd4;" />
-
-      <p style="font-size:12px;color:#a89280;margin:0;line-height:1.6;">
-        You're receiving this because a password reset was requested for your Veilora Club account.<br/>
-        If this wasn't you, no action is needed.
-      </p>
-
-      <p style="font-size:12px;color:#a89280;margin:12px 0 0;">
-        Veilora Club &nbsp;·&nbsp;
-        <a href="${baseUrl}" style="color:#7B2D3E;text-decoration:none;">${baseUrl.replace("https://", "")}</a>
-      </p>
-    </div>
-  </div>
+    </body>
+  </html>
   `;
 
   const text = `
-Veilora Club — Password Reset
+Veilora Club
+My Account
+
+Reset your password
 
 ${greeting}
 
@@ -84,18 +304,38 @@ Reset your password here:
 ${opts.resetUrl}
 
 This link expires in 60 minutes.
+
 If you didn't request this, you can safely ignore this email.
+Your password will remain unchanged.
+
+Best,
+The Veilora Club Team
+
+Need help?
+${supportEmail}
 
 Veilora Club
-${baseUrl}
-  `;
+The Home of Global Modest Fashion
+  `.trim();
 
-  await resend.emails.send({
-    from,
-    to: opts.to,
-    subject: "Reset your Veilora Club password",
-    html,
-    text,
-    ...(replyTo ? { replyTo } : {}),
-  });
+  const { data, error } =
+    await resend.emails.send({
+      from,
+      to: opts.to,
+      subject: "Reset your Veilora Club password",
+      html,
+      text,
+      ...(replyTo ? { replyTo } : {}),
+    });
+
+  if (error) {
+    throw new Error(
+      `Resend shopper password reset failed: ${error.message}`
+    );
+  }
+
+  console.log(
+    "[shopper-reset-email] sent",
+    data?.id
+  );
 }

@@ -41,12 +41,15 @@ export async function POST(req: NextRequest) {
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.veiloraclub.com";
       const resetUrl = `${baseUrl}/account/reset?token=${token}`;
 
-      // Non-blocking
-      sendShopperResetEmail({
-        to: shopper.email,
-        resetUrl,
-        firstName: shopper.firstName,
-      }).catch((err) => console.error("[shopper-reset-email]", err));
+     try {
+  await sendShopperResetEmail({
+    to: shopper.email,
+    resetUrl,
+    firstName: shopper.firstName,
+  });
+} catch (err) {
+  console.error("[shopper-reset-email]", err);
+}
     }
 
     // Always return ok — never reveal if email exists

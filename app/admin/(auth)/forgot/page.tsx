@@ -37,7 +37,7 @@ export default function AdminForgotPage() {
             <input
               type="email"
               required
-              placeholder="admin@veiloraclub.com"
+              placeholder="name@veiloraclub.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="mt-1 w-full rounded border border-[#d8c9b5] bg-white px-4 py-3 text-sm text-[#1a0a0e] placeholder:text-[#c0b0a0] outline-none focus:border-[#7B2D3E]"

@@ -28,11 +28,52 @@ export async function POST(req: Request) {
 
   if (!email) return NextResponse.json({ ok: true });
 
-  const user = await prisma.user.findFirst({
-  where: { email: { equals: email, mode: "insensitive" } },
-  select: { email: true },
+const user = await prisma.user.findFirst({
+  where: {
+    email: {
+      equals: email,
+      mode: "insensitive",
+    },
+  },
+  select: {
+    email: true,
+    name: true,
+  },
 });
-if (!user) return NextResponse.json({ ok: true });
+
+if (!user) {
+  return NextResponse.json({ ok: true });
+}
+
+// Some older brand accounts may not have User.name populated.
+// Fall back to the original BrandApplication first name.
+const brandApplication =
+  await prisma.brandApplication.findFirst({
+    where: {
+      email: {
+        equals: email,
+        mode: "insensitive",
+      },
+    },
+    orderBy: {
+      updatedAt: "desc",
+    },
+    select: {
+      firstName: true,
+    },
+  });
+
+const brandName =
+  user.name?.trim() ||
+  brandApplication?.firstName?.trim() ||
+  null;
+
+await prisma.passwordResetToken.deleteMany({
+  where: {
+    userType: "BRAND",
+    email,
+  },
+});
 
   const token = makeResetToken();
   const tokenHash = hashToken(token);
@@ -52,7 +93,16 @@ if (!user) return NextResponse.json({ ok: true });
 
 const resetUrl = `${appUrl}/brand/reset?token=${token}&email=${encodeURIComponent(email)}`;
 
-  await sendResetEmail({ to: email, resetUrl, userType: "BRAND" });
+  try {
+  await sendResetEmail({
+  to: user.email,
+  resetUrl,
+  userType: "BRAND",
+  name: brandName,
+});
+} catch (err) {
+  console.error("[brand-reset-email]", err);
+}
 
   return NextResponse.json({ ok: true });
 }

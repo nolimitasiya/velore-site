@@ -174,6 +174,9 @@ async function main() {
         countryCode: subscriber.countryCode,
       });
 
+      // HISTORICAL MIGRATION ONLY.
+// Do not re-enable unless intentionally importing historical subscribers.
+
      // await subscribeHistorical({
        // email,
         //consentedAt: subscriber.createdAt,
