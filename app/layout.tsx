@@ -8,6 +8,7 @@ import {
 } from "next/font/google";
 
 import localFont from "next/font/local";
+import AnalyticsSessionBootstrap from "@/components/analytics/AnalyticsSessionBootstrap";
 
 const heading = Abril_Fatface({
   weight: "400",
@@ -84,8 +85,9 @@ export default function RootLayout({
       className={`${heading.variable} ${body.variable} ${display.variable} ${script.variable} ${celandine.variable}`}
     >
       <body className="min-h-screen w-full bg-white font-body text-black">
-        {children}
-      </body>
+  <AnalyticsSessionBootstrap />
+  {children}
+</body>
     </html>
   );
 }

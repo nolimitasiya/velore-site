@@ -550,6 +550,19 @@ model WaitlistSubscriber {
   email       String   @unique
   countryCode String?  @db.Char(2)
   createdAt   DateTime @default(now())
+
+  // Acquisition attribution captured at signup
+  analyticsSessionId   String?
+  acquisitionSource    String?
+  acquisitionMedium    String?
+  acquisitionCampaign  String?
+  acquisitionContent   String?
+  acquisitionTerm      String?
+  landingPath          String?
+  referrer             String?
+
+  @@index([acquisitionSource, createdAt])
+  @@index([acquisitionCampaign, createdAt])
 }
 
 enum ProductStatus {
@@ -1418,12 +1431,24 @@ model AnalyticsSession {
   shopperCountryCode  String? @db.Char(2)
   shopperCurrencyCode String? @db.Char(3)
 
+  // Acquisition attribution
+  acquisitionSource   String?
+  acquisitionMedium   String?
+  acquisitionCampaign String?
+  acquisitionContent  String?
+  acquisitionTerm     String?
+
+  landingPath String?
+  referrer    String?
+
   events AnalyticsEvent[]
 
   @@index([startedAt])
   @@index([lastSeenAt])
   @@index([shopperId])
   @@index([shopperCountryCode, startedAt])
+  @@index([acquisitionSource, startedAt])
+  @@index([acquisitionCampaign, startedAt])
 }
 
 model AnalyticsEvent {

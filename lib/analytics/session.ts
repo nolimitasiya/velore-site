@@ -8,11 +8,44 @@ import { prisma } from "@/lib/prisma";
 export const ANALYTICS_SESSION_COOKIE =
   "vc_session";
 
+export const ANALYTICS_ATTRIBUTION_COOKIE =
+  "vc_attribution";
+
 const SESSION_LENGTH_MS =
   30 * 60 * 1000;
 
 const SESSION_COOKIE_MAX_AGE =
   30 * 60;
+
+/*
+ * Keep acquisition attribution
+ * for 30 days.
+ *
+ * This is separate from the
+ * 30-minute behavioural session.
+ */
+const ATTRIBUTION_COOKIE_MAX_AGE =
+  30 * 24 * 60 * 60;
+
+export type AnalyticsAttributionInput = {
+  utmSource?: string | null;
+  utmMedium?: string | null;
+  utmCampaign?: string | null;
+  utmContent?: string | null;
+  utmTerm?: string | null;
+  landingPath?: string | null;
+  referrer?: string | null;
+};
+
+type StoredAttribution = {
+  source: string | null;
+  medium: string | null;
+  campaign: string | null;
+  content: string | null;
+  term: string | null;
+  landingPath: string | null;
+  referrer: string | null;
+};
 
 function normalizeCountryCode(
   value:
@@ -46,8 +79,306 @@ function normalizeCurrencyCode(
     : null;
 }
 
-export async function getOrCreateAnalyticsSession(
+function cleanValue(
+  value:
+    | string
+    | null
+    | undefined
+) {
+  const cleaned =
+    (value ?? "").trim();
+
+  return cleaned
+    ? cleaned.slice(0, 1000)
+    : null;
+}
+
+function normalizeUtmValue(
+  value:
+    | string
+    | null
+    | undefined
+) {
+  const cleaned =
+    cleanValue(value);
+
+  return cleaned
+    ? cleaned.toLowerCase()
+    : null;
+}
+
+function classifyReferrer(
+  referrer:
+    | string
+    | null
+    | undefined
+) {
+  const cleaned =
+    cleanValue(referrer);
+
+  if (!cleaned) {
+    return {
+      source: "direct",
+      medium: "none",
+    };
+  }
+
+  try {
+    const url =
+      new URL(cleaned);
+
+    const hostname =
+      url.hostname
+        .toLowerCase()
+        .replace(/^www\./, "");
+
+    /*
+     * Same-site navigation is not
+     * a new acquisition source.
+     */
+    if (
+      hostname === "veiloraclub.com" ||
+      hostname.endsWith(
+        ".veiloraclub.com"
+      ) ||
+      hostname === "localhost" ||
+      hostname === "127.0.0.1"
+    ) {
+      return {
+        source: "direct",
+        medium: "none",
+      };
+    }
+
+    if (
+      hostname === "tiktok.com" ||
+      hostname.endsWith(
+        ".tiktok.com"
+      )
+    ) {
+      return {
+        source: "tiktok",
+        medium: "organic_social",
+      };
+    }
+
+    if (
+      hostname === "instagram.com" ||
+      hostname.endsWith(
+        ".instagram.com"
+      )
+    ) {
+      return {
+        source: "instagram",
+        medium: "organic_social",
+      };
+    }
+
+    if (
+      hostname === "linkedin.com" ||
+      hostname.endsWith(
+        ".linkedin.com"
+      )
+    ) {
+      return {
+        source: "linkedin",
+        medium: "organic_social",
+      };
+    }
+
+    if (
+      hostname === "facebook.com" ||
+      hostname.endsWith(
+        ".facebook.com"
+      ) ||
+      hostname === "fb.com" ||
+      hostname.endsWith(".fb.com")
+    ) {
+      return {
+        source: "facebook",
+        medium: "organic_social",
+      };
+    }
+
+    if (
+      hostname === "google.com" ||
+      hostname.endsWith(
+        ".google.com"
+      ) ||
+      hostname.startsWith(
+        "google."
+      )
+    ) {
+      return {
+        source: "google",
+        medium: "organic_search",
+      };
+    }
+
+    if (
+      hostname === "bing.com" ||
+      hostname.endsWith(
+        ".bing.com"
+      )
+    ) {
+      return {
+        source: "bing",
+        medium: "organic_search",
+      };
+    }
+
+    return {
+      source: hostname,
+      medium: "referral",
+    };
+  } catch {
+    return {
+      source: "referral",
+      medium: "referral",
+    };
+  }
+}
+
+function buildAttribution(
+  input:
+    | AnalyticsAttributionInput
+    | undefined
+): StoredAttribution {
+  const utmSource =
+    normalizeUtmValue(
+      input?.utmSource
+    );
+
+  const utmMedium =
+    normalizeUtmValue(
+      input?.utmMedium
+    );
+
+  const utmCampaign =
+    normalizeUtmValue(
+      input?.utmCampaign
+    );
+
+  const utmContent =
+    normalizeUtmValue(
+      input?.utmContent
+    );
+
+  const utmTerm =
+    normalizeUtmValue(
+      input?.utmTerm
+    );
+
+  const landingPath =
+    cleanValue(
+      input?.landingPath
+    );
+
+  const referrer =
+    cleanValue(
+      input?.referrer
+    );
+
+  const classified =
+    classifyReferrer(
+      referrer
+    );
+
+  return {
+    /*
+     * Explicit campaign tagging
+     * always wins over inferred
+     * referrer attribution.
+     */
+    source:
+      utmSource ??
+      classified.source,
+
+    medium:
+      utmMedium ??
+      classified.medium,
+
+    campaign:
+      utmCampaign,
+
+    content:
+      utmContent,
+
+    term:
+      utmTerm,
+
+    landingPath,
+
+    referrer,
+  };
+}
+
+function readStoredAttribution(
   req: NextRequest
+): StoredAttribution | null {
+  const raw =
+    req.cookies.get(
+      ANALYTICS_ATTRIBUTION_COOKIE
+    )?.value;
+
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed =
+      JSON.parse(
+        decodeURIComponent(raw)
+      ) as StoredAttribution;
+
+    return {
+      source:
+        cleanValue(parsed.source),
+
+      medium:
+        cleanValue(parsed.medium),
+
+      campaign:
+        cleanValue(parsed.campaign),
+
+      content:
+        cleanValue(parsed.content),
+
+      term:
+        cleanValue(parsed.term),
+
+      landingPath:
+        cleanValue(
+          parsed.landingPath
+        ),
+
+      referrer:
+        cleanValue(parsed.referrer),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function hasExplicitAcquisition(
+  input:
+    | AnalyticsAttributionInput
+    | undefined
+) {
+  return Boolean(
+    cleanValue(input?.utmSource) ||
+      cleanValue(input?.utmMedium) ||
+      cleanValue(
+        input?.utmCampaign
+      ) ||
+      cleanValue(input?.utmContent) ||
+      cleanValue(input?.utmTerm)
+  );
+}
+
+export async function getOrCreateAnalyticsSession(
+  req: NextRequest,
+  attributionInput?: AnalyticsAttributionInput
 ) {
   const now = new Date();
 
@@ -73,10 +404,6 @@ export async function getOrCreateAnalyticsSession(
       )?.value
     );
 
-  /*
-   * Resolve the currently
-   * authenticated shopper.
-   */
   const shopperCookieId =
     req.cookies
       .get("shopper_authed")
@@ -101,9 +428,8 @@ export async function getOrCreateAnalyticsSession(
     null;
 
   /*
-   * Check whether the browser's
-   * existing analytics session
-   * can safely continue.
+   * Existing behavioural session
+   * continues exactly as before.
    */
   if (existingSessionId) {
     const existingSession =
@@ -129,17 +455,6 @@ export async function getOrCreateAnalyticsSession(
         age <=
         SESSION_LENGTH_MS;
 
-      /*
-       * Identity rules:
-       *
-       * anonymous -> anonymous
-       * same shopper -> same shopper
-       *
-       * Anything else means the
-       * browser's identity changed
-       * and therefore requires a
-       * new analytics session.
-       */
       const sameIdentity =
         existingSession.shopperId ===
         shopperId;
@@ -176,23 +491,48 @@ export async function getOrCreateAnalyticsSession(
           shopperCountryCode,
 
           shopperCurrencyCode,
+
+          attribution:
+            null as StoredAttribution | null,
+
+          shouldSetAttributionCookie:
+            false,
         };
       }
     }
   }
 
   /*
-   * Create a new session when:
+   * Attribution strategy:
    *
-   * - no session exists
-   * - session expired
-   * - anonymous -> logged in
-   * - logged in -> anonymous
-   * - shopper A -> shopper B
+   * 1. Explicit UTMs on this landing
+   *    take priority.
    *
-   * Historical session ownership
-   * is therefore never rewritten.
+   * 2. Otherwise preserve the
+   *    visitor's existing 30-day
+   *    acquisition attribution.
+   *
+   * 3. Otherwise infer attribution
+   *    from the referrer/direct visit.
    */
+  const storedAttribution =
+    readStoredAttribution(req);
+
+  const explicitAcquisition =
+    hasExplicitAcquisition(
+      attributionInput
+    );
+
+  const attribution =
+    explicitAcquisition
+      ? buildAttribution(
+          attributionInput
+        )
+      : storedAttribution ??
+        buildAttribution(
+          attributionInput
+        );
+
   const session =
     await prisma.analyticsSession.create({
       data: {
@@ -207,6 +547,27 @@ export async function getOrCreateAnalyticsSession(
         shopperCurrencyCode,
 
         shopperId,
+
+        acquisitionSource:
+          attribution.source,
+
+        acquisitionMedium:
+          attribution.medium,
+
+        acquisitionCampaign:
+          attribution.campaign,
+
+        acquisitionContent:
+          attribution.content,
+
+        acquisitionTerm:
+          attribution.term,
+
+        landingPath:
+          attribution.landingPath,
+
+        referrer:
+          attribution.referrer,
       },
 
       select: {
@@ -226,6 +587,12 @@ export async function getOrCreateAnalyticsSession(
     shopperCountryCode,
 
     shopperCurrencyCode,
+
+    attribution,
+
+    shouldSetAttributionCookie:
+      explicitAcquisition ||
+      !storedAttribution,
   };
 }
 
@@ -255,6 +622,41 @@ export function attachAnalyticsSessionCookie(
 
     maxAge:
       SESSION_COOKIE_MAX_AGE,
+  });
+
+  return response;
+}
+
+export function attachAnalyticsAttributionCookie(
+  response: NextResponse,
+  attribution: StoredAttribution
+) {
+  response.cookies.set({
+    name:
+      ANALYTICS_ATTRIBUTION_COOKIE,
+
+    value:
+      encodeURIComponent(
+        JSON.stringify(
+          attribution
+        )
+      ),
+
+    httpOnly:
+      true,
+
+    sameSite:
+      "lax",
+
+    secure:
+      process.env.NODE_ENV ===
+      "production",
+
+    path:
+      "/",
+
+    maxAge:
+      ATTRIBUTION_COOKIE_MAX_AGE,
   });
 
   return response;

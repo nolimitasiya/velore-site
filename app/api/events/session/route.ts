@@ -4,6 +4,7 @@ import {
 } from "next/server";
 
 import {
+  attachAnalyticsAttributionCookie,
   attachAnalyticsSessionCookie,
   getOrCreateAnalyticsSession,
 } from "@/lib/analytics/session";
@@ -15,13 +16,57 @@ export async function POST(
   req: NextRequest
 ) {
   try {
+    const body = await req
+      .json()
+      .catch(() => ({}));
+
+    const attribution = {
+      utmSource:
+        typeof body.utmSource === "string"
+          ? body.utmSource
+          : null,
+
+      utmMedium:
+        typeof body.utmMedium === "string"
+          ? body.utmMedium
+          : null,
+
+      utmCampaign:
+        typeof body.utmCampaign === "string"
+          ? body.utmCampaign
+          : null,
+
+      utmContent:
+        typeof body.utmContent === "string"
+          ? body.utmContent
+          : null,
+
+      utmTerm:
+        typeof body.utmTerm === "string"
+          ? body.utmTerm
+          : null,
+
+      landingPath:
+        typeof body.landingPath === "string"
+          ? body.landingPath
+          : null,
+
+      referrer:
+        typeof body.referrer === "string"
+          ? body.referrer
+          : null,
+    };
+
     const {
-      sessionId,
-      isNew,
-    } =
-      await getOrCreateAnalyticsSession(
-        req
-      );
+  sessionId,
+  isNew,
+  attribution: resolvedAttribution,
+  shouldSetAttributionCookie,
+} =
+  await getOrCreateAnalyticsSession(
+    req,
+    attribution
+  );
 
     const response =
       NextResponse.json({
@@ -34,6 +79,16 @@ export async function POST(
       response,
       sessionId
     );
+
+    if (
+  shouldSetAttributionCookie &&
+  resolvedAttribution
+) {
+  attachAnalyticsAttributionCookie(
+    response,
+    resolvedAttribution
+  );
+}
 
     return response;
   } catch (error) {

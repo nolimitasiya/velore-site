@@ -1,47 +1,124 @@
-const KLAVIYO_API_URL = "https://a.klaviyo.com/api";
-const KLAVIYO_REVISION = "2026-07-15";
+const KLAVIYO_API_URL =
+  "https://a.klaviyo.com/api";
 
-function klaviyoHeaders(apiKey: string) {
+const KLAVIYO_REVISION =
+  "2026-07-15";
+
+type WaitlistAttribution = {
+  source?: string | null;
+  medium?: string | null;
+  campaign?: string | null;
+  content?: string | null;
+  term?: string | null;
+  referrer?: string | null;
+  landingPath?: string | null;
+};
+
+function klaviyoHeaders(
+  apiKey: string
+) {
   return {
-    Authorization: `Klaviyo-API-Key ${apiKey}`,
-    Accept: "application/vnd.api+json",
-    "Content-Type": "application/vnd.api+json",
-    revision: KLAVIYO_REVISION,
+    Authorization:
+      `Klaviyo-API-Key ${apiKey}`,
+
+    Accept:
+      "application/vnd.api+json",
+
+    "Content-Type":
+      "application/vnd.api+json",
+
+    revision:
+      KLAVIYO_REVISION,
   };
 }
 
-async function upsertKlaviyoProfile(params: {
-  email: string;
-  name: string;
-}) {
-  const apiKey = process.env.KLAVIYO_PRIVATE_API_KEY;
+async function upsertKlaviyoProfile(
+  params: {
+    email: string;
+    name: string;
+    attribution?: WaitlistAttribution;
+  }
+) {
+  const apiKey =
+    process.env
+      .KLAVIYO_PRIVATE_API_KEY;
 
   if (!apiKey) {
-    throw new Error("Missing KLAVIYO_PRIVATE_API_KEY");
+    throw new Error(
+      "Missing KLAVIYO_PRIVATE_API_KEY"
+    );
   }
 
-  const response = await fetch(
-    `${KLAVIYO_API_URL}/profile-import`,
-    {
-      method: "POST",
-      headers: klaviyoHeaders(apiKey),
-      body: JSON.stringify({
-        data: {
-          type: "profile",
-          attributes: {
-            email: params.email,
-            first_name: params.name,
-            properties: {
-                waitlist_member: true,
+  const response =
+    await fetch(
+      `${KLAVIYO_API_URL}/profile-import`,
+      {
+        method: "POST",
+
+        headers:
+          klaviyoHeaders(
+            apiKey
+          ),
+
+        body: JSON.stringify({
+          data: {
+            type: "profile",
+
+            attributes: {
+              email:
+                params.email,
+
+              first_name:
+                params.name,
+
+              properties: {
+                waitlist_member:
+                  true,
+
+                veilora_acquisition_source:
+                  params.attribution
+                    ?.source ??
+                  null,
+
+                veilora_acquisition_medium:
+                  params.attribution
+                    ?.medium ??
+                  null,
+
+                veilora_acquisition_campaign:
+                  params.attribution
+                    ?.campaign ??
+                  null,
+
+                veilora_acquisition_content:
+                  params.attribution
+                    ?.content ??
+                  null,
+
+                veilora_acquisition_term:
+                  params.attribution
+                    ?.term ??
+                  null,
+
+                veilora_acquisition_referrer:
+                  params.attribution
+                    ?.referrer ??
+                  null,
+
+                veilora_first_page:
+                  params.attribution
+                    ?.landingPath ??
+                  null,
               },
+            },
           },
-        },
-      }),
-    }
-  );
+        }),
+      }
+    );
 
   if (!response.ok) {
-    const errorText = await response.text();
+    const errorText =
+      await response.text();
 
     throw new Error(
       `Klaviyo profile update failed (${response.status}): ${errorText}`
@@ -49,63 +126,94 @@ async function upsertKlaviyoProfile(params: {
   }
 }
 
-async function subscribeWaitlistProfile(params: {
-  email: string;
-}) {
-  const apiKey = process.env.KLAVIYO_PRIVATE_API_KEY;
-  const listId = process.env.KLAVIYO_WAITLIST_LIST_ID;
+async function subscribeWaitlistProfile(
+  params: {
+    email: string;
+  }
+) {
+  const apiKey =
+    process.env
+      .KLAVIYO_PRIVATE_API_KEY;
+
+  const listId =
+    process.env
+      .KLAVIYO_WAITLIST_LIST_ID;
 
   if (!apiKey) {
-    throw new Error("Missing KLAVIYO_PRIVATE_API_KEY");
+    throw new Error(
+      "Missing KLAVIYO_PRIVATE_API_KEY"
+    );
   }
 
   if (!listId) {
-    throw new Error("Missing KLAVIYO_WAITLIST_LIST_ID");
+    throw new Error(
+      "Missing KLAVIYO_WAITLIST_LIST_ID"
+    );
   }
 
-  const response = await fetch(
-    `${KLAVIYO_API_URL}/profile-subscription-bulk-create-jobs`,
-    {
-      method: "POST",
-      headers: klaviyoHeaders(apiKey),
-      body: JSON.stringify({
-        data: {
-          type: "profile-subscription-bulk-create-job",
-          attributes: {
-            profiles: {
-              data: [
-                {
-                  type: "profile",
-                  attributes: {
-                    email: params.email,
-                    subscriptions: {
-                      email: {
-                        marketing: {
-                          consent: "SUBSCRIBED",
+  const response =
+    await fetch(
+      `${KLAVIYO_API_URL}/profile-subscription-bulk-create-jobs`,
+      {
+        method: "POST",
+
+        headers:
+          klaviyoHeaders(
+            apiKey
+          ),
+
+        body: JSON.stringify({
+          data: {
+            type:
+              "profile-subscription-bulk-create-job",
+
+            attributes: {
+              profiles: {
+                data: [
+                  {
+                    type:
+                      "profile",
+
+                    attributes: {
+                      email:
+                        params.email,
+
+                      subscriptions: {
+                        email: {
+                          marketing: {
+                            consent:
+                              "SUBSCRIBED",
+                          },
                         },
                       },
                     },
                   },
-                },
-              ],
+                ],
+              },
+
+              historical_import:
+                false,
             },
-            historical_import: false,
-          },
-          relationships: {
-            list: {
-              data: {
-                type: "list",
-                id: listId,
+
+            relationships: {
+              list: {
+                data: {
+                  type:
+                    "list",
+
+                  id:
+                    listId,
+                },
               },
             },
           },
-        },
-      }),
-    }
-  );
+        }),
+      }
+    );
 
   if (!response.ok) {
-    const errorText = await response.text();
+    const errorText =
+      await response.text();
 
     throw new Error(
       `Klaviyo waitlist sync failed (${response.status}): ${errorText}`
@@ -113,15 +221,19 @@ async function subscribeWaitlistProfile(params: {
   }
 }
 
-export async function syncWaitlistSubscriberToKlaviyo(params: {
-  email: string;
-  name: string;
-}) {
-  // First make sure the Klaviyo profile contains the shopper's name.
-  await upsertKlaviyoProfile(params);
+export async function syncWaitlistSubscriberToKlaviyo(
+  params: {
+    email: string;
+    name: string;
+    attribution?: WaitlistAttribution;
+  }
+) {
+  await upsertKlaviyoProfile(
+    params
+  );
 
-  // Then subscribe that profile to the Veilora Waitlist.
   await subscribeWaitlistProfile({
-    email: params.email,
+    email:
+      params.email,
   });
 }
