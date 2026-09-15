@@ -150,7 +150,7 @@ export default function MetricTrendChart({
     if (
       secondX -
         firstX <
-      45
+      458
     ) {
       indexes.shift();
     }

@@ -109,7 +109,7 @@ function PageShell({
 }) {
   return (
     <main className="min-h-screen bg-neutral-50/70">
-      <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-none px-4 py-8 sm:px-5 lg:px-6">
         {children}
       </div>
     </main>

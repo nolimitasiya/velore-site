@@ -421,7 +421,7 @@ const primaryAgeGroup =
   <SectionIntro
     eyebrow="Analytics areas"
     title="Explore Veilora performance"
-    description="Move from the high-level overview into dedicated intelligence for demand, shoppers, platform behaviour, and commerce."
+    description="Move from the high-level overview into dedicated intelligence for demand, shoppers, platform behaviour, and acquisition."
   />
 
   <div className="grid gap-5 xl:grid-cols-2">
@@ -539,29 +539,29 @@ const primaryAgeGroup =
 />
 
     <AnalyticsAreaCard
-      eyebrow="Commerce"
-      title="Commercial performance"
-      description="Track outbound intent, future purchases, GMV, commissions, and brand revenue contribution."
-      href="/admin/analytics/commerce"
-      stats={[
-        {
-          label: "Shop clicks",
-          value: index.shopClicks ?? 0,
-        },
-        {
-          label: "Purchases",
-          value: "—",
-        },
-        {
-          label: "GMV",
-          value: "—",
-        },
-        {
-          label: "Commission",
-          value: "—",
-        },
-      ]}
-    />
+  eyebrow="Acquisition"
+  title="Growth & conversion"
+  description="Understand where Veilora traffic comes from and which sources and campaigns convert into waitlist signups and brand applications."
+  href="/admin/analytics/acquisition"
+  stats={[
+    {
+      label: "Sessions",
+      value: "View",
+    },
+    {
+      label: "Waitlist",
+      value: "View",
+    },
+    {
+      label: "Brand apps",
+      value: "View",
+    },
+    {
+      label: "Waitlist CVR",
+      value: "View",
+    },
+  ]}
+/>
   </div>
 </section>
 

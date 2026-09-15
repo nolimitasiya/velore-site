@@ -25,9 +25,9 @@ const items = [
     href: "/admin/analytics/brands",
   },
   {
-    label: "Commerce",
-    href: "/admin/analytics/commerce",
-  },
+  label: "Acquisition",
+  href: "/admin/analytics/acquisition",
+},
 ];
 
 export default function AnalyticsNav() {

@@ -10,7 +10,16 @@ type Item = {
   socialMedia: string | null;
   status: string;
   createdAt: Date;
-  internalNotes: { id: string; content: string; createdAt: Date }[];
+
+  acquisitionSource: string | null;
+  acquisitionCampaign: string | null;
+  acquisitionContent: string | null;
+
+  internalNotes: {
+    id: string;
+    content: string;
+    createdAt: Date;
+  }[];
 };
 
 import StatusSelect from "./StatusSelect";
@@ -44,6 +53,14 @@ function fmt(d: Date) {
   return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(d));
 }
 
+function acquisitionLabel(value: string | null) {
+  if (!value) return "—";
+
+  return value
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 export default function ApplicationsTable({ items }: { items: Item[] }) {
   function syncScroll(fromId: string, toId: string) {
     return (e: React.UIEvent<HTMLDivElement>) => {
@@ -59,7 +76,7 @@ export default function ApplicationsTable({ items }: { items: Item[] }) {
         id="apps-scroll-top"
         onScroll={syncScroll("apps-scroll-top", "apps-scroll-bottom")}
       >
-        <div style={{ height: 8 }} className="min-w-[1180px]" />
+        <div style={{ height: 8 }} className="min-w-[1380px]" />
       </div>
 
       <div
@@ -67,18 +84,23 @@ export default function ApplicationsTable({ items }: { items: Item[] }) {
         id="apps-scroll-bottom"
         onScroll={syncScroll("apps-scroll-bottom", "apps-scroll-top")}
       >
-        <table className="w-full min-w-[1180px] text-sm">
+        <table className="w-full min-w-[1380px] text-sm">
           <thead className="bg-[#fdf7f4] text-left">
             <tr className="text-xs uppercase tracking-[0.16em] text-[#a89280]">
-              <th className="px-6 py-4 font-semibold">Contact</th>
-              <th className="px-6 py-4 font-semibold">Email</th>
-              <th className="px-6 py-4 font-semibold">Phone</th>
-              <th className="px-6 py-4 font-semibold">Website</th>
-              <th className="px-6 py-4 font-semibold">Social</th>
-              <th className="px-6 py-4 font-semibold">Status</th>
-              <th className="px-6 py-4 font-semibold">Created</th>
-              <th className="px-6 py-4 font-semibold">Stage</th>
-              <th className="px-6 py-4 font-semibold">Notes</th>
+              <th className="px-4 py-4 font-semibold">Contact</th>
+              <th className="px-4 py-4 font-semibold">Email</th>
+              <th className="px-4 py-4 font-semibold">Phone</th>
+              <th className="px-4 py-4 font-semibold">Website</th>
+              <th className="px-4 py-4 font-semibold">Social</th>
+              <th className="px-4 py-4 font-semibold">Source</th>
+              <th className="px-4 py-4 font-semibold">Campaign</th>
+              <th className="px-4 py-4 font-semibold">Content</th>
+              <th className="px-4 py-4 font-semibold">Status</th>
+              <th className="px-4 py-4 font-semibold">Created</th>
+              <th className="px-4 py-4 font-semibold">Stage</th>
+              <th className="min-w-[110px] px-4 py-4 font-semibold">
+  Notes
+</th>
             </tr>
           </thead>
           <tbody>
@@ -128,6 +150,38 @@ export default function ApplicationsTable({ items }: { items: Item[] }) {
                       </a>
                     ) : <span className="text-neutral-400">—</span>}
                   </td>
+
+                  <td className="px-6 py-4">
+  {a.acquisitionSource ? (
+    <span className="font-medium text-neutral-800">
+      {acquisitionLabel(a.acquisitionSource)}
+    </span>
+  ) : (
+    <span className="text-neutral-400">Unattributed</span>
+  )}
+</td>
+
+<td className="px-6 py-4">
+  {a.acquisitionCampaign ? (
+    <span className="text-neutral-700">
+      {acquisitionLabel(a.acquisitionCampaign)}
+    </span>
+  ) : (
+    <span className="text-neutral-400">—</span>
+  )}
+</td>
+
+<td className="px-6 py-4">
+  {a.acquisitionContent ? (
+    <span className="text-neutral-700">
+      {acquisitionLabel(a.acquisitionContent)}
+    </span>
+  ) : (
+    <span className="text-neutral-400">—</span>
+  )}
+</td>
+
+
                   <td className="px-6 py-4">
                     <span className={b.cls}>{b.label}</span>
                   </td>
@@ -137,15 +191,18 @@ export default function ApplicationsTable({ items }: { items: Item[] }) {
                   <td className="px-6 py-4">
                     <StatusSelect id={String(a.id)} value={String(a.status)} />
                   </td>
-                  <td className="px-6 py-4">
-                    <ApplicationNotesButton applicationId={String(a.id)} initialNotes={a.internalNotes} />
-                  </td>
+                  <td className="min-w-[110px] px-4 py-4">
+  <ApplicationNotesButton
+    applicationId={String(a.id)}
+    initialNotes={a.internalNotes}
+  />
+</td>
                 </tr>
               );
             })}
             {items.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-6 py-16 text-center text-sm text-neutral-500">
+                <td colSpan={12} className="px-6 py-16 text-center text-sm text-neutral-500">
                   No applications found.
                 </td>
               </tr>

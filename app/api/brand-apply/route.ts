@@ -1,7 +1,7 @@
 // C:\Users\Asiya\projects\dalra\app\api\brand-apply\route.ts
-import { NextResponse } from "next/server";
-import { z } from "zod";
+import { NextRequest, NextResponse,} from "next/server";import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import {  ANALYTICS_SESSION_COOKIE,} from "@/lib/analytics/session";
 import { Resend } from "resend";
 import { sendBrandApplicationToKlaviyo } from "@/lib/klaviyo/brandApplication";
 
@@ -61,36 +61,100 @@ const schema = z
     }
   });
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const data = schema.parse(body);
 
     // Normalised values already, but keep these explicit:
-    const countryCode = data.countryCode; // already upper + trimmed
     const city = data.city;
 
-    const created = await prisma.brandApplication.create({
-      data: {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
+/*
+ * Snapshot the visitor's acquisition attribution
+ * onto the brand application.
+ *
+ * Attribution must never block an application,
+ * so a missing/invalid session simply results
+ * in an unattributed application.
+ */
+const analyticsSessionId =
+  req.cookies
+    .get(ANALYTICS_SESSION_COOKIE)
+    ?.value
+    ?.trim() || null;
 
-        // ✅ NEW
-        companyName: data.companyName,
-        platformHosted: data.platformHosted,
-        platformHostedOther:
-          data.platformHosted === "OTHER" ? (data.platformHostedOther?.trim() || null) : null,
+let analyticsSession: {
+  id: string;
+  acquisitionSource: string | null;
+  acquisitionMedium: string | null;
+  acquisitionCampaign: string | null;
+  acquisitionContent: string | null;
+  acquisitionTerm: string | null;
+  landingPath: string | null;
+  referrer: string | null;
+} | null = null;
 
-        countryCode,
-        city,
+if (analyticsSessionId) {
+  try {
+    analyticsSession =
+      await prisma.analyticsSession.findUnique({
+        where: {
+          id: analyticsSessionId,
+        },
+        select: {
+          id: true,
+          acquisitionSource: true,
+          acquisitionMedium: true,
+          acquisitionCampaign: true,
+          acquisitionContent: true,
+          acquisitionTerm: true,
+          landingPath: true,
+          referrer: true,
+        },
+      });
+  } catch (err) {
+    console.error(
+      "[brand-apply] Attribution lookup failed",
+      err
+    );
+  }
+}
 
-        phone: data.phone,
-        website: data.website,
-        socialMedia: data.socialMedia,
-        notes: data.notes,
-      },
-    });
+const created =
+  await prisma.brandApplication.create({
+    data: {
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+
+      // ✅ NEW
+      companyName: data.companyName,
+      platformHosted: data.platformHosted,
+      platformHostedOther:
+        data.platformHosted === "OTHER" ? (data.platformHostedOther?.trim() || null) : null,
+
+      countryCode: data.countryCode,
+      city: data.city,
+
+      phone: data.phone,
+      website: data.website,
+      socialMedia: data.socialMedia,
+      notes: data.notes,
+
+      
+      // ✅ Acquisition attribution
+      analyticsSessionId: analyticsSessionId,
+      acquisitionSource: analyticsSession?.acquisitionSource ?? null,
+      acquisitionMedium: analyticsSession?.acquisitionMedium ?? null,
+      acquisitionCampaign: analyticsSession?.acquisitionCampaign ?? null,
+      acquisitionContent: analyticsSession?.acquisitionContent ?? null,
+      acquisitionTerm: analyticsSession?.acquisitionTerm ?? null,
+      landingPath: analyticsSession?.landingPath ?? null,
+      referrer: analyticsSession?.referrer ?? null,
+    },
+    
+  });
+  
 
 try {
   await sendBrandApplicationToKlaviyo({
@@ -111,6 +175,31 @@ try {
       data.platformHosted === "OTHER"
         ? data.platformHostedOther || "OTHER"
         : data.platformHosted,
+
+        analyticsSessionId:
+  created.analyticsSessionId,
+
+acquisitionSource:
+  created.acquisitionSource,
+
+acquisitionMedium:
+  created.acquisitionMedium,
+
+acquisitionCampaign:
+  created.acquisitionCampaign,
+
+acquisitionContent:
+  created.acquisitionContent,
+
+acquisitionTerm:
+  created.acquisitionTerm,
+
+landingPath:
+  created.landingPath,
+
+referrer:
+  created.referrer,
+  
   });
 } catch (err) {
   console.error(

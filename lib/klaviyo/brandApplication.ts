@@ -21,6 +21,14 @@ export async function sendBrandApplicationToKlaviyo(params: {
   website: string | null;
   socialMedia: string | null;
   platformHosted: string;
+  analyticsSessionId: string | null;
+  acquisitionSource: string | null;
+  acquisitionMedium: string | null;
+  acquisitionCampaign: string | null;
+  acquisitionContent: string | null;
+  acquisitionTerm: string | null;
+  landingPath: string | null;
+  referrer: string | null;
 }) {
   const apiKey = process.env.KLAVIYO_PRIVATE_API_KEY;
 
@@ -62,26 +70,71 @@ export async function sendBrandApplicationToKlaviyo(params: {
                 },
 
                 properties: {
-                  relationship: "Brand",
-                  brand_name: params.companyName,
-                  brand_stage: "new",
-                  website: params.website,
-                  social_media: params.socialMedia,
-                  platform_hosted: params.platformHosted,
-                },
+  relationship: "Brand",
+  brand_name: params.companyName,
+  brand_stage: "new",
+  website: params.website,
+  social_media: params.socialMedia,
+  platform_hosted: params.platformHosted,
+
+  veilora_analytics_session_id:
+    params.analyticsSessionId,
+
+  veilora_acquisition_source:
+    params.acquisitionSource,
+
+  veilora_acquisition_medium:
+    params.acquisitionMedium,
+
+  veilora_acquisition_campaign:
+    params.acquisitionCampaign,
+
+  veilora_acquisition_content:
+    params.acquisitionContent,
+
+  veilora_acquisition_term:
+    params.acquisitionTerm,
+
+  veilora_landing_path:
+    params.landingPath,
+
+  veilora_referrer:
+    params.referrer,
+},
               },
             },
           },
 
           properties: {
-            application_id: params.applicationId,
-            brand_name: params.companyName,
-            country_code: params.countryCode,
-            city: params.city,
-            website: params.website,
-            social_media: params.socialMedia,
-            platform_hosted: params.platformHosted,
-          },
+  application_id: params.applicationId,
+  brand_name: params.companyName,
+  country_code: params.countryCode,
+  city: params.city,
+  website: params.website,
+  social_media: params.socialMedia,
+  platform_hosted: params.platformHosted,
+
+  acquisition_source:
+    params.acquisitionSource,
+
+  acquisition_medium:
+    params.acquisitionMedium,
+
+  acquisition_campaign:
+    params.acquisitionCampaign,
+
+  acquisition_content:
+    params.acquisitionContent,
+
+  acquisition_term:
+    params.acquisitionTerm,
+
+  landing_path:
+    params.landingPath,
+
+  referrer:
+    params.referrer,
+},
 
           unique_id: params.applicationId,
           time: new Date().toISOString(),

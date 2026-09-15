@@ -316,7 +316,7 @@ model BrandApplication {
   email               String
   notes               String?
   companyName         String?
-  platformHosted      PlatformHosted? // new enum
+  platformHosted      PlatformHosted?
   platformHostedOther String?
 
   status             BrandApplicationStatus @default(new)
@@ -326,7 +326,7 @@ model BrandApplication {
   lastName           String
   phone              String?
   socialMedia        String?
-  countryCode        String?                @db.Char(2) // ISO-2 like "GB"
+  countryCode        String?                @db.Char(2)
   city               String?
   contractSentAt     DateTime?
   contractSignedAt   DateTime?
@@ -335,6 +335,16 @@ model BrandApplication {
 
   internalNotes     BrandApplicationNote[]
   applicationSource BrandApplicationSource @default(ORGANIC)
+
+  // Acquisition attribution captured at application
+  analyticsSessionId  String?
+  acquisitionSource   String?
+  acquisitionMedium   String?
+  acquisitionCampaign String?
+  acquisitionContent  String?
+  acquisitionTerm     String?
+  landingPath         String?
+  referrer            String?
 
   leadTemperature LeadTemperature?
   leadScore       Int?
@@ -345,6 +355,9 @@ model BrandApplication {
   @@index([status, createdAt])
   @@index([email])
   @@index([platformHosted])
+
+  @@index([acquisitionSource, createdAt])
+  @@index([acquisitionCampaign, createdAt])
 }
 
 model BrandApplicationNote {
