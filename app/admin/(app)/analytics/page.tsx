@@ -177,6 +177,9 @@ const toDate = sp.to ?? "";
   summary,
   indexOverview,
   audienceData,
+  acquisitionData,
+  brandsData,
+
 ] = await Promise.all([
   getJSON(
     `/api/admin/analytics/summary?range=${range}&from=${fromDate}&to=${toDate}`
@@ -189,6 +192,13 @@ const toDate = sp.to ?? "";
   getJSON(
     `/api/admin/analytics/audience?range=${range}&from=${fromDate}&to=${toDate}&country=all&source=all`
   ),
+  getJSON(
+  `/api/admin/analytics/acquisition?range=${range}&from=${fromDate}&to=${toDate}`
+),
+getJSON(
+  "/api/admin/analytics/brands"
+),
+
 ]);
 
 
@@ -197,6 +207,30 @@ const index = indexOverview?.overview ?? {};
 
 const audience =
   audienceData?.overview ?? {};
+const acquisition =
+  acquisitionData?.overview ?? {};
+
+
+const brandPortfolio =
+  brandsData?.summary ?? {};
+
+  const catalogueHealth =
+  brandPortfolio.brands > 0
+    ? Math.round(
+        (brandPortfolio.healthyBrands /
+          brandPortfolio.brands) *
+          100
+      )
+    : 0;
+
+const affiliateReadiness =
+  brandPortfolio.liveProducts > 0
+    ? Math.round(
+        (brandPortfolio.affiliateReadyProducts /
+          brandPortfolio.liveProducts) *
+          100
+      )
+    : 0;
 
 const audienceGeography =
   audienceData?.geography ?? [];
@@ -520,25 +554,27 @@ const primaryAgeGroup =
   href="/admin/analytics/brands"
   stats={[
     {
-      label: "Active brands",
-      value: summary?.brandCount ?? 0,
+      label: "Brands with products",
+      value: brandPortfolio.brands ?? 0,
     },
     {
-      label: "Active products",
-      value: summary?.productCount ?? 0,
+      label: "Live products",
+      value: brandPortfolio.liveProducts ?? 0,
     },
     {
-      label: "Catalogue health",
-      value: "View",
+      label: "Healthy brands",
+      value: `${brandPortfolio.healthyBrands ?? 0} / ${
+        brandPortfolio.brands ?? 0
+      }`,
     },
     {
       label: "Affiliate readiness",
-      value: "View",
+      value: `${affiliateReadiness}%`,
     },
   ]}
 />
 
-    <AnalyticsAreaCard
+   <AnalyticsAreaCard
   eyebrow="Acquisition"
   title="Growth & conversion"
   description="Understand where Veilora traffic comes from and which sources and campaigns convert into waitlist signups and brand applications."
@@ -546,19 +582,22 @@ const primaryAgeGroup =
   stats={[
     {
       label: "Sessions",
-      value: "View",
+      value: acquisition.sessions ?? 0,
     },
     {
-      label: "Waitlist",
-      value: "View",
+      label: "Waitlist signups",
+      value: acquisition.waitlistReceived ?? 0,
     },
     {
-      label: "Brand apps",
-      value: "View",
+      label: "Brand applications",
+      value: acquisition.brandAppsReceived ?? 0,
     },
     {
       label: "Waitlist CVR",
-      value: "View",
+      value:
+        acquisition.waitlistConversionRate != null
+          ? `${acquisition.waitlistConversionRate.toFixed(1)}%`
+          : "0.0%",
     },
   ]}
 />
