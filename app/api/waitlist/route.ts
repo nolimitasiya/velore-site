@@ -70,34 +70,41 @@ export async function POST(
       body.name || ""
     );
 
-  if (
-    !rawName.trim() ||
-    !email
-  ) {
-    return NextResponse.json(
-      {
-        error:
-          "Missing name or email",
-      },
-      {
-        status: 400,
-      }
-    );
-  }
+ if (!rawName.trim()) {
+  return NextResponse.json(
+    {
+      error: "Please enter your name.",
+    },
+    {
+      status: 400,
+    }
+  );
+}
 
-  if (
-    !email.includes("@")
-  ) {
-    return NextResponse.json(
-      {
-        error:
-          "Invalid email",
-      },
-      {
-        status: 400,
-      }
-    );
-  }
+if (!email) {
+  return NextResponse.json(
+    {
+      error: "Please enter your email address.",
+    },
+    {
+      status: 400,
+    }
+  );
+}
+
+const emailPattern =
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+if (!emailPattern.test(email)) {
+  return NextResponse.json(
+    {
+      error: "Please enter a valid email address.",
+    },
+    {
+      status: 400,
+    }
+  );
+}
 
   const friendlyName =
     displayName(

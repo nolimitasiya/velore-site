@@ -16,7 +16,7 @@ export default function Page() {
         </div>
       </div>
 
-      <section className="mx-auto w-full max-w-4xl px-6 py-14 md:px-8 md:py-20">
+      <section className="mx-auto w-full max-w-[1180px] px-6 py-14 md:px-8 md:py-20">
 
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-[11px] uppercase tracking-[0.22em] text-[#7B2D3E]">

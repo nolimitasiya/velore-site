@@ -313,48 +313,68 @@ export default function BrandApplyForm() {
           </div>
 
           {/* Phone */}
-          <fieldset>
-            <legend id={phoneLegendId} className="text-sm font-medium">
-              Phone *
-            </legend>
+<fieldset>
+  <legend id={phoneLegendId} className={labelClass}>
+    Phone *
+  </legend>
 
-            <div className="mt-1 grid grid-cols-[220px_1fr] gap-3">
-              <select
-                id="phoneCountry"
-                className="rounded-xl border border-black/15 bg-white px-3 py-2 text-black"
-                value={form.phoneCountry}
-                onChange={(e) => setForm({ ...form, phoneCountry: e.target.value })}
-                aria-labelledby={phoneLegendId}
-                title="Phone country code"
-                disabled={submitting}
-              >
-                
-                <option value="+44">United Kingdom (+44)</option>
-                <option disabled>──────────</option>
-                {countryCodes
-                  .filter((c) => c.code !== "+44")
-                  .map((c) => (
-                    <option key={`${c.name}-${c.code}`} value={c.code}>
-                      {c.name} ({c.code})
-                    </option>
-                  ))}
-              </select>
+  <div className="grid grid-cols-1 gap-3 md:grid-cols-[220px_1fr]">
+    <select
+      id="phoneCountry"
+      className={selectClass}
+      value={form.phoneCountry}
+      onChange={(e) =>
+        setForm({
+          ...form,
+          phoneCountry: e.target.value,
+        })
+      }
+      aria-labelledby={phoneLegendId}
+      title="Phone country code"
+      disabled={submitting}
+    >
+      <option value="+44">United Kingdom (+44)</option>
+      <option disabled>──────────</option>
 
-              <input id="phoneNumber" className={`rounded-xl border border-black/15 bg-white px-3 py-2 text-black placeholder:text-black/40 ${fieldError(!form.phoneNumber.trim())}`}
-                value={form.phoneNumber}
-                onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
-                placeholder="Phone number"
-                inputMode="tel"
-                pattern="^[0-9\\s()+-]{7,20}$"
-                required
-                disabled={submitting}
-                autoComplete="tel"
-              />
-              {showErrors && !form.phoneNumber.trim() && (
-  <p className={errMsg}>Phone number is required</p>
-)}
-            </div>
-          </fieldset>
+      {countryCodes
+        .filter((c) => c.code !== "+44")
+        .map((c) => (
+          <option
+            key={`${c.name}-${c.code}`}
+            value={c.code}
+          >
+            {c.name} ({c.code})
+          </option>
+        ))}
+    </select>
+
+    <input
+      id="phoneNumber"
+      className={`${inputClass} ${fieldError(
+        !form.phoneNumber.trim()
+      )}`}
+      value={form.phoneNumber}
+      onChange={(e) =>
+        setForm({
+          ...form,
+          phoneNumber: e.target.value,
+        })
+      }
+      placeholder="Phone number"
+      inputMode="tel"
+      pattern="^[0-9\\s()+-]{7,20}$"
+      required
+      disabled={submitting}
+      autoComplete="tel"
+    />
+  </div>
+
+  {showErrors && !form.phoneNumber.trim() && (
+    <p className={errMsg}>
+      Phone number is required
+    </p>
+  )}
+</fieldset>
         </div>
       </section>
 
@@ -509,52 +529,65 @@ export default function BrandApplyForm() {
           </div>
 
           {/* Social */}
-          <div>
-            <label htmlFor="socialPlatform" className={labelClass}>
-              Social media *
-            </label>
+<div>
+  <label htmlFor="socialPlatform" className={labelClass}>
+    Social media *
+  </label>
 
-            <div className="mt-1 grid grid-cols-1 gap-3 md:grid-cols-[220px_1fr]">
-              <select
-                id="socialPlatform"
-                className="rounded-xl border border-black/15 bg-white px-3 py-2 text-black placeholder:text-black/40"
-                value={form.socialPlatform}
-                required
-                disabled={submitting}
-                title="Social media platform"
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    socialPlatform: e.target.value as SocialPlatform,
-                  })
-                }
-              >
-                <option value="none" disabled>
-                  Select a platform…
-                </option>
-                {SOCIAL_OPTIONS.filter((o) => o.value !== "none").map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
+  <div className="grid grid-cols-1 gap-3 md:grid-cols-[220px_1fr]">
+    <select
+      id="socialPlatform"
+      className={selectClass}
+      value={form.socialPlatform}
+      required
+      disabled={submitting}
+      title="Social media platform"
+      onChange={(e) =>
+        setForm({
+          ...form,
+          socialPlatform: e.target.value as SocialPlatform,
+        })
+      }
+    >
+      <option value="none" disabled>
+        Select a platform…
+      </option>
 
-              <input id="socialHandle" className={`rounded-xl border px-3 py-2 ${fieldError(!form.socialHandle.trim())}`} 
-                value={form.socialHandle}
-                onChange={(e) => setForm({ ...form, socialHandle: e.target.value })}
-                placeholder="Username or link"
-                required
-                disabled={submitting}
-              />
-              
-            </div>
-            {showErrors && form.socialPlatform === "none" && (
-  <p className={errMsg}>Please select a social platform</p>
-)}
-{showErrors && form.socialPlatform !== "none" && !form.socialHandle.trim() && (
-  <p className={errMsg}>Social handle or link is required</p>
-)}
-          </div>
+      {SOCIAL_OPTIONS.filter((o) => o.value !== "none").map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </select>
+
+    <input
+      id="socialHandle"
+      className={`${inputClass} ${fieldError(
+        !form.socialHandle.trim()
+      )}`}
+      value={form.socialHandle}
+      onChange={(e) =>
+        setForm({
+          ...form,
+          socialHandle: e.target.value,
+        })
+      }
+      placeholder="Username or link"
+      required
+      disabled={submitting}
+    />
+  </div>
+
+  {showErrors && form.socialPlatform === "none" && (
+    <p className={errMsg}>Please select a social platform</p>
+  )}
+
+  {showErrors &&
+    form.socialPlatform !== "none" &&
+    !form.socialHandle.trim() && (
+      <p className={errMsg}>Social handle or link is required</p>
+    )}
+</div>
         </div>
       </section>
 
