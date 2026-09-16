@@ -142,22 +142,32 @@ export default function Gate() {
 
           <div>
             <h1 className="mt-4 font-heading text-4xl leading-[1.1] text-[#1a0a0e] md:text-5xl">
-              Discover <em className="italic text-[#7A2A3A]">modest fashion.</em>
-            </h1>
+  Discover{" "}
+  <span className="text-[#7A2A3A]">
+    modest fashion
+  </span>{" "}
+  from around the world.
+</h1>
             <p className="mt-6 max-w-[46ch] text-base leading-relaxed text-[#000000]">
               Veilora Club is a curated discovery platform connecting shoppers with modest
               fashion brands from around the world. From emerging designers to established
               labels, Veilora Club helps you discover your next favourite brand.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-6">
-             
-              <a
-                href="#how-it-works"
-                className="text-sm font-semibold text-[#7A2A3A] underline underline-offset-4"
-              >
-                Explore our features →
-              </a>
-            </div>
+  <a
+    href="#shoppers"
+    className="rounded bg-[#7A2A3A] px-6 py-3.5 text-xs font-bold uppercase tracking-[0.06em] text-white transition hover:opacity-90"
+  >
+    Join the Waitlist
+  </a>
+
+  <a
+    href="#how-it-works"
+    className="text-sm font-semibold text-[#7A2A3A] underline underline-offset-4"
+  >
+    Explore our features →
+  </a>
+</div>
           </div>
         </div>
       </section>

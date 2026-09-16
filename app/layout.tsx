@@ -64,13 +64,22 @@ export const metadata: Metadata = {
     url: SITE_URL,
     siteName: "Veilora Club",
     type: "website",
+    images: [
+      {
+        url: "/images/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Veilora Club — Home of Global Modest Fashion",
+      },
+    ],
   },
 
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Veilora Club | Home of Global Modest Fashion",
     description:
       "Discover curated modest fashion brands from around the world, all in one destination.",
+    images: ["/images/og-image.jpg"],
   },
 };
 
@@ -85,9 +94,9 @@ export default function RootLayout({
       className={`${heading.variable} ${body.variable} ${display.variable} ${script.variable} ${celandine.variable}`}
     >
       <body className="min-h-screen w-full bg-white font-body text-black">
-  <AnalyticsSessionBootstrap />
-  {children}
-</body>
-    </html>
+          <AnalyticsSessionBootstrap />
+            {children}
+      </body>
+   </html>
   );
 }
