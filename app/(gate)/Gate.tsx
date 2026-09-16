@@ -77,24 +77,39 @@ export default function Gate() {
       {/* ══════════════ HEADER ══════════════ */}
       <header className="sticky top-0 z-50 border-b border-[#EDE6DC] bg-white">
         <div className="mx-auto flex max-w-[1180px] items-center justify-between px-6 py-5 md:px-12">
-          <div className="font-heading text-2xl font-semibold text-[#1a0a0e]">
+          <div className="font-heading text-4xl font-semibold text-[#7A2A3A]">
             Veilora Club
           </div>
 
           <nav className="hidden items-center gap-10 md:flex">
-            <a href="#about" className="text-sm font-medium text-[#000000] transition hover:text-[#1a0a0e]">
-              About
-            </a>
-            <a href="#features" className="text-sm font-medium text-[#000000] transition hover:text-[#1a0a0e]">
-              Features
-            </a>
-            <a href="#how-it-works" className="text-sm font-medium text-[#000000] transition hover:text-[#1a0a0e]">
-              Discover
-            </a>
-            <a href="#for-brands" className="text-sm font-medium text-[#000000] transition hover:text-[#1a0a0e]">
-              For Brands
-            </a>
-          </nav>
+  <a
+    href="#about"
+    className="text-base font-semibold text-[#1a0a0e] transition hover:text-[#7A2A3A]"
+  >
+    About
+  </a>
+
+  <a
+    href="#features"
+    className="text-base font-semibold text-[#1a0a0e] transition hover:text-[#7A2A3A]"
+  >
+    Features
+  </a>
+
+  <a
+    href="#how-it-works"
+    className="text-base font-semibold text-[#1a0a0e] transition hover:text-[#7A2A3A]"
+  >
+    Discover
+  </a>
+
+  <a
+    href="#for-brands"
+    className="text-base font-semibold text-[#1a0a0e] transition hover:text-[#7A2A3A]"
+  >
+    For Brands
+  </a>
+</nav>
 
           <div className="flex items-center gap-3">
             <a
@@ -220,7 +235,7 @@ export default function Gate() {
               </svg>
               <h3 className="mt-4 font-heading text-lg text-[#1a0a0e]">Emerging Brands</h3>
               <p className="mt-2.5 text-sm leading-relaxed text-[#6b5c4e]">
-                Discover your next new favorite brands.
+                Discover your next new favourite brands.
               </p>
             </div>
           </div>
@@ -263,7 +278,6 @@ export default function Gate() {
         </div>
       </section>
 
-      {/* ══════════════ EARLY ACCESS (shoppers + brands) ══════════════ */}
       {/* ══════════════ EARLY ACCESS (shoppers + brands) ══════════════ */}
 <section id="shoppers" className="px-6 pb-24 pt-8 md:px-12">
   <div className="mx-auto max-w-md text-center">
@@ -392,7 +406,7 @@ export default function Gate() {
       {/* ══════════════ FOOTER ══════════════ */}
       <footer className="border-t border-[#EDE6DC] px-6 py-11 md:px-12">
         <div className="mx-auto flex max-w-[1180px] flex-col items-center gap-3.5 text-center">
-          <div className="font-heading text-2xl font-semibold text-[#1a0a0e]">
+          <div className="font-heading text-3xl font-semibold text-[#7A2A3A]">
             Veilora Club
           </div>
           <div className="text-md text-[#7A2A3A]">The Home of Global Modest Fashion</div>
