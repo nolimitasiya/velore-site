@@ -7,7 +7,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import MoneyLabel from "@/components/MoneyLabel";
+import ProductPrice from "@/components/ProductPrice";
 import ProductClickTrackingLink from "@/components/analytics/ProductClickTrackingLink";
 import WishlistButton from "@/components/WishlistButton";
 import ProductImpressionTracker from "@/components/analytics/ProductImpressionTracker";
@@ -22,6 +22,7 @@ export type GridProduct = {
   brandSlug?: string | null; // ← ADD THIS to your data fetch
   productSlug?: string | null; // ← ADD THIS to your data fetch
   price: string | null;
+  originalPrice?: string | null;
   currency: string;
   priceLabel?: string | null;
   buyUrl: string | null;
@@ -273,12 +274,15 @@ if (p.analytics?.contextType) {
                   </div>
                 ) : null}
 
-                <div className="mt-2 text-sm text-black/70">
-                  <MoneyLabel
-                    amount={p.price}
-                    currency={p.currency}
-                  />
-                </div>
+                <div className="mt-2 text-black/70">
+  <ProductPrice
+    price={p.price}
+    originalPrice={p.originalPrice}
+    currency={p.currency}
+    badges={p.badges}
+    size="md"
+  />
+</div>
 
                 <ProductClickTrackingLink
                   href={outHref}

@@ -89,7 +89,6 @@ export default function AdminBrandInvitesPage() {
 
   const [invites, setInvites] = useState<InviteRow[]>([]);
 
-  const ADMIN_TOKEN = process.env.NEXT_PUBLIC_ADMIN_IMPORT_TOKEN ?? "";
 
   const countryOptions = useMemo(() => {
     return countries
@@ -144,9 +143,8 @@ export default function AdminBrandInvitesPage() {
 
   async function loadInvites() {
     setError(null);
-    const r = await fetch("/api/admin/brand-invites/list", {
-      headers: { "x-admin-token": ADMIN_TOKEN },
-    });
+    const r = await fetch("/api/admin/brand-invites/list");
+
     const j = await r.json().catch(() => ({}));
     if (!r.ok) {
       setError(j?.error ?? `Failed to load invites (${r.status})`);
@@ -178,9 +176,8 @@ export default function AdminBrandInvitesPage() {
     const r = await fetch("/api/admin/brand-invites/create", {
       method: "POST",
       headers: {
-        "content-type": "application/json",
-        "x-admin-token": ADMIN_TOKEN,
-      },
+          "content-type": "application/json",
+        },
       body: JSON.stringify(payload),
     });
 
@@ -205,7 +202,7 @@ export default function AdminBrandInvitesPage() {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-admin-token": ADMIN_TOKEN,
+        
       },
       body: JSON.stringify({ id }),
     });
@@ -231,7 +228,7 @@ export default function AdminBrandInvitesPage() {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-admin-token": ADMIN_TOKEN,
+       
       },
       body: JSON.stringify({
         companyName: row.brand.name,

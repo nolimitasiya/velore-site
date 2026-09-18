@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import MoneyLabel from "@/components/MoneyLabel";
+import ProductPrice from "@/components/ProductPrice";
 import ProductImpressionTracker from "@/components/analytics/ProductImpressionTracker";
 
 export type StyleFeedPost = {
@@ -24,7 +24,9 @@ export type StyleFeedPost = {
   title: string;
   slug: string;
   price: string | null;
+  originalPrice?: string | null;
   currency: string;
+  badges?: string[];
   brandName: string;
   brandSlug: string;
   imageUrl: string | null;
@@ -298,13 +300,16 @@ useEffect(() => {
                     </p>
 
                     {product.price ? (
-                      <div className="mt-1 text-xs text-black/60">
-                        <MoneyLabel
-                        amount={product.price}
-                        currency={product.currency}
-                        />
-                          </div>
-                        ) : null}
+  <div className="mt-1 text-black/60">
+    <ProductPrice
+      price={product.price}
+      originalPrice={product.originalPrice}
+      currency={product.currency}
+      badges={product.badges}
+      size="sm"
+    />
+  </div>
+) : null}
                   </div>
                 </Link>
                   </ProductImpressionTracker>

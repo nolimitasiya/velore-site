@@ -19,6 +19,7 @@ type MerchProductRecord = {
     title: string;
     affiliateUrl: string | null;
     price: unknown;
+    originalPrice: unknown;
     currency: string;
     badges: string[];
     productType: string | null;
@@ -40,6 +41,7 @@ type FallbackProductRecord = {
   title: string;
   affiliateUrl: string | null;
   price: unknown;
+  originalPrice: unknown;
   currency: string;
   badges: string[];
   productType: string | null;
@@ -118,6 +120,12 @@ function mapMerchToGridProduct(
     item.product.price == null
       ? null
       : String(item.product.price),
+
+  originalPrice:
+    item.product.originalPrice == null
+      ? null
+      : String(item.product.originalPrice),
+
   currency:
     item.product.currency,
 
@@ -191,6 +199,11 @@ function mapFallbackToGridProduct(
       product.price == null
         ? null
         : String(product.price),
+
+    originalPrice:
+      product.originalPrice == null
+        ? null
+        : String(product.originalPrice),
     currency: product.currency,
 
     buyUrl: buildTrackedOutboundUrl(
@@ -254,6 +267,7 @@ export async function getMerchPageOneProducts(
           title: true,
           affiliateUrl: true,
           price: true,
+          originalPrice: true,
           currency: true,
           badges: true,
           productType: true,
@@ -382,6 +396,7 @@ export async function getMerchPageOneProducts(
       title: true,
       affiliateUrl: true,
       price: true,
+      originalPrice: true,
       currency: true,
       badges: true,
       productType: true,

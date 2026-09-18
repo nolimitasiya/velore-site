@@ -13,6 +13,7 @@ type CandidateProduct = {
   slug: string;
   title: string;
   price: unknown;
+  originalPrice: unknown;
   currency: string;
   badges: string[];
   affiliateUrl: string | null;
@@ -51,6 +52,11 @@ function mapToGridProduct(
       product.price == null
         ? null
         : String(product.price),
+
+    originalPrice:
+      product.originalPrice == null
+        ? null
+        : String(product.originalPrice),
     currency:
       String(product.currency),
 
@@ -139,6 +145,7 @@ export async function getContinentPageOneProducts(
         slug: true,
         title: true,
         price: true,
+        originalPrice: true,
         currency: true,
         badges: true,
         affiliateUrl: true,

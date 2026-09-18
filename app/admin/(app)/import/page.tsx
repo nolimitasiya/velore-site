@@ -8,7 +8,6 @@ export default function Page() {
       validateUrl="/api/admin/import/validate"
       importUrl="/api/admin/import"
       historyUrl="/api/admin/import/history"
-      requireToken={true}
     />
   );
 }

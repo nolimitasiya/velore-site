@@ -1305,16 +1305,17 @@ shouldIncludeSearch
     })
   : Promise.resolve([]),
 
-  // 9. Behaviour trend events
-  prisma.analyticsEvent.findMany({
-    where: {
-      eventType: {
-        in: [
-          AnalyticsEventType.PRODUCT_VIEW,
-          AnalyticsEventType.WISHLIST_ADD,
-          AnalyticsEventType.SHOP_CLICK,
-        ],
-      },
+// 9. Behaviour trend events
+prisma.analyticsEvent.findMany({
+  where: {
+    eventType: {
+      in: [
+        AnalyticsEventType.PRODUCT_IMPRESSION,
+        AnalyticsEventType.PRODUCT_VIEW,
+        AnalyticsEventType.WISHLIST_ADD,
+        AnalyticsEventType.SHOP_CLICK,
+      ],
+    },
 
       createdAt,
 
@@ -2846,6 +2847,7 @@ const trendMap = new Map<
   {
     date: string;
     searches: number;
+    impressions: number;
     productViews: number;
     wishlistAdds: number;
     shopClicks: number;
@@ -2868,12 +2870,13 @@ for (
       .slice(0, 10);
 
   trendMap.set(date, {
-    date,
-    searches: 0,
-    productViews: 0,
-    wishlistAdds: 0,
-    shopClicks: 0,
-  });
+  date,
+  searches: 0,
+  impressions: 0,
+  productViews: 0,
+  wishlistAdds: 0,
+  shopClicks: 0,
+});
 }
 
 const trendEvents = [
@@ -2900,6 +2903,12 @@ for (const event of trendEvents) {
   ) {
     row.searches += 1;
   }
+  if (
+  event.eventType ===
+  AnalyticsEventType.PRODUCT_IMPRESSION
+) {
+  row.impressions += 1;
+}
 
   if (
     event.eventType ===
@@ -2921,6 +2930,10 @@ for (const event of trendEvents) {
   ) {
     row.shopClicks += 1;
   }
+
+  
+
+  
 }
 
 const trends =

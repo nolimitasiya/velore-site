@@ -664,6 +664,7 @@ const where = q
       slug: true,
       title: true,
       price: true,
+      originalPrice: true,
       currency: true,
       badges: true,
       brand: { select: { name: true, slug: true } },
@@ -677,7 +678,10 @@ const where = q
   brandName: p.brand?.name ?? null,
   imageUrl: p.images?.[0]?.url ?? null,
   price: p.price ? p.price.toString() : null,
-  currency: String(p.currency),
+  originalPrice: p.originalPrice
+  ? p.originalPrice.toString()
+  : null,
+currency: String(p.currency),
   buyUrl: buildTrackedOutboundUrl(p.id, {
     sourcePage: "SEARCH",
     position: index + 1,

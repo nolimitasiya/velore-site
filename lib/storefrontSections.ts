@@ -17,7 +17,9 @@ const storefrontSectionInclude = {
           slug: true, // ← ADD
           title: true,
           price: true,
+          originalPrice: true,
           currency: true,
+          badges: true,
           affiliateUrl: true,
           sourceUrl: true,
           publishedAt: true,

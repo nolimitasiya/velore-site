@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import MoneyLabel from "@/components/MoneyLabel";
+import ProductPrice from "@/components/ProductPrice";
 import ProductClickTrackingLink from "@/components/analytics/ProductClickTrackingLink";
 import WishlistButton from "@/components/WishlistButton";
 import ProductImpressionTracker from "@/components/analytics/ProductImpressionTracker";
@@ -12,6 +12,8 @@ export type StorefrontProduct = {
   brandName?: string | null;
   imageUrl: string | null;
   price: string | null;
+  originalPrice?: string | null;
+  badges?: string[];
   currency: string;
   buyUrl: string | null;
   brandSlug?: string | null;
@@ -274,9 +276,15 @@ entryContextType:
                   </div>
                 )}
 
-                <div className="mt-2 text-sm text-black/70">
-                  <MoneyLabel amount={p.price} currency={p.currency} />
-                </div>
+                <div className="mt-2 text-black/70">
+  <ProductPrice
+    price={p.price}
+    originalPrice={p.originalPrice}
+    currency={p.currency}
+    badges={p.badges}
+    size="md"
+  />
+</div>
 
                 {href && (
                   <ProductClickTrackingLink

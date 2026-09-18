@@ -227,6 +227,7 @@ export default async function AccessoriesPage({
         slug: true,
         title: true,
         price: true,
+        originalPrice: true,
         currency: true,
         badges: true,
         brand: { select: { name: true, slug: true } },
@@ -258,6 +259,11 @@ export default async function AccessoriesPage({
         p.price
           ? p.price.toString()
           : null,
+
+      originalPrice:
+       p.originalPrice
+       ? p.originalPrice.toString()
+           : null,
 
       currency:
         String(p.currency),

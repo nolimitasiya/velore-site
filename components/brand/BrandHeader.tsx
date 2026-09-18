@@ -68,7 +68,6 @@ export function BrandHeader({ brandName }: { brandName: string }) {
             Catalogue
           </div>
           <NavLink href="/brand/products" label="Products" icon="ti-shirt" />
-          <NavLink href="/brand/import" label="Import" icon="ti-upload" />
 
           <div className="mb-1 mt-4 px-3 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#c4a898]">
             Account
@@ -83,19 +82,21 @@ export function BrandHeader({ brandName }: { brandName: string }) {
             <i className="ti ti-refresh text-[15px] text-[#c4a898]" aria-hidden="true" />
             Refresh
           </button>
+
+          <button
+  type="button"
+  onClick={logout}
+  disabled={busy}
+  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-[#9a7e6f] transition-all hover:bg-[#f2ece4] hover:text-[#1a0a0e] disabled:opacity-50"
+>
+  <i
+    className="ti ti-logout text-[15px] text-[#c4a898]"
+    aria-hidden="true"
+  />
+  {busy ? "Logging out..." : "Logout"}
+</button>
         </nav>
 
-        {/* Logout */}
-        <div className="border-t border-[#e8ddd4] p-3">
-          <button
-            onClick={logout}
-            disabled={busy}
-            className="flex w-full items-center gap-2.5 rounded-lg border border-[#e8ddd4] bg-white px-3 py-2.5 text-left text-[13px] text-[#a89280] transition hover:border-[#7B2D3E] hover:text-[#7B2D3E]"
-          >
-            <i className="ti ti-logout text-[15px]" aria-hidden="true" />
-            {busy ? "Logging out..." : "Logout"}
-          </button>
-        </div>
       </aside>
     </>
   );

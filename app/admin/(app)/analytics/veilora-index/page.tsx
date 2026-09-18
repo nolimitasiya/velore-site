@@ -3,6 +3,7 @@ import AnalyticsNav from "@/components/analytics/AnalyticsNav";
 import MetricTrendChart from "@/components/analytics/MetricTrendChart";
 import MarketSignalTable from "@/components/analytics/MarketSignalTable";
 import Link from "next/link";
+import PerformanceTrendChart from "@/components/analytics/PerformanceTrendChart";
 
 export const dynamic = "force-dynamic";
 
@@ -886,6 +887,37 @@ function getSignalLeader(rows: any[]) {
             />
           </div>
         </section>
+
+
+
+        {/* Performance over time */}
+<section className="space-y-4">
+  <div>
+    <div className="text-[12px] font-semibold uppercase tracking-[0.22em] text-[#7B2D3E]/70">
+      Performance
+    </div>
+
+    <h2 className="text-sm font-medium text-black">
+      Performance over time
+    </h2>
+
+    <p className="mt-1 text-xs text-neutral-500">
+      Daily shopper interactions during the selected reporting period.
+    </p>
+  </div>
+
+  <PerformanceTrendChart
+  data={trends.map((row: any) => ({
+    date: row.date,
+    impressions: row.impressions ?? 0,
+    views: row.productViews ?? 0,
+    wishlistAdds: row.wishlistAdds ?? 0,
+    shopClicks: row.shopClicks ?? 0,
+  }))}
+  ariaLabel="Veilora behaviour over time"
+  emptyMessage="Performance will appear here as shoppers interact across Veilora."
+/>
+</section>
 
 
 

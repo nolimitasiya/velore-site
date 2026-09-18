@@ -216,6 +216,7 @@ let products =
       slug: true,
       title: true,
       price: true,
+      originalPrice: true,
       currency: true,
       badges: true,
 
@@ -276,6 +277,7 @@ if (
           slug: true,
           title: true,
           price: true,
+          originalPrice: true,
           currency: true,
           badges: true,
 
@@ -361,12 +363,17 @@ const mapped: GridProduct[] =
       p.images?.[0]?.url ?? null,
 
     price:
-      p.price
-        ? p.price.toString()
-        : null,
+  p.price
+    ? p.price.toString()
+    : null,
 
-    currency:
-      String(p.currency),
+originalPrice:
+  p.originalPrice
+    ? p.originalPrice.toString()
+    : null,
+
+currency:
+  String(p.currency),
 
     buyUrl:
       buildTrackedOutboundUrl(

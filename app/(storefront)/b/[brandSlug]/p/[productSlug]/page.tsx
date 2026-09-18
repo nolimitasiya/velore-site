@@ -5,7 +5,6 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import MoneyLabel from "@/components/MoneyLabel";
 import ProductClickTrackingLink from "@/components/analytics/ProductClickTrackingLink";
 import { buildTrackedOutboundUrl } from "@/lib/affiliate/tracking";
 import { sortSizes, formatSizeLabel } from "@/lib/sizing/order";
@@ -16,7 +15,7 @@ import WishlistButton from "@/components/WishlistButton";
 import ProductViewTracker from "@/components/analytics/ProductViewTracker";
 import {  normalizeDiscoverySource,} from "@/lib/analytics/discoverySource";
 import {  getStorefrontProductDetail,  getCompleteTheLook,  getProductDiaryPosts,  getRelatedProducts,} from "@/lib/storefront/product-detail";
-
+import ProductPrice from "@/components/ProductPrice";
 
 function formatProductTypeLabel(value: string) {
   if (value === "COATS_JACKETS") return "Coats & Jackets";
@@ -241,7 +240,7 @@ const shippingToLabels = getShippingToLabel(
     <div className="mx-auto w-full max-w-[1800px] px-4 py-8 md:px-8 md:py-10">
 
         {/* Breadcrumb */}
-        <nav className="mb-6 flex items-center gap-2 text-xs text-black/50">
+        <nav className="mb-7 flex items-center gap-2.5 text-sm text-black/55">
           <Link href="/" className="hover:text-black transition-colors">Home</Link>
           <span>/</span>
           <Link href="/categories/clothing" className="hover:text-black transition-colors">Discover</Link>
@@ -252,7 +251,7 @@ const shippingToLabels = getShippingToLabel(
         </nav>
 
         {/* Main grid */}
-        <div className="mx-auto max-w-4xl grid gap-8 lg:grid-cols-[420px_1fr] xl:grid-cols-[480px_1fr]">
+       <div className="mx-auto max-w-6xl grid gap-10 lg:grid-cols-[540px_1fr] xl:grid-cols-[620px_1fr]">
 
 
           {/* Left: image gallery */}
@@ -274,21 +273,23 @@ const shippingToLabels = getShippingToLabel(
             </div>
 
             {/* Price */}
-            <div className="flex items-baseline gap-3">
-              {product.price ? (
-                product.badges.includes("sale") ? (
-                  <span className="text-2xl font-semibold text-red-600">
-                    <MoneyLabel amount={product.price.toString()} currency={product.currency} />
-                  </span>
-                ) : (
-                  <span className="text-2xl font-semibold">
-                    <MoneyLabel amount={product.price.toString()} currency={product.currency} />
-                  </span>
-                )
-              ) : (
-                <span className="text-xl text-black/40">Price not available</span>
-              )}
-            </div>
+<div>
+  {product.price ? (
+    <ProductPrice
+      price={product.price.toString()}
+      originalPrice={
+        product.originalPrice?.toString() ?? null
+      }
+      currency={product.currency}
+      badges={product.badges}
+      size="lg"
+    />
+  ) : (
+    <span className="text-xl text-black/40">
+      Price not available
+    </span>
+  )}
+</div>
 
             {/* Colours */}
             {product.productColours.length > 0 && (
@@ -584,17 +585,17 @@ const shippingToLabels = getShippingToLabel(
                   {p.title}
                 </p>
 
-                <p className="mt-1 text-xs text-black/60">
-                  <MoneyLabel
-                    amount={
-                      p.price?.toString() ??
-                      null
-                    }
-                    currency={
-                      p.currency
-                    }
-                  />
-                </p>
+               <div className="mt-1 text-black/60">
+  <ProductPrice
+    price={p.price?.toString() ?? null}
+    originalPrice={
+      p.originalPrice?.toString() ?? null
+    }
+    currency={p.currency}
+    badges={p.badges}
+    size="sm"
+  />
+</div>
               </div>
             </Link>
           );
@@ -718,15 +719,17 @@ const shippingToLabels = getShippingToLabel(
                 {p.title}
               </p>
 
-              <p className="mt-2 text-sm text-black/60">
-                <MoneyLabel
-                  amount={
-                    p.price?.toString() ??
-                    null
-                  }
-                  currency={p.currency}
-                />
-              </p>
+              <div className="mt-2 text-black/60">
+  <ProductPrice
+    price={p.price?.toString() ?? null}
+    originalPrice={
+      p.originalPrice?.toString() ?? null
+    }
+    currency={p.currency}
+    badges={p.badges}
+    size="md"
+  />
+</div>
             </div>
           </Link>
         );

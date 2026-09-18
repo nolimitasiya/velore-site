@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Papa from "papaparse";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { requireAdminSession } from "@/lib/auth/AdminSession";
 
 export const runtime = "nodejs";
 
@@ -68,11 +69,15 @@ function parseCommaList(s: string) {
 
 export async function POST(req: Request) {
   try {
-    // 🔐 Protect validate endpoint too
-    const token = req.headers.get("x-admin-token");
-    if (token !== process.env.ADMIN_IMPORT_TOKEN) {
-      return NextResponse.json({ ok: false, error: "Unauthorized import request" }, { status: 401 });
-    }
+    // 🔐 Admin authentication
+try {
+  await requireAdminSession();
+} catch {
+  return NextResponse.json(
+    { ok: false, error: "Unauthorized" },
+    { status: 401 }
+  );
+}
 
     const formData = await req.formData();
     const file = formData.get("file");

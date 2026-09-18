@@ -5,7 +5,6 @@
 // app/admin/products/page.tsx
 export const dynamic = "force-dynamic";
 
-const ADMIN_TOKEN = process.env.NEXT_PUBLIC_ADMIN_IMPORT_TOKEN ?? "";
 
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -17,6 +16,7 @@ import {
   getUserTimeZone,
 } from "@/lib/adminTime";
 import { formatMoney } from "@/lib/formatMoney";
+import Link from "next/link";
 
 type BrandOption = { slug: string; name: string };
 
@@ -403,18 +403,31 @@ const selectedBrandLabel =
       <div className="space-y-6">
         <section className="rounded-[28px] bg-[#7B2D3E] px-6 py-7 shadow-sm md:px-8">
   <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-    <div className="space-y-2">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
-        Admin catalogue
-      </div>
-      <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
-        Product moderation
-      </h1>
-      <p className="max-w-3xl text-sm leading-6 text-white/60">
-        Review, publish, activate, and manage marketplace products across all brands
-        from one clean control surface.
-      </p>
+    <div className="space-y-4">
+  <div className="space-y-2">
+    <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+      Admin catalogue
     </div>
+
+    <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
+      Product moderation
+    </h1>
+
+    <p className="max-w-3xl text-sm leading-6 text-white/60">
+      Review, publish, activate, and manage marketplace products across all brands
+      from one clean control surface.
+    </p>
+  </div>
+
+  <div>
+    <Link
+      href="/admin/products/new"
+      className="inline-flex items-center justify-center rounded-full bg-white px-4 py-2.5 text-sm font-medium text-[#7B2D3E] shadow-sm transition hover:bg-white/90"
+    >
+      + Add product
+    </Link>
+  </div>
+</div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
   <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3">
@@ -666,9 +679,16 @@ const selectedBrandLabel =
                     cell: (p) => (
                       <div className="min-w-[200px] leading-tight">
                         <div className="font-medium text-black">{p.title}</div>
-                        <div className="mt-1 text-xs text-neutral-500">{p.slug}</div>
+<div className="mt-1 text-xs text-neutral-500">{p.slug}</div>
 
-                        <div className="mt-3 flex flex-wrap items-center gap-2">
+<Link
+  href={`/admin/products/${p.id}`}
+  className="mt-2 inline-flex text-xs font-medium text-[#7B2D3E] underline decoration-[#7B2D3E]/30 underline-offset-2 transition hover:decoration-[#7B2D3E]"
+>
+  Edit product
+</Link>
+
+<div className="mt-3 flex flex-wrap items-center gap-2">
                           <span
                             className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-medium ${statusPill(
                               p.status

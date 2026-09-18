@@ -3,6 +3,7 @@ import Papa from "papaparse";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { Prisma, ProductType } from "@prisma/client";
+import { requireAdminSession } from "@/lib/auth/AdminSession";
 
 
 // Ensure route runs on Node (file parsing)
@@ -96,11 +97,15 @@ export async function POST(req: Request) {
   let jobId: string | null = null;
 
   try {
-    // 🔐 Auth
-    const token = req.headers.get("x-admin-token");
-    if (token !== process.env.ADMIN_IMPORT_TOKEN) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-    }
+    // 🔐 Admin authentication
+try {
+  await requireAdminSession();
+} catch {
+  return NextResponse.json(
+    { ok: false, error: "Unauthorized" },
+    { status: 401 }
+  );
+}
 
     // Multipart file
     const formData = await req.formData();

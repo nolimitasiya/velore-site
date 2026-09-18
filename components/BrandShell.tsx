@@ -45,9 +45,9 @@ export default function BrandShell({
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-7xl px-6 py-10 md:px-8 md:py-12">
-        {children}
-      </main>
+      <main className="mx-auto w-full max-w-[1600px] px-6 py-10 md:px-8 md:py-12">
+  {children}
+</main>
     </div>
   );
 }

@@ -21,6 +21,7 @@ type ProductRecord = {
   slug: string;
   title: string;
   price: unknown;
+  originalPrice: unknown;
   currency: string;
   badges: string[];
   brand: {
@@ -45,6 +46,7 @@ function mapProduct(
     productSlug: product.slug,
     imageUrl: product.images[0]?.url ?? null,
     price: product.price == null ? null : String(product.price),
+    originalPrice: product.originalPrice == null ? null : String(product.originalPrice),
     currency: String(product.currency),
     buyUrl:
   buildTrackedOutboundUrl(
@@ -156,6 +158,7 @@ const getCachedEligibleProducts = unstable_cache(
         slug: true,
         title: true,
         price: true,
+        originalPrice: true,
         currency: true,
         badges: true,
 

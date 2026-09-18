@@ -35,7 +35,7 @@ export async function GET() {
 
   return NextResponse.json({
   ok: true,
-  brandId, // 👈 add this line
+  brandId,
   products: products.map((p) => ({
     id: p.id,
     title: p.title,

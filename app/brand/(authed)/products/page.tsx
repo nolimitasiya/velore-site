@@ -10,8 +10,8 @@ export default function BrandProductsPage() {
           </div>
           <h1 className="text-3xl font-semibold tracking-tight text-white">Products</h1>
           <p className="max-w-2xl text-sm leading-6 text-white/60">
-            Manage your product listings, submit for review, and track approval status.
-          </p>
+            View your catalogue and explore performance insights for each product.
+            </p>
         </div>
       </section>
       <ProductsClient />

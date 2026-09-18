@@ -185,6 +185,7 @@ export default async function ContinentPage({
         slug: true,
         title: true,
         price: true,
+        originalPrice: true,
         currency: true,
         affiliateUrl: true,
         sourceUrl: true,
@@ -213,6 +214,14 @@ export default async function ContinentPage({
     p.price
       ? p.price.toString()
       : null,
+
+
+
+  originalPrice:
+  p.originalPrice
+    ? p.originalPrice.toString()
+    : null,    
+    
   currency:
     String(p.currency),
 

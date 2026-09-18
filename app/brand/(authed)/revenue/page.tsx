@@ -1,60 +1,353 @@
+import Link from "next/link";
+import { AnalyticsEventType } from "@prisma/client";
+
 import { prisma } from "@/lib/prisma";
 import { requireBrandContext } from "@/lib/auth/BrandSession";
-import { iso2ToIsoNumeric } from "@/lib/geo/iso";
-import WorldChoropleth from "@/components/analytics/WorldChoropleth";
+import PerformanceTrendChart from "@/components/analytics/PerformanceTrendChart";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
+type RangeKey =
+  | "today"
+  | "7d"
+  | "30d"
+  | "custom";
 
-function countryLabel(code: string) {
-  return regionNames.of(String(code ?? "").toUpperCase()) ?? code;
+const PERFORMANCE_EVENT_TYPES: AnalyticsEventType[] = [
+  AnalyticsEventType.PRODUCT_IMPRESSION,
+  AnalyticsEventType.PRODUCT_VIEW,
+  AnalyticsEventType.WISHLIST_ADD,
+  AnalyticsEventType.SHOP_CLICK,
+];
+
+const MIN_DEMOGRAPHIC_SESSIONS = 20;
+const MIN_DEMOGRAPHIC_SHOPPERS = 5;
+
+const regionNames =
+  new Intl.DisplayNames(
+    ["en"],
+    {
+      type: "region",
+    }
+  );
+
+function countryLabel(
+  code: string
+) {
+  return (
+    regionNames.of(
+      code.toUpperCase()
+    ) ?? code
+  );
 }
 
-function startOfDay(d = new Date()) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
+function parseRange(
+  input?: string
+): RangeKey {
+  const value = String(
+    input ?? ""
+  ).toLowerCase();
+
+  if (
+    value === "today" ||
+    value === "7d" ||
+    value === "30d" ||
+    value === "custom"
+  ) {
+    return value;
+  }
+
+  return "30d";
 }
 
-function addDays(d: Date, days: number) {
-  const x = new Date(d);
-  x.setDate(x.getDate() + days);
-  return x;
+function startOfDayUTC(
+  date = new Date()
+) {
+  const value = new Date(date);
+
+  value.setUTCHours(
+    0,
+    0,
+    0,
+    0
+  );
+
+  return value;
 }
 
-function percent(n: number, total: number) {
-  if (!total) return "0%";
-  return `${Math.round((n / total) * 100)}%`;
+function parseUTCDate(
+  value: string
+) {
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})$/.exec(
+      value
+    );
+
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+
+  const date = new Date(
+    Date.UTC(
+      year,
+      month - 1,
+      day
+    )
+  );
+
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !==
+      month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return date;
 }
 
-function rangeWindow(range: string, fromParam: string, toParam: string) {
-  const now = new Date();
+function getDateWindow(
+  range: RangeKey,
+  fromParam: string,
+  toParam: string
+) {
+  if (range === "custom") {
+    const from =
+      parseUTCDate(fromParam);
 
+    const to =
+      parseUTCDate(toParam);
+
+    if (
+      !from ||
+      !to ||
+      from > to
+    ) {
+      return null;
+    }
+
+    const until =
+      new Date(to);
+
+    until.setUTCDate(
+      until.getUTCDate() + 1
+    );
+
+    return {
+      from,
+      until,
+    };
+  }
+
+  const from =
+    startOfDayUTC();
+
+  if (range === "7d") {
+    from.setUTCDate(
+      from.getUTCDate() - 6
+    );
+  }
+
+  if (range === "30d") {
+    from.setUTCDate(
+      from.getUTCDate() - 29
+    );
+  }
+
+  return {
+    from,
+    until: null,
+  };
+}
+
+function intersectionCount(
+  a: Set<string>,
+  b: Set<string>
+) {
+  let count = 0;
+
+  for (const value of a) {
+    if (b.has(value)) {
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
+function percentage(
+  numerator: number,
+  denominator: number
+) {
+  if (!denominator) {
+    return 0;
+  }
+
+  return Math.round(
+    (numerator /
+      denominator) *
+      1000
+  ) / 10;
+}
+
+function rangeLabel(
+  range: RangeKey,
+  fromParam?: string,
+  toParam?: string
+) {
   if (range === "today") {
-    const gte = startOfDay(now);
-    const lt = addDays(gte, 1);
-    return { gte, lt };
+    return "Today";
   }
 
   if (range === "7d") {
-    const gte = startOfDay(addDays(now, -6));
-    const lt = addDays(startOfDay(now), 1);
-    return { gte, lt };
+    return "Last 7 days";
   }
 
-  if (range === "custom" && fromParam && toParam) {
-    const gte = startOfDay(new Date(fromParam));
-    const lt = addDays(startOfDay(new Date(toParam)), 1);
-    if (!isNaN(gte.getTime()) && !isNaN(lt.getTime())) return { gte, lt };
+  if (
+    range === "custom" &&
+    fromParam &&
+    toParam
+  ) {
+    return `${fromParam} → ${toParam}`;
   }
 
-  // default: 30d
-  const gte = startOfDay(addDays(now, -29));
-  const lt = addDays(startOfDay(now), 1);
-  return { gte, lt };
+  return "Last 30 days";
 }
+
+type TrendPoint = {
+  date: string;
+  impressions: number;
+  views: number;
+  wishlistAdds: number;
+  shopClicks: number;
+};
+
+function buildDailyTrend(
+  events: Array<{
+    sessionId: string;
+    createdAt: Date;
+    eventType: AnalyticsEventType;
+  }>,
+  from: Date,
+  until: Date | null
+): TrendPoint[] {
+  const start = startOfDayUTC(from);
+
+  const end = until
+    ? new Date(until)
+    : startOfDayUTC();
+
+  if (until) {
+    end.setUTCDate(end.getUTCDate() - 1);
+  }
+
+  const buckets = new Map<
+    string,
+    {
+      date: string;
+      impressionSessions: Set<string>;
+      viewSessions: Set<string>;
+      wishlistSessions: Set<string>;
+      shopSessions: Set<string>;
+    }
+  >();
+
+  const cursor = new Date(start);
+
+  while (cursor <= end) {
+    const key = [
+      cursor.getUTCFullYear(),
+      String(cursor.getUTCMonth() + 1).padStart(2, "0"),
+      String(cursor.getUTCDate()).padStart(2, "0"),
+    ].join("-");
+
+    buckets.set(key, {
+      date: key,
+      impressionSessions: new Set(),
+      viewSessions: new Set(),
+      wishlistSessions: new Set(),
+      shopSessions: new Set(),
+    });
+
+    cursor.setUTCDate(
+      cursor.getUTCDate() + 1
+    );
+  }
+
+  for (const event of events) {
+    const key = [
+      event.createdAt.getUTCFullYear(),
+      String(
+        event.createdAt.getUTCMonth() + 1
+      ).padStart(2, "0"),
+      String(
+        event.createdAt.getUTCDate()
+      ).padStart(2, "0"),
+    ].join("-");
+
+    const bucket = buckets.get(key);
+
+    if (!bucket) continue;
+
+    if (
+      event.eventType ===
+      AnalyticsEventType.PRODUCT_IMPRESSION
+    ) {
+      bucket.impressionSessions.add(
+        event.sessionId
+      );
+    }
+
+    if (
+      event.eventType ===
+      AnalyticsEventType.PRODUCT_VIEW
+    ) {
+      bucket.viewSessions.add(
+        event.sessionId
+      );
+    }
+
+    if (
+      event.eventType ===
+      AnalyticsEventType.WISHLIST_ADD
+    ) {
+      bucket.wishlistSessions.add(
+        event.sessionId
+      );
+    }
+
+    if (
+      event.eventType ===
+      AnalyticsEventType.SHOP_CLICK
+    ) {
+      bucket.shopSessions.add(
+        event.sessionId
+      );
+    }
+  }
+
+  return Array.from(
+    buckets.values()
+  ).map((bucket) => ({
+    date: bucket.date,
+    impressions:
+      bucket.impressionSessions.size,
+    views:
+      bucket.viewSessions.size,
+    wishlistAdds:
+      bucket.wishlistSessions.size,
+    shopClicks:
+      bucket.shopSessions.size,
+  }));
+}
+
+
 
 function RangeLink({
   href,
@@ -66,7 +359,7 @@ function RangeLink({
   active: boolean;
 }) {
   return (
-    <a
+    <Link
       href={href}
       className={[
         "inline-flex items-center rounded-full border px-4 py-2 text-sm font-medium transition",
@@ -76,555 +369,1360 @@ function RangeLink({
       ].join(" ")}
     >
       {label}
-    </a>
+    </Link>
   );
 }
 
 export default async function BrandRevenuePage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+  searchParams: Promise<{
+    range?: string;
+    from?: string;
+    to?: string;
+  }>;
 }) {
-  const sp = await searchParams;
+  const sp =
+    await searchParams;
 
   const range =
-    sp.range === "today" ||
-    sp.range === "7d" ||
-    sp.range === "30d" ||
-    sp.range === "custom"
-      ? sp.range
-      : "today";
+    parseRange(sp.range);
 
-  const fromParam = sp.from ?? "";
-  const toParam = sp.to ?? "";
+  const fromParam =
+    sp.from ?? "";
 
-  const { gte, lt } = rangeWindow(range, fromParam, toParam);
+  const toParam =
+    sp.to ?? "";
 
-  const { brandId } = await requireBrandContext();
+  const {
+    brandId,
+  } =
+    await requireBrandContext();
 
-  const [productViews, shopAtClicks] = await Promise.all([
-    prisma.affiliateClick.count({
+  /*
+   * Invalid / incomplete custom URLs
+   * fall back safely to 30 days.
+   */
+  const dateWindow =
+    getDateWindow(
+      range,
+      fromParam,
+      toParam
+    );
+
+  const effectiveRange:
+    RangeKey =
+      dateWindow
+        ? range
+        : "30d";
+
+  const effectiveWindow =
+    dateWindow ??
+    getDateWindow(
+      "30d",
+      "",
+      ""
+    )!;
+
+  const {
+    from,
+    until,
+  } =
+    effectiveWindow;
+
+  /*
+   * Canonical Brand Analytics events.
+   * No AffiliateClick usage.
+   */
+  const events =
+    await prisma.analyticsEvent.findMany({
       where: {
         brandId,
-        type: "PRODUCT_VIEW",
-        clickedAt: { gte, lt },
+
+        eventType: {
+          in: PERFORMANCE_EVENT_TYPES,
+        },
+
+        createdAt: {
+          gte: from,
+
+          ...(until
+            ? {
+                lt: until,
+              }
+            : {}),
+        },
       },
-    }),
-    prisma.affiliateClick.count({
-      where: {
-        brandId,
-        NOT: { type: "PRODUCT_VIEW" },
-        clickedAt: { gte, lt },
+
+      select: {
+        sessionId: true,
+        eventType: true,
+        productId: true,
+        createdAt: true,
+
       },
-    }),
-  ]);
+    });
 
-  const grouped = await prisma.affiliateClick.groupBy({
-    by: ["productId"],
-    where: {
-      brandId,
-      productId: { not: null },
-      NOT: { type: "PRODUCT_VIEW" },
-      clickedAt: { gte, lt },
-    },
-    _count: { _all: true },
-    orderBy: { _count: { productId: "desc" } },
-    take: 5000,
-  });
+  /*
+   * Brand-level unique-session funnel.
+   */
+  const impressionSessions =
+    new Set<string>();
 
-  const [totalWishlistSaves, wishlistByShopperRaw, wishlistByProductRaw] = await Promise.all([
-  prisma.wishlistItem.count({
-    where: { product: { brandId } },
-  }),
-  prisma.wishlistItem.groupBy({
-    by: ["shopperId"],
-    where: { product: { brandId } },
-  }),
-  prisma.wishlistItem.groupBy({
-    by: ["productId"],
-    where: { product: { brandId } },
-    _count: { _all: true },
-    orderBy: { _count: { productId: "desc" } },
-    take: 5,
-  }),
-]);
+  const viewSessions =
+    new Set<string>();
 
-const uniqueWishlistShoppers = wishlistByShopperRaw.length;
-const wishlistProductIds = wishlistByProductRaw.map((r) => r.productId);
+  const wishlistSessions =
+    new Set<string>();
 
-const wishlistProducts = await prisma.product.findMany({
-  where: { id: { in: wishlistProductIds } },
-  select: {
-    id: true,
-    title: true,
-    price: true,
-    currency: true,
-    images: {
-      orderBy: { sortOrder: "asc" },
-      take: 1,
-      select: { url: true },
-    },
-  },
-});
+  const shopSessions =
+    new Set<string>();
 
-const wMap = new Map(wishlistProducts.map((p) => [p.id, p]));
+  for (const event of events) {
+    if (
+      event.eventType ===
+      AnalyticsEventType.PRODUCT_IMPRESSION
+    ) {
+      impressionSessions.add(
+        event.sessionId
+      );
+    }
 
-const topWishlistRows = wishlistByProductRaw.map((r) => {
-  const p = wMap.get(r.productId) ?? null;
-  return {
-    productId: r.productId,
-    title: p?.title ?? "Unknown product",
-    imageUrl: p?.images?.[0]?.url ?? null,
-    price: p?.price ? String(p.price) : null,
-    currency: p?.currency ?? "",
-    saves: Number(r._count._all),
-  };
-});
+    if (
+      event.eventType ===
+      AnalyticsEventType.PRODUCT_VIEW
+    ) {
+      viewSessions.add(
+        event.sessionId
+      );
+    }
 
-  const top = grouped.slice(0, 5);
-  const productIds = top.map((r) => r.productId!).filter(Boolean);
+    if (
+      event.eventType ===
+      AnalyticsEventType.WISHLIST_ADD
+    ) {
+      wishlistSessions.add(
+        event.sessionId
+      );
+    }
 
-  const products = await prisma.product.findMany({
-    where: { id: { in: productIds }, brandId },
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      price: true,
-      currency: true,
-      sourceUrl: true,
-      affiliateUrl: true,
-      images: {
-        select: { url: true },
-        orderBy: { sortOrder: "asc" },
-        take: 1,
-      },
-    },
-  });
-
-  const pMap = new Map(products.map((p) => [p.id, p]));
-
-  const topRows = top.map((r) => {
-    const p = pMap.get(r.productId!) ?? null;
-    return {
-      productId: r.productId!,
-      title: p?.title ?? "Unknown product",
-      imageUrl: p?.images?.[0]?.url ?? "",
-      clicks: Number(r._count._all),
-      sourceUrl: p?.sourceUrl ?? "",
-      price: p?.price ? String(p.price) : "",
-      currency: p?.currency ?? "",
-    };
-  });
-
-  const groupedShopperCountries = await prisma.affiliateClick.groupBy({
-    by: ["shopperCountryCode"],
-    where: {
-      brandId,
-      clickedAt: { gte, lt },
-      shopperCountryCode: { not: null },
-    },
-    _count: { _all: true },
-    orderBy: { shopperCountryCode: "asc" },
-    take: 5000,
-  });
-
-  const byShopperCountry = groupedShopperCountries
-    .map((g) => ({
-      countryCode: g.shopperCountryCode!,
-      clicks: Number(g._count._all),
-    }))
-    .sort((a, b) => b.clicks - a.clicks)
-    .slice(0, 50);
-
-  const totalGeoClicks = byShopperCountry.reduce((sum, r) => sum + r.clicks, 0);
-  const maxClicks = Math.max(1, ...byShopperCountry.map((r) => r.clicks));
-  const topCountry = byShopperCountry[0] ?? null;
-
-  const numericData: Record<string, number> = {};
-  for (const r of byShopperCountry) {
-    const id = iso2ToIsoNumeric(r.countryCode);
-    if (!id) continue;
-    numericData[id] = (numericData[id] ?? 0) + r.clicks;
+    if (
+      event.eventType ===
+      AnalyticsEventType.SHOP_CLICK
+    ) {
+      shopSessions.add(
+        event.sessionId
+      );
+    }
   }
 
-  const qs = (r: string) => (r === "today" ? "" : `?range=${r}`);
+  /*
+ * All unique sessions that interacted
+ * with this brand in the selected range.
+ */
+const interactionSessionIds = new Set<string>([
+  ...impressionSessions,
+  ...viewSessions,
+  ...wishlistSessions,
+  ...shopSessions,
+]);
 
-  const rangeLabel =
-    range === "today"
-      ? "Today"
-      : range === "7d"
-      ? "Last 7 days"
-      : range === "custom" && fromParam && toParam
-      ? `${fromParam} → ${toParam}`
-      : "Last 30 days";
+const interactionSessions =
+  interactionSessionIds.size > 0
+    ? await prisma.analyticsSession.findMany({
+        where: {
+          id: {
+            in: Array.from(
+              interactionSessionIds
+            ),
+          },
+        },
+
+        select: {
+          id: true,
+          shopperCountryCode: true,
+
+          shopper: {
+            select: {
+              id: true,
+              dateOfBirth: true,
+              countryCode: true,
+            },
+          },
+        },
+      })
+    : [];
+
+  const uniqueImpressions =
+    impressionSessions.size;
+
+  const uniqueViews =
+    viewSessions.size;
+
+  const uniqueWishlistAdds =
+    wishlistSessions.size;
+
+  const uniqueShopClicks =
+    shopSessions.size;
+
+    /*
+ * Brand-level audience.
+ *
+ * Anonymous sessions remain part of
+ * behavioural analytics but do not
+ * contribute to identified demographics.
+ */
+const demographicSessionCount =
+  interactionSessionIds.size;
+
+const identifiedSessions =
+  interactionSessions.filter(
+    (session) =>
+      Boolean(session.shopper)
+  );
+
+
+
+const identifiedShopperIds =
+  new Set(
+    identifiedSessions
+      .map(
+        (session) =>
+          session.shopper?.id
+      )
+      .filter(
+        (
+          id
+        ): id is string =>
+          Boolean(id)
+      )
+  );
+
+const identifiedShopperCount =
+  identifiedShopperIds.size;
+
+
+const demographicsQualified =
+  demographicSessionCount >=
+    MIN_DEMOGRAPHIC_SESSIONS &&
+  identifiedShopperCount >=
+    MIN_DEMOGRAPHIC_SHOPPERS;
+
+    function ageFromDateOfBirth(
+  dateOfBirth: Date
+) {
+  const today = new Date();
+
+  let age =
+    today.getUTCFullYear() -
+    dateOfBirth.getUTCFullYear();
+
+  const monthDifference =
+    today.getUTCMonth() -
+    dateOfBirth.getUTCMonth();
+
+  if (
+    monthDifference < 0 ||
+    (monthDifference === 0 &&
+      today.getUTCDate() <
+        dateOfBirth.getUTCDate())
+  ) {
+    age -= 1;
+  }
+
+  return age;
+}
+
+const ageCounts = {
+  "18–24": 0,
+  "25–34": 0,
+  "35–44": 0,
+  "45+": 0,
+};
+
+const shoppersSeenForAge =
+  new Set<string>();
+
+for (const session of identifiedSessions) {
+  const shopper =
+    session.shopper;
+
+  if (
+    !shopper ||
+    !shopper.dateOfBirth ||
+    shoppersSeenForAge.has(
+      shopper.id
+    )
+  ) {
+    continue;
+  }
+
+  shoppersSeenForAge.add(
+    shopper.id
+  );
+
+  const age =
+    ageFromDateOfBirth(
+      shopper.dateOfBirth
+    );
+
+  if (age >= 18 && age <= 24) {
+    ageCounts["18–24"] += 1;
+  } else if (
+    age >= 25 &&
+    age <= 34
+  ) {
+    ageCounts["25–34"] += 1;
+  } else if (
+    age >= 35 &&
+    age <= 44
+  ) {
+    ageCounts["35–44"] += 1;
+  } else if (age >= 45) {
+    ageCounts["45+"] += 1;
+  }
+}
+
+const totalAgeShoppers =
+  Object.values(
+    ageCounts
+  ).reduce(
+    (sum, count) =>
+      sum + count,
+    0
+  );
+
+const ageRows =
+  Object.entries(ageCounts).map(
+    ([label, count]) => ({
+      label,
+      count,
+
+      percentage:
+        percentage(
+          count,
+          totalAgeShoppers
+        ),
+    })
+  );
+
+  const marketCounts =
+  new Map<string, number>();
+
+const shoppersSeenForMarket =
+  new Set<string>();
+
+for (const session of identifiedSessions) {
+  const shopper =
+    session.shopper;
+
+  if (
+    !shopper ||
+    shoppersSeenForMarket.has(
+      shopper.id
+    )
+  ) {
+    continue;
+  }
+
+  shoppersSeenForMarket.add(
+    shopper.id
+  );
+
+  const countryCode =
+    shopper.countryCode ??
+    session.shopperCountryCode;
+
+  if (!countryCode) {
+    continue;
+  }
+
+  const normalizedCode =
+    countryCode.toUpperCase();
+
+  marketCounts.set(
+    normalizedCode,
+    (marketCounts.get(
+      normalizedCode
+    ) ?? 0) + 1
+  );
+}
+
+const totalMarketShoppers =
+  Array.from(
+    marketCounts.values()
+  ).reduce(
+    (sum, count) =>
+      sum + count,
+    0
+  );
+
+const marketRows =
+  Array.from(
+    marketCounts.entries()
+  )
+    .map(
+      ([
+        countryCode,
+        count,
+      ]) => ({
+        countryCode,
+        count,
+
+        percentage:
+          percentage(
+            count,
+            totalMarketShoppers
+          ),
+      })
+    )
+    .sort(
+      (a, b) =>
+        b.count - a.count
+    )
+    .slice(0, 6);
+
+  /*
+   * View rate:
+   * impression sessions that also viewed
+   * ÷ impression sessions.
+   */
+  const viewRate =
+    percentage(
+      intersectionCount(
+        impressionSessions,
+        viewSessions
+      ),
+      impressionSessions.size
+    );
+
+  /*
+   * Brand-facing save/shop rates:
+   * PDP view session denominator.
+   */
+  const saveRate =
+    percentage(
+      intersectionCount(
+        viewSessions,
+        wishlistSessions
+      ),
+      viewSessions.size
+    );
+
+  const shopIntentRate =
+    percentage(
+      intersectionCount(
+        viewSessions,
+        shopSessions
+      ),
+      viewSessions.size
+    );
+
+  const trend = buildDailyTrend(
+      events,
+      from,
+      until
+    );
+
+  /*
+   * Product-level aggregation.
+   */
+  const productMap =
+    new Map<
+      string,
+      {
+        impressionSessions:
+          Set<string>;
+        viewSessions:
+          Set<string>;
+        wishlistSessions:
+          Set<string>;
+        shopSessions:
+          Set<string>;
+      }
+    >();
+
+  for (const event of events) {
+    if (!event.productId) {
+      continue;
+    }
+
+    let row =
+      productMap.get(
+        event.productId
+      );
+
+    if (!row) {
+      row = {
+        impressionSessions:
+          new Set<string>(),
+        viewSessions:
+          new Set<string>(),
+        wishlistSessions:
+          new Set<string>(),
+        shopSessions:
+          new Set<string>(),
+      };
+
+      productMap.set(
+        event.productId,
+        row
+      );
+    }
+
+    if (
+      event.eventType ===
+      AnalyticsEventType.PRODUCT_IMPRESSION
+    ) {
+      row.impressionSessions.add(
+        event.sessionId
+      );
+    }
+
+    if (
+      event.eventType ===
+      AnalyticsEventType.PRODUCT_VIEW
+    ) {
+      row.viewSessions.add(
+        event.sessionId
+      );
+    }
+
+    if (
+      event.eventType ===
+      AnalyticsEventType.WISHLIST_ADD
+    ) {
+      row.wishlistSessions.add(
+        event.sessionId
+      );
+    }
+
+    if (
+      event.eventType ===
+      AnalyticsEventType.SHOP_CLICK
+    ) {
+      row.shopSessions.add(
+        event.sessionId
+      );
+    }
+  }
+
+  const productIds =
+    Array.from(
+      productMap.keys()
+    );
+
+  const products =
+    productIds.length
+      ? await prisma.product.findMany({
+          where: {
+            id: {
+              in: productIds,
+            },
+
+            brandId,
+          },
+
+          select: {
+            id: true,
+            title: true,
+            price: true,
+            currency: true,
+
+            images: {
+              orderBy: {
+                sortOrder: "asc",
+              },
+
+              take: 1,
+
+              select: {
+                url: true,
+              },
+            },
+          },
+        })
+      : [];
+
+  const productsById =
+    new Map(
+      products.map(
+        (product) => [
+          product.id,
+          product,
+        ]
+      )
+    );
+
+  const productRows =
+    Array.from(
+      productMap.entries()
+    )
+      .map(
+        ([
+          productId,
+          data,
+        ]) => {
+          const product =
+            productsById.get(
+              productId
+            );
+
+          if (!product) {
+            return null;
+          }
+
+          const productViewRate =
+            percentage(
+              intersectionCount(
+                data.impressionSessions,
+                data.viewSessions
+              ),
+              data.impressionSessions
+                .size
+            );
+
+          const productSaveRate =
+            percentage(
+              intersectionCount(
+                data.viewSessions,
+                data.wishlistSessions
+              ),
+              data.viewSessions.size
+            );
+
+          const productShopIntent =
+            percentage(
+              intersectionCount(
+                data.viewSessions,
+                data.shopSessions
+              ),
+              data.viewSessions.size
+            );
+
+          return {
+            id: product.id,
+            title:
+              product.title,
+            price:
+              product.price
+                ? String(
+                    product.price
+                  )
+                : null,
+            currency:
+              product.currency,
+            imageUrl:
+              product.images[0]
+                ?.url ?? null,
+
+            impressions:
+              data
+                .impressionSessions
+                .size,
+
+            views:
+              data.viewSessions
+                .size,
+
+            saves:
+              data
+                .wishlistSessions
+                .size,
+
+            shopClicks:
+              data.shopSessions
+                .size,
+
+            viewRate:
+              productViewRate,
+
+            saveRate:
+              productSaveRate,
+
+            shopIntentRate:
+              productShopIntent,
+          };
+        }
+      )
+      .filter(
+        (
+          row
+        ): row is NonNullable<
+          typeof row
+        > => Boolean(row)
+      )
+      .sort(
+        (a, b) =>
+          b.views -
+            a.views ||
+          b.shopClicks -
+            a.shopClicks ||
+          b.saves -
+            a.saves ||
+          b.impressions -
+            a.impressions
+      );
+
+  /*
+   * Overview only shows a concise
+   * preview. Full table remains on
+   * Product Performance.
+   */
+  const topProducts =
+    productRows.slice(0, 5);
+
+  const qs = (
+    value: RangeKey
+  ) => {
+    if (
+      value === "custom" &&
+      fromParam &&
+      toParam
+    ) {
+      return `?range=custom&from=${encodeURIComponent(
+        fromParam
+      )}&to=${encodeURIComponent(
+        toParam
+      )}`;
+    }
+
+    return value === "30d"
+      ? ""
+      : `?range=${value}`;
+  };
+
+  const selectedRangeLabel =
+    rangeLabel(
+      effectiveRange,
+      fromParam,
+      toParam
+    );
+
+  const productPerformanceHref =
+    `/brand/revenue/products${qs(
+      effectiveRange
+    )}`;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Hero */}
-      <section className="rounded-[28px] bg-[#7B2D3E] px-6 py-7 shadow-sm md:px-8">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-semibold tracking-tight text-white">Analytics</h1>
+      <section className="rounded-[28px] bg-[#7B2D3E] px-7 py-8 shadow-sm md:px-10 md:py-9">
+        <div className="flex flex-col gap-6">
+          {/* Top row */}
+          <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-white">
+                Analytics
+              </h1>
+
+              <p className="mt-1 text-sm text-white/60">
+                Understand how
+                shoppers discover
+                and engage with your
+                products.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <RangeLink
+                href="/brand/revenue?range=today"
+                label="Today"
+                active={
+                  effectiveRange ===
+                  "today"
+                }
+              />
+
+              <RangeLink
+                href="/brand/revenue?range=7d"
+                label="Last 7 days"
+                active={
+                  effectiveRange ===
+                  "7d"
+                }
+              />
+
+              <RangeLink
+                href="/brand/revenue"
+                label="Last 30 days"
+                active={
+                  effectiveRange ===
+                  "30d"
+                }
+              />
+
+              <RangeLink
+                href="/brand/revenue?range=custom"
+                label="Custom range"
+                active={
+                  range ===
+                  "custom"
+                }
+              />
+            </div>
           </div>
 
-          {/* Range pills — exactly like admin */}
-          <div className="flex flex-wrap items-center gap-2">
-            <RangeLink
-              href={`/brand/revenue${qs("today")}`}
-              label="Today"
-              active={range === "today"}
-            />
-            <RangeLink
-              href={`/brand/revenue${qs("7d")}`}
-              label="Last 7 days"
-              active={range === "7d"}
-            />
-            <RangeLink
-              href={`/brand/revenue?range=30d`}
-              label="Last 30 days"
-              active={range === "30d"}
-            />
-            <RangeLink
-              href={`/brand/revenue?range=custom`}
-              label="Custom range"
-              active={range === "custom"}
-            />
-          </div>
-        </div>
-
-        {/* Custom date picker — only shown when range=custom, inside hero like admin */}
-        {range === "custom" && (
-          <form
-            method="GET"
-            action="/brand/revenue"
-            className="mt-5 flex flex-wrap items-center gap-3"
-          >
-            <input type="hidden" name="range" value="custom" />
-            <div className="flex items-center gap-2">
-              <label
-                htmlFor="from-date"
-                className="text-[11px] uppercase tracking-[0.16em] text-white/50"
-              >
-                From
-              </label>
+          {/* Custom range */}
+          {range ===
+            "custom" && (
+            <form
+              method="GET"
+              action="/brand/revenue"
+              className="flex flex-wrap items-center gap-3"
+            >
               <input
-                id="from-date"
+                type="hidden"
+                name="range"
+                value="custom"
+              />
+
+              <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-white/60">
+                From
+              </span>
+
+              <input
                 type="date"
                 name="from"
-                defaultValue={fromParam}
-                className="rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm text-white focus:border-white/40 focus:outline-none"
+                defaultValue={
+                  fromParam
+                }
+                required
+                className="h-10 rounded-xl border border-white/20 bg-white/10 px-3 text-sm text-white outline-none [color-scheme:dark] focus:border-white/40"
               />
-            </div>
-            <div className="flex items-center gap-2">
-              <label
-                htmlFor="to-date"
-                className="text-[11px] uppercase tracking-[0.16em] text-white/50"
-              >
+
+              <span className="ml-1 text-[11px] font-medium uppercase tracking-[0.16em] text-white/60">
                 To
-              </label>
+              </span>
+
               <input
-                id="to-date"
                 type="date"
                 name="to"
-                defaultValue={toParam}
-                className="rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm text-white focus:border-white/40 focus:outline-none"
+                defaultValue={
+                  toParam
+                }
+                required
+                className="h-10 rounded-xl border border-white/20 bg-white/10 px-3 text-sm text-white outline-none [color-scheme:dark] focus:border-white/40"
               />
-            </div>
-            <button
-              type="submit"
-              className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-[#7B2D3E] transition hover:bg-white/90"
-            >
-              Apply
-            </button>
-          </form>
-        )}
+
+              <button
+                type="submit"
+                className="h-10 rounded-xl bg-white px-5 text-sm font-semibold text-[#7B2D3E] transition hover:bg-white/90"
+              >
+                Apply
+              </button>
+            </form>
+          )}
+        </div>
       </section>
 
-      {/* Two stat cards */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Product views */}
-        <div className="overflow-hidden rounded-[28px] border border-black/10 border-l-[3px] border-l-[#7B2D3E] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-          <div className="border-b border-[#e8ddd4] bg-[#fdf7f4] px-6 py-4">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">
-              Discovery
-            </div>
-            <h2 className="mt-1 text-md font-medium text-black">Product views</h2>
-            <p className="mt-1 text-xs text-neutral-500">
-              Shoppers who viewed your product detail page.
-            </p>
+      {/* Overview */}
+      <section className="overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+        <div className="border-b border-[#e8ddd4] bg-[#fdf7f4] px-6 py-4">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">
+            Overview
           </div>
-          <div className="px-6 py-6">
-            <div className="text-4xl font-semibold tracking-tight text-black">
-              {productViews.toLocaleString()}
+
+          <h2 className="mt-1 text-md font-medium text-black">
+            Shopper engagement
+          </h2>
+
+          <p className="mt-1 text-xs text-neutral-500">
+            Unique shopper
+            sessions in the
+            selected period.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 divide-x divide-y divide-[#e8ddd4] lg:grid-cols-4 lg:divide-y-0">
+          <Metric
+            label="Product impressions"
+            value={
+              uniqueImpressions
+            }
+          />
+
+          <Metric
+            label="Product views"
+            value={uniqueViews}
+          />
+
+          <Metric
+            label="Wishlist adds"
+            value={
+              uniqueWishlistAdds
+            }
+          />
+
+          <Metric
+            label="Shop clicks"
+            value={
+              uniqueShopClicks
+            }
+          />
+        </div>
+      </section>
+
+      {/* Engagement rates */}
+      <section className="overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#e8ddd4] bg-[#fdf7f4] px-6 py-4">
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">
+              Engagement
             </div>
-            <div className="mt-1 text-xs text-neutral-400">{rangeLabel}</div>
+
+            <h2 className="mt-1 text-md font-medium text-black">
+              Shopper intent
+            </h2>
+          </div>
+
+          <div className="text-xs text-neutral-400">
+            {selectedRangeLabel}
           </div>
         </div>
 
-        {/* Shop at clicks */}
-        <div className="overflow-hidden rounded-[28px] border border-black/10 border-l-[3px] border-l-[#7B2D3E] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+        <div className="grid gap-px bg-[#e8ddd4] md:grid-cols-3">
+          <RateCard
+            label="View rate"
+            value={viewRate}
+            description="Impression sessions that opened a product page."
+          />
 
-          <div className="border-b border-[#e8ddd4] bg-[#fdf7f4] px-6 py-4">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">
-              Intent
-            </div>
-            <h2 className="mt-1 text-md font-medium text-black">Shop at clicks</h2>
-            <p className="mt-1 text-xs text-neutral-500">
-              Shoppers who clicked through to your website.
-            </p>
-          </div>
-          <div className="px-6 py-6">
-            <div className="text-4xl font-semibold tracking-tight text-black">
-              {shopAtClicks.toLocaleString()}
-            </div>
-            <div className="mt-1 text-xs text-neutral-400">{rangeLabel}</div>
-          </div>
+          <RateCard
+            label="Save rate"
+            value={saveRate}
+            description="Product-view sessions that added a product to wishlist."
+          />
+
+          <RateCard
+            label="Shop intent"
+            value={
+              shopIntentRate
+            }
+            description="Product-view sessions that clicked through to shop."
+          />
         </div>
+      </section>
+
+      {/* Performance over time */}
+<section className="overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+  <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#e8ddd4] bg-[#fdf7f4] px-6 py-4">
+    <div>
+      <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">
+        Performance
       </div>
 
-      {/* Wishlist snapshot */}
-<div className="overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-  <div className="border-b border-[#e8ddd4] bg-[#fdf7f4] px-6 py-4">
-    <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">
-      Wishlist
-    </div>
-    <h2 className="mt-1 text-md font-medium text-black">Saved products</h2>
-    <p className="mt-1 text-xs text-neutral-500">
-       shoppers who have saved your products to their wishlist.
-    </p>
-  </div>
+      <h2 className="mt-1 text-md font-medium text-black">
+        Performance over time
+      </h2>
 
-  {/* Two mini stats */}
-  <div className="grid grid-cols-2 divide-x divide-[#e8ddd4] border-b border-[#e8ddd4]">
-    <div className="px-6 py-5">
-      <div className="text-xs text-neutral-400">Total saves</div>
-      <div className="mt-1 text-3xl font-semibold tracking-tight text-black">
-        {totalWishlistSaves}
-      </div>
+      <p className="mt-1 text-xs text-neutral-500">
+        Daily unique shopper sessions
+        across your products.
+      </p>
     </div>
-    <div className="px-6 py-5">
-      <div className="text-xs text-neutral-400">Unique shoppers</div>
-      <div className="mt-1 text-3xl font-semibold tracking-tight text-black">
-        {uniqueWishlistShoppers}
-      </div>
+
+    <div className="text-xs text-neutral-400">
+      {selectedRangeLabel}
     </div>
   </div>
 
-  {/* Top wishlisted products */}
-  {topWishlistRows.length > 0 ? (
-    <table className="w-full text-sm">
-      <thead className="bg-[#fdf7f4] text-left text-[#a89280]">
-        <tr>
-          <th className="px-5 py-3 font-medium">Product</th>
-          <th className="px-5 py-3 font-medium">Price</th>
-          <th className="px-5 py-3 text-right font-medium">Saves</th>
-        </tr>
-      </thead>
-      <tbody>
-        {topWishlistRows.map((r) => (
-          <tr key={r.productId} className="border-t border-black/6">
-            <td className="px-5 py-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-black/8 bg-[#faf8f4]">
-                  {r.imageUrl ? (
-                    <img
-                      src={r.imageUrl}
-                      alt={r.title}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-xs text-neutral-400">—</span>
-                  )}
-                </div>
-                <div className="truncate font-medium text-neutral-900">{r.title}</div>
-              </div>
-            </td>
-            <td className="px-5 py-4 text-neutral-700">
-              {r.price ? (
-                `${r.currency} ${r.price}`
-              ) : (
-                <span className="text-neutral-400">—</span>
-              )}
-            </td>
-            <td className="px-5 py-4 text-right font-semibold text-[#7B2D3E]">
-              {r.saves}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  ) : (
-    <div className="px-6 py-8 text-sm text-neutral-400">
-      No products wishlisted yet.
-    </div>
-  )}
-</div>
+  <div className="px-6 py-6">
+    <PerformanceTrendChart
+  data={trend}
+  ariaLabel="Brand performance over time"
+  emptyMessage="Performance will appear here as shoppers interact with your products."
+/>
+  </div>
+</section>
 
-      {/* Top products table */}
-      <div className="overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-        <div className="flex items-center justify-between border-b border-[#e8ddd4] bg-[#fdf7f4] px-5 py-4">
+      {/* Product performance */}
+      <section className="overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#e8ddd4] bg-[#fdf7f4] px-5 py-4">
           <div>
             <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">
               Performance
             </div>
-           <h2 className="mt-1 text-md font-medium text-black">
-  <a
-    href={`/brand/revenue/products?range=${range}&from=${fromParam}&to=${toParam}`}
-    className="text-black decoration-transparent hover:underline"
-  >
-    Top products
-  </a>
-</h2>
+
+            <h2 className="mt-1 text-md font-medium text-black">
+              Product performance
+            </h2>
+
+            <p className="mt-1 text-xs text-neutral-500">
+              A snapshot of your
+              most viewed products
+              in this period.
+            </p>
           </div>
-          <div className="text-xs text-neutral-400">{rangeLabel}</div>
+
+          <Link
+            href={
+              productPerformanceHref
+            }
+            className="rounded-full border border-[#7B2D3E]/20 bg-white px-4 py-2 text-xs font-semibold text-[#7B2D3E] transition hover:bg-[#7B2D3E]/5"
+          >
+            View all products →
+          </Link>
         </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-[#fdf7f4] text-left text-[#a89280]">
               <tr>
-                <th className="px-5 py-3 font-medium">Product</th>
-                <th className="px-5 py-3 font-medium">Price</th>
-                <th className="px-5 py-3 text-right font-medium">Shop at clicks</th>
+                <th className="px-5 py-3 font-medium">
+                  Product
+                </th>
+
+                <th className="px-5 py-3 text-right font-medium">
+                  Impressions
+                </th>
+
+                <th className="px-5 py-3 text-right font-medium">
+                  Views
+                </th>
+
+                <th className="px-5 py-3 text-right font-medium">
+                  Saves
+                </th>
+
+                <th className="px-5 py-3 text-right font-medium">
+                  Shop clicks
+                </th>
+
+                <th className="px-5 py-3 text-right font-medium">
+                  View rate
+                </th>
+
+                <th className="px-5 py-3 text-right font-medium">
+                  Save rate
+                </th>
+
+                <th className="px-5 py-3 text-right font-medium">
+                  Shop intent
+                </th>
               </tr>
             </thead>
+
             <tbody>
-              {topRows.map((r) => (
-                <tr key={r.productId} className="border-t border-black/6">
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-black/8 bg-[#faf8f4]">
-                        {r.imageUrl ? (
-                          <img
-                            src={r.imageUrl}
-                            alt={r.title}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-xs text-neutral-400">No image</span>
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="truncate font-medium text-neutral-900">{r.title}</div>
-                        {r.sourceUrl ? (
-                          <a
-                            className="mt-1 inline-block text-xs text-neutral-500 underline underline-offset-2"
-                            href={r.sourceUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            View source
-                          </a>
-                        ) : (
-                          <span className="mt-1 inline-block text-xs text-neutral-400">—</span>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4 text-neutral-700">
-                    {r.price ? (
-                      `${r.currency} ${r.price}`
-                    ) : (
-                      <span className="text-neutral-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-5 py-4 text-right font-medium text-neutral-900">
-                    {r.clicks}
-                  </td>
-                </tr>
-              ))}
-              {topRows.length === 0 && (
+              {topProducts.map(
+                (row) => (
+                  <tr
+                    key={row.id}
+                    className="border-t border-black/6"
+                  >
+                    <td className="px-5 py-4">
+                      <Link
+                        href={`/brand/revenue/products/${row.id}${qs(
+                          effectiveRange
+                        )}`}
+                        className="flex items-center gap-3"
+                      >
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-black/8 bg-[#faf8f4]">
+                          {row.imageUrl ? (
+                            <img
+                              src={
+                                row.imageUrl
+                              }
+                              alt={
+                                row.title
+                              }
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-xs text-neutral-400">
+                              —
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="min-w-0">
+                          <div className="truncate font-medium text-neutral-900 hover:text-[#7B2D3E]">
+                            {
+                              row.title
+                            }
+                          </div>
+
+                          <div className="mt-0.5 text-xs text-neutral-400">
+                            {row.price
+                              ? `${row.currency} ${row.price}`
+                              : "—"}
+                          </div>
+                        </div>
+                      </Link>
+                    </td>
+
+                    <td className="px-5 py-4 text-right text-neutral-700">
+                      {
+                        row.impressions
+                      }
+                    </td>
+
+                    <td className="px-5 py-4 text-right text-neutral-700">
+                      {row.views}
+                    </td>
+
+                    <td className="px-5 py-4 text-right text-neutral-700">
+                      {row.saves}
+                    </td>
+
+                    <td className="px-5 py-4 text-right text-neutral-700">
+                      {
+                        row.shopClicks
+                      }
+                    </td>
+
+                    <td className="px-5 py-4 text-right font-medium text-neutral-900">
+                      {
+                        row.viewRate
+                      }
+                      %
+                    </td>
+
+                    <td className="px-5 py-4 text-right font-medium text-neutral-900">
+                      {
+                        row.saveRate
+                      }
+                      %
+                    </td>
+
+                    <td className="px-5 py-4 text-right font-medium text-neutral-900">
+                      {
+                        row.shopIntentRate
+                      }
+                      %
+                    </td>
+                  </tr>
+                )
+              )}
+
+              {topProducts.length ===
+                0 && (
                 <tr>
-                  <td className="px-5 py-8 text-neutral-500" colSpan={3}>
-                    No product-level clicks yet in this range.
+                  <td
+                    colSpan={8}
+                    className="px-5 py-10 text-center text-sm text-neutral-400"
+                  >
+                    No product
+                    activity yet in
+                    this period.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+      </section>
+
+      {/* Audience */}
+<section className="overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+  <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#e8ddd4] bg-[#fdf7f4] px-6 py-5">
+    <div>
+      <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">
+        Audience
       </div>
 
-      {/* Geography */}
-      <section className="overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#e8ddd4] bg-[#fdf7f4] px-5 py-5 md:px-6">
-          <div>
-            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7B2D3E]/60">
-              Geography
-            </div>
-            <h2 className="mt-1 text-md font-medium text-black">
-              Shopper preference geography
-            </h2>
-            <p className="mt-1 text-xs text-neutral-500">
-              Based on shopper-selected country preference across tracked clicks in the selected range.
+      <h2 className="mt-1 text-md font-medium text-black">
+        Shopper demographics
+      </h2>
+
+      <p className="mt-1 text-xs text-neutral-500">
+        An aggregated view of
+        identified shoppers who
+        interacted with your
+        products.
+      </p>
+    </div>
+
+    <div className="text-xs text-neutral-400">
+      {selectedRangeLabel}
+    </div>
+  </div>
+
+
+
+  {demographicsQualified ? (
+    <div className="grid lg:grid-cols-2">
+      {/* Age groups */}
+      <div className="border-b border-[#e8ddd4] p-6 lg:border-b-0 lg:border-r">
+        <div className="mb-5">
+          <h3 className="text-sm font-semibold text-neutral-900">
+            Age groups
+          </h3>
+
+          <p className="mt-1 text-xs text-neutral-400">
+            Based on identified
+            shoppers with a date of
+            birth.
+          </p>
+        </div>
+
+        <div className="space-y-5">
+          {ageRows.map(
+            (row) => (
+              <div
+                key={row.label}
+              >
+                <div className="mb-2 flex items-center justify-between gap-4">
+                  <span className="text-sm text-neutral-700">
+                    {row.label}
+                  </span>
+
+                  <span className="text-sm font-semibold text-neutral-900">
+                    {
+                      row.percentage
+                    }
+                    %
+                  </span>
+                </div>
+
+                <div className="h-2 overflow-hidden rounded-full bg-[#ece7dc]">
+                  <div
+                    className="h-full rounded-full bg-[#7B2D3E]/70"
+                    style={{
+                      width: `${row.percentage}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            )
+          )}
+
+          {totalAgeShoppers ===
+            0 && (
+            <p className="text-sm text-neutral-400">
+              No age information is
+              available yet.
             </p>
-          </div>
-          <div className="min-w-[200px] rounded-[20px] border border-[#e8ddd4] bg-white px-4 py-3">
-            <div className="text-xs uppercase tracking-[0.14em] text-neutral-400">Top market</div>
-            <div className="mt-1.5 text-sm font-medium tracking-tight text-black">
-  {topCountry ? countryLabel(topCountry.countryCode) : "—"}
-</div>
-            <div className="mt-0.5 text-xs text-neutral-500">
-              {topCountry
-                ? `${topCountry.clicks} clicks • ${percent(topCountry.clicks, totalGeoClicks)}`
-                : "No geo data yet"}
-            </div>
-          </div>
+          )}
         </div>
-        <div className="space-y-6 p-4 md:p-6">
-          <div className="rounded-[28px] border border-black/6 bg-[#f9f6ef] p-2 md:p-3">
-            <WorldChoropleth
-              title={`Shopper geography · ${rangeLabel}`}
-              data={numericData}
-            />
-          </div>
-          <div className="overflow-hidden rounded-[28px] border border-black/6">
-            <table className="w-full text-sm">
-              <thead className="bg-[#fdf7f4] text-left text-[#a89280]">
-                <tr>
-                  <th className="px-5 py-3 font-medium">Country</th>
-                  <th className="px-5 py-3 text-right font-medium">Clicks</th>
-                  <th className="px-5 py-3 text-right font-medium">Share</th>
-                  <th className="px-5 py-3 font-medium">Relative intensity</th>
-                </tr>
-              </thead>
-              <tbody>
-                {byShopperCountry.map((r) => (
-                  <tr key={r.countryCode} className="border-t border-black/6">
-                    <td className="px-5 py-4 font-medium text-neutral-900">
-                      {countryLabel(r.countryCode)}
-                    </td>
-                    <td className="px-5 py-4 text-right text-neutral-800">{r.clicks}</td>
-                    <td className="px-5 py-4 text-right text-neutral-600">
-                      {percent(r.clicks, totalGeoClicks)}
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#ece7dc]">
-                        <div
-                          className="h-2.5 rounded-full bg-[#7B2D3E]/70"
-                          style={{
-                            width: `${Math.max(4, Math.round((r.clicks / maxClicks) * 100))}%`,
-                          }}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {byShopperCountry.length === 0 && (
-                  <tr>
-                    <td className="px-5 py-8 text-neutral-500" colSpan={4}>
-                      No geo clicks yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          <div className="text-xs text-neutral-400">
-            Country boundaries may include overseas territories depending on the underlying map dataset.
-          </div>
+      </div>
+
+      {/* Markets */}
+      <div className="p-6">
+        <div className="mb-5">
+          <h3 className="text-sm font-semibold text-neutral-900">
+            Shopper markets
+          </h3>
+
+          <p className="mt-1 text-xs text-neutral-400">
+            Based on the country of
+            identified shoppers.
+          </p>
         </div>
-      </section>
+
+        <div className="space-y-5">
+          {marketRows.map(
+            (row) => (
+              <div
+                key={
+                  row.countryCode
+                }
+              >
+                <div className="mb-2 flex items-center justify-between gap-4">
+                  <span className="text-sm text-neutral-700">
+                    {countryLabel(
+                      row.countryCode
+                    )}
+                  </span>
+
+                  <span className="text-sm font-semibold text-neutral-900">
+                    {
+                      row.percentage
+                    }
+                    %
+                  </span>
+                </div>
+
+                <div className="h-2 overflow-hidden rounded-full bg-[#ece7dc]">
+                  <div
+                    className="h-full rounded-full bg-[#7B2D3E]/70"
+                    style={{
+                      width: `${row.percentage}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            )
+          )}
+
+          {marketRows.length ===
+            0 && (
+            <p className="text-sm text-neutral-400">
+              No shopper market
+              information is
+              available yet.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  ) : (
+    <div className="px-6 py-8">
+      <div className="rounded-2xl border border-[#e8ddd4] bg-[#fdf7f4] px-5 py-4">
+        <div className="text-sm font-medium text-neutral-800">
+          Audience insights are
+          building
+        </div>
+
+        <p className="mt-1 max-w-2xl text-xs leading-5 text-neutral-500">
+          Age and market breakdowns
+          will appear once there is
+          enough identified shopper
+          activity to provide useful
+          aggregated insights.
+        </p>
+      </div>
+    </div>
+  )}
+</section>
+
+
+    </div>
+  );
+}
+
+function Metric({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}) {
+  return (
+    <div className="bg-white px-6 py-6">
+      <div className="text-xs text-neutral-400">
+        {label}
+      </div>
+
+      <div className="mt-1 text-3xl font-semibold tracking-tight text-black">
+        {value.toLocaleString()}
+      </div>
+    </div>
+  );
+}
+
+function RateCard({
+  label,
+  value,
+  description,
+}: {
+  label: string;
+  value: number;
+  description: string;
+}) {
+  return (
+    <div className="bg-white px-6 py-6">
+      <div className="text-xs text-neutral-400">
+        {label}
+      </div>
+
+      <div className="mt-1 text-3xl font-semibold tracking-tight text-[#7B2D3E]">
+        {value}%
+      </div>
+
+      <p className="mt-2 max-w-xs text-xs leading-5 text-neutral-400">
+        {description}
+      </p>
     </div>
   );
 }

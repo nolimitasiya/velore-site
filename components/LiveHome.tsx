@@ -155,7 +155,9 @@ export default async function LiveHome({ region, country }: LiveHomeProps) {
               title: true,
               slug: true,
               price: true,
+              originalPrice: true,
               currency: true,
+              badges: true,
 
               brand: {
                 select: {
@@ -233,12 +235,20 @@ const hero = normalizeHero(rawHero);
       i.product.images?.[0]?.url ?? null,
 
     price:
-      i.product.price
-        ? i.product.price.toString()
-        : null,
+  i.product.price
+    ? i.product.price.toString()
+    : null,
 
-    currency:
-      i.product.currency,
+originalPrice:
+  i.product.originalPrice
+    ? i.product.originalPrice.toString()
+    : null,
+
+currency:
+  i.product.currency,
+
+badges:
+  (i.product.badges ?? []) as string[],
 
     buyUrl:
       buildTrackedOutboundUrl(
@@ -294,7 +304,9 @@ const liveStyleFeed: StyleFeedPost[] = homepageStyleFeedDb.map((p) => ({
     title: product.title,
     slug: product.slug,
     price: product.price ? product.price.toString() : null,
+    originalPrice: product.originalPrice ? product.originalPrice.toString() : null,
     currency: product.currency,
+    badges: product.badges ?? [],
 
     brandName: product.brand.name,
     brandSlug: product.brand.slug,

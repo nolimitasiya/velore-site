@@ -17,9 +17,9 @@ export default async function BrandAuthedLayout({
   <BrandShell brandName={brand?.name ?? "Brand Portal"}>
     <div className="flex min-h-screen bg-[#faf8f4]">
       <BrandHeader brandName={brand?.name ?? "Brand Portal"} />
-      <main className="flex-1 overflow-y-auto px-8 py-8 bg-[#faf8f4]">
-        {children}
-      </main>
+      <main className="min-w-0 flex-1 overflow-y-auto bg-[#faf8f4] px-8 py-8 lg:px-10">
+  {children}
+</main>
     </div>
   </BrandShell>
 );

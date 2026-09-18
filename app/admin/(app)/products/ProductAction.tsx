@@ -15,26 +15,24 @@ export function ProductActions({ id, isActive, publishedAt }: Props) {
 
   async function toggleActive() {
     await fetch(`/api/admin/products/${id}/active`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-admin-token": process.env.NEXT_PUBLIC_ADMIN_IMPORT_TOKEN!,
-      },
-      body: JSON.stringify({ isActive: !isActive }),
-    });
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ isActive: !isActive }),
+});
 
     router.refresh();
   }
 
   async function togglePublish() {
     await fetch(`/api/admin/products/${id}/publish`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-admin-token": process.env.NEXT_PUBLIC_ADMIN_IMPORT_TOKEN!,
-      },
-      body: JSON.stringify({ published: !publishedAt }),
-    });
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ published: !publishedAt }),
+});
 
     router.refresh();
   }
@@ -65,3 +63,5 @@ export function ProductActions({ id, isActive, publishedAt }: Props) {
     </div>
   );
 }
+
+

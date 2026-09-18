@@ -143,6 +143,7 @@ export default async function NewInPage({
       slug: true, // ← ADDED
       title: true,
       price: true,
+      originalPrice: true,
       currency: true,
       badges: true,
       brand: { select: { name: true, slug: true } }, // ← slug ADDED
@@ -248,6 +249,11 @@ if (shouldUseMerch) {
       p.price
         ? p.price.toString()
         : null,
+
+    originalPrice:
+       p.originalPrice
+       ? p.originalPrice.toString()
+           : null,
 
     currency:
       String(p.currency),

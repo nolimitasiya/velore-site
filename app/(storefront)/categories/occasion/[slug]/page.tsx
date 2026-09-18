@@ -258,6 +258,7 @@ if (
         slug: true,
         title: true,
         price: true,
+        originalPrice: true,
         currency: true,
         badges: true,
         brand: {
@@ -297,6 +298,11 @@ if (
   price:
     p.price
       ? p.price.toString()
+      : null,
+
+  originalPrice:
+    p.originalPrice
+      ? p.originalPrice.toString()
       : null,
 
   currency:

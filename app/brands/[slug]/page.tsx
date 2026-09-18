@@ -223,7 +223,9 @@ const discoveryContext =
       slug: true,
       title: true,
       price: true,
+      originalPrice: true,
       currency: true,
+      badges: true,
       images: {
         orderBy: { sortOrder: "asc" },
         take: 1,
@@ -244,13 +246,21 @@ const discoveryContext =
       p.images?.[0]?.url ??
       null,
 
-    price:
-      p.price
-        ? p.price.toString()
-        : null,
+    price: 
+  p.price 
+    ? p.price.toString() 
+    : null,
 
-    currency:
-      p.currency,
+originalPrice:
+  p.originalPrice
+    ? p.originalPrice.toString()
+    : null,
+
+currency: 
+  p.currency,
+
+badges:
+  (p.badges ?? []) as string[],
 
     buyUrl:
   buildTrackedOutboundUrl(

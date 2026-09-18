@@ -6,6 +6,7 @@ import DiaryReadTracker from "@/components/diary/DiaryReadTracker";
 import WishlistButton from "@/components/WishlistButton";
 import ProductImpressionTracker from "@/components/analytics/ProductImpressionTracker";
 import { buildTrackedOutboundUrl } from "@/lib/affiliate/tracking";
+import ProductPrice from "@/components/ProductPrice";
 
 export const dynamic = "force-dynamic";
 
@@ -18,23 +19,6 @@ type PageProps = {
 function safeJsonToHtml(contentJson: unknown): string {
   if (!contentJson) return "";
   return "";
-}
-
-function formatMoney(value: string | number | null, currency: string | null) {
-  if (value == null || !currency) return null;
-
-  const amount = typeof value === "string" ? Number(value) : value;
-  if (Number.isNaN(amount)) return null;
-
-  try {
-    return new Intl.NumberFormat("en-GB", {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  } catch {
-    return `${amount} ${currency}`;
-  }
 }
 
 function stripHtml(html: string) {
@@ -76,7 +60,9 @@ export default async function DiaryPostPage({ params }: PageProps) {
       slug: true,
       title: true,
       price: true,
+      originalPrice: true,
       currency: true,
+      badges: true,
       brand: {
         select: {
           name: true,
@@ -216,11 +202,6 @@ export default async function DiaryPostPage({ params }: PageProps) {
               <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 md:grid-cols-3 xl:grid-cols-4">
                 {post.relatedProducts.map(({ product }, index) => {
                   const imageUrl = product.images[0]?.url ?? null;
-                  const price = formatMoney(
-                    product.price ? product.price.toString() : null,
-                    product.currency ?? null
-                  );
-
                   const position = index + 1;
 
 const analyticsContext = {
@@ -292,11 +273,19 @@ const outUrl = buildTrackedOutboundUrl(
               {product.title}
             </h3>
 
-            {price ? (
-              <p className="mt-1 text-sm text-black/65">
-                {price}
-              </p>
-            ) : null}
+            {product.price ? (
+  <div className="mt-1 text-black/65">
+    <ProductPrice
+      price={product.price.toString()}
+      originalPrice={
+        product.originalPrice?.toString() ?? null
+      }
+      currency={product.currency}
+      badges={product.badges}
+      size="md"
+    />
+  </div>
+) : null}
           </div>
         </Link>
       ) : (
@@ -327,11 +316,19 @@ const outUrl = buildTrackedOutboundUrl(
               {product.title}
             </h3>
 
-            {price ? (
-              <p className="mt-1 text-sm text-black/65">
-                {price}
-              </p>
-            ) : null}
+            {product.price ? (
+  <div className="mt-1 text-black/65">
+    <ProductPrice
+      price={product.price.toString()}
+      originalPrice={
+        product.originalPrice?.toString() ?? null
+      }
+      currency={product.currency}
+      badges={product.badges}
+      size="md"
+    />
+  </div>
+) : null}
           </div>
         </div>
       )}

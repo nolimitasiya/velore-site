@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdminSession } from "@/lib/auth/AdminSession";
 
 export async function POST(req: Request) {
-  const token = req.headers.get("x-admin-token");
-  if (token !== process.env.ADMIN_IMPORT_TOKEN) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
+  try {
+  await requireAdminSession();
+} catch {
+  return NextResponse.json(
+    { ok: false, error: "Unauthorized" },
+    { status: 401 }
+  );
+}
 
   const body = await req.json().catch(() => ({}));
   const id = String(body.id || "");

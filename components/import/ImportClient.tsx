@@ -20,8 +20,7 @@ type Props = {
   validateUrl: string;
   importUrl: string;
   historyUrl: string;
-  requireToken?: boolean;
-  tokenEnvVarName?: string;
+  
 };
 
 function SectionCard({
@@ -145,8 +144,6 @@ export default function ImportClient({
   validateUrl,
   importUrl,
   historyUrl,
-  requireToken = false,
-  tokenEnvVarName = "NEXT_PUBLIC_ADMIN_IMPORT_TOKEN",
 }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [syncMissing, setSyncMissing] = useState(false);
@@ -167,10 +164,6 @@ export default function ImportClient({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [previewNote, setPreviewNote] = useState<string | null>(null);
 
-  const token =
-    requireToken && mode === "admin"
-      ? (process.env as any)[tokenEnvVarName] ?? process.env.NEXT_PUBLIC_ADMIN_IMPORT_TOKEN ?? ""
-      : "";
 
   const templateCsv = useMemo(() => {
     const brandHeader = ["product_slug", "product_name", "source_url", "image_url"];
@@ -254,17 +247,13 @@ export default function ImportClient({
     URL.revokeObjectURL(url);
   }
 
-  function buildHeaders() {
-    const headers: Record<string, string> = {};
-    if (requireToken && token) headers["x-admin-token"] = token;
-    return headers;
-  }
+ 
 
   async function loadHistory() {
-    const r = await fetch(historyUrl, { headers: buildHeaders() });
-    const j = await r.json().catch(() => ({}));
-    if (j?.ok) setHistory(j.jobs ?? []);
-  }
+      const r = await fetch(historyUrl);
+      const j = await r.json().catch(() => ({}));
+      if (j?.ok) setHistory(j.jobs ?? []);
+}
 
   useEffect(() => {
     loadHistory();
@@ -286,7 +275,6 @@ export default function ImportClient({
 
     const r = await fetch(validateUrl, {
       method: "POST",
-      headers: buildHeaders(),
       body: fd,
     });
 
@@ -314,7 +302,6 @@ export default function ImportClient({
 
     const r = await fetch(importUrl, {
       method: "POST",
-      headers: buildHeaders(),
       body: fd,
     });
 
