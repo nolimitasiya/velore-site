@@ -250,6 +250,7 @@ model Product {
   wishlistItems           WishlistItem[]
   categoryMerchPlacements CategoryMerchPlacement[]
   homepageStyleFeedItems  HomepageStyleFeedItemProduct[]
+  catalogueHealthTargets  CatalogueHealthTarget[]
 
   completeTheLook    ProductCompleteTheLook[] @relation("CompleteTheLookSource")
   completeTheLookFor ProductCompleteTheLook[] @relation("CompleteTheLookTarget")
@@ -267,6 +268,8 @@ model ProductImage {
   url       String
   sortOrder Int     @default(0)
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  catalogueHealthTargets CatalogueHealthTarget[]
 
   @@index([productId])
 }
@@ -356,7 +359,6 @@ model BrandApplication {
   @@index([status, createdAt])
   @@index([email])
   @@index([platformHosted])
-
   @@index([acquisitionSource, createdAt])
   @@index([acquisitionCampaign, createdAt])
 }
@@ -458,6 +460,153 @@ enum AnalyticsSourcePage {
   NEW_IN
   SALE
   OTHER
+}
+
+enum CatalogueHealthTargetType {
+  PRODUCT_SOURCE_URL
+  PRODUCT_AFFILIATE_URL
+  PRODUCT_IMAGE
+}
+
+enum CatalogueHealthStatus {
+  UNKNOWN
+  HEALTHY
+  DEGRADED
+  BROKEN
+}
+
+enum CatalogueHealthFailureType {
+  INVALID_URL
+  NOT_FOUND
+  GONE
+  UNAUTHORIZED
+  FORBIDDEN
+  RATE_LIMITED
+  SERVER_ERROR
+  TIMEOUT
+  NETWORK_ERROR
+  REDIRECT_LOOP
+  TOO_MANY_REDIRECTS
+  INVALID_CONTENT_TYPE
+  OTHER
+}
+
+enum CatalogueHealthIssueStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+  IGNORED
+}
+
+enum CatalogueHealthSeverity {
+  WARNING
+  CRITICAL
+}
+
+model CatalogueHealthTarget {
+  id        String @id @default(cuid())
+  targetKey String @unique
+
+  targetType CatalogueHealthTargetType
+
+  productId      String? @db.Uuid
+  productImageId String? @db.Uuid
+
+  url String @db.Text
+
+  isActive  Boolean   @default(true)
+  retiredAt DateTime?
+
+  status      CatalogueHealthStatus       @default(UNKNOWN)
+  failureType CatalogueHealthFailureType?
+
+  httpStatus     Int?
+  finalUrl       String? @db.Text
+  contentType    String?
+  responseTimeMs Int?
+
+  consecutiveFailures  Int @default(0)
+  consecutiveSuccesses Int @default(0)
+
+  firstCheckedAt DateTime?
+  lastCheckedAt  DateTime?
+  lastHealthyAt  DateTime?
+  lastFailedAt   DateTime?
+  nextCheckAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  productImage ProductImage? @relation(fields: [productImageId], references: [id], onDelete: SetNull)
+
+  checks CatalogueHealthCheck[]
+  issues CatalogueHealthIssue[]
+
+  @@index([isActive, nextCheckAt])
+  @@index([status, nextCheckAt])
+  @@index([productId])
+  @@index([productImageId])
+  @@index([targetType, status])
+  @@index([lastCheckedAt])
+}
+
+model CatalogueHealthCheck {
+  id String @id @default(cuid())
+
+  targetId     String
+  target       CatalogueHealthTarget @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  requestedUrl String                @db.Text
+
+  status      CatalogueHealthStatus
+  failureType CatalogueHealthFailureType?
+
+  httpStatus     Int?
+  finalUrl       String? @db.Text
+  contentType    String?
+  responseTimeMs Int?
+
+  errorMessage String? @db.Text
+
+  checkedAt DateTime @default(now())
+
+  @@index([targetId, checkedAt])
+  @@index([status, checkedAt])
+  @@index([failureType, checkedAt])
+}
+
+model CatalogueHealthIssue {
+  id String @id @default(cuid())
+
+  targetId String
+  target   CatalogueHealthTarget @relation(fields: [targetId], references: [id], onDelete: Cascade)
+
+  status   CatalogueHealthIssueStatus @default(OPEN)
+  severity CatalogueHealthSeverity
+
+  failureType CatalogueHealthFailureType
+  urlAtOpen   String                     @db.Text
+
+  openedAt       DateTime  @default(now())
+  acknowledgedAt DateTime?
+  resolvedAt     DateTime?
+  ignoredAt      DateTime?
+
+  firstHttpStatus  Int?
+  latestHttpStatus Int?
+
+  failureCount  Int      @default(1)
+  lastFailureAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  adminNotifications AdminNotification[]
+
+  @@index([status, severity])
+  @@index([targetId, status])
+  @@index([openedAt])
 }
 
 model AffiliateClick {
@@ -566,14 +715,14 @@ model WaitlistSubscriber {
   createdAt   DateTime @default(now())
 
   // Acquisition attribution captured at signup
-  analyticsSessionId   String?
-  acquisitionSource    String?
-  acquisitionMedium    String?
-  acquisitionCampaign  String?
-  acquisitionContent   String?
-  acquisitionTerm      String?
-  landingPath          String?
-  referrer             String?
+  analyticsSessionId  String?
+  acquisitionSource   String?
+  acquisitionMedium   String?
+  acquisitionCampaign String?
+  acquisitionContent  String?
+  acquisitionTerm     String?
+  landingPath         String?
+  referrer            String?
 
   @@index([acquisitionSource, createdAt])
   @@index([acquisitionCampaign, createdAt])
@@ -724,23 +873,29 @@ model ProductShippingCountry {
 }
 
 model AdminNotification {
-  id        String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  type      AdminNotificationType // e.g. "PRODUCT_SUBMITTED", "TAXONOMY_REQUEST"
-  brandId   String?               @db.Uuid
-  productId String?               @db.Uuid
-  createdAt DateTime              @default(now())
+  id                     String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type                   AdminNotificationType
+  brandId                String?               @db.Uuid
+  productId              String?               @db.Uuid
+  catalogueHealthIssueId String?
+
+  createdAt DateTime  @default(now())
   readAt    DateTime?
 
-  brand   Brand?   @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  product Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  brand                Brand?                @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  product              Product?              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  catalogueHealthIssue CatalogueHealthIssue? @relation(fields: [catalogueHealthIssueId], references: [id], onDelete: SetNull)
 
   @@index([type, createdAt])
   @@index([readAt])
+  @@index([catalogueHealthIssueId])
 }
 
 enum AdminNotificationType {
   PRODUCT_SUBMITTED
   TAXONOMY_REQUEST
+  CATALOGUE_HEALTH_FAILURE
+  CATALOGUE_HEALTH_RECOVERED
 }
 
 enum Region {

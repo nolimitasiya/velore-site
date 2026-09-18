@@ -37,8 +37,8 @@ export type StorefrontProduct = {
 
 export function ProductRow({ products }: { products: StorefrontProduct[] }) {
   return (
-    <div className="mx-auto w-full max-w-[1800px] px-8">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+  <div className="w-full">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4">
         {products.map((p) => {
           const params = new URLSearchParams();
 

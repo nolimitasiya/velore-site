@@ -3,6 +3,10 @@
     {
       "path": "/api/admin/snapshots/daily",
       "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/catalogue-health",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

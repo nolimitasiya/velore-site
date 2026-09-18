@@ -363,7 +363,7 @@ const shippingToLabels = getShippingToLabel(
         brandName={brand.name}
         className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-black px-6 py-3.5 text-sm font-medium text-white transition hover:opacity-90"
       >
-        Shop at {brand.name} ↗
+        Shop at {brand.name} 
       </ProductClickTrackingLink>
     ) : (
       <button disabled className="flex-1 rounded-full bg-black/20 px-6 py-3.5 text-sm font-medium text-white">

@@ -16,14 +16,22 @@ export function BrandMosaic({ tiles }: { tiles: StorefrontBrandTile[] }) {
   const visibleTiles = tiles.slice(0, 7);
 
   const tileClasses = [
-    "md:col-span-5 md:row-span-1",
-    "md:col-span-4 md:row-span-1",
-    "md:col-span-3 md:row-span-2",
-    "md:col-span-3 md:row-span-1",
-    "md:col-span-3 md:row-span-1",
-    "md:col-span-3 md:row-span-1",
-    "md:col-span-3 md:row-span-1",
-  ];
+  // 1 — mobile hero
+  "col-span-2 row-span-2 md:col-span-5 md:row-span-1",
+
+  // 2 + 3 — paired
+  "col-span-1 row-span-1 md:col-span-4 md:row-span-1",
+  "col-span-1 row-span-1 md:col-span-3 md:row-span-2",
+
+  // 4 — mobile wide feature
+  "col-span-2 row-span-1 md:col-span-3 md:row-span-1",
+
+  // 5 + 6 — paired
+  "col-span-1 row-span-1 md:col-span-3 md:row-span-1",
+  "col-span-1 row-span-1 md:col-span-3 md:row-span-1",
+
+  "col-span-2 row-span-1 md:col-span-3 md:row-span-1",
+];
 
   return (
     <section className="bg-[#fcfbf8]">
@@ -58,7 +66,7 @@ export function BrandMosaic({ tiles }: { tiles: StorefrontBrandTile[] }) {
         </div>
 
         {/* Editorial mosaic */}
-        <div className="grid auto-rows-[260px] grid-cols-1 gap-[2px] md:grid-cols-12 md:auto-rows-[330px]">
+        <div className="grid grid-cols-2 auto-rows-[190px] gap-[2px] md:grid-cols-12 md:auto-rows-[330px]">
           {visibleTiles.map((tile, index) => (
             <Link
               key={tile.id}
@@ -84,14 +92,14 @@ export function BrandMosaic({ tiles }: { tiles: StorefrontBrandTile[] }) {
 
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
 
-              <div className="absolute inset-x-0 bottom-0 p-6 text-white md:p-7">
-                <h3 className="font-display text-[30px] font-normal leading-none tracking-[-0.01em] md:text-[38px]">
-                  {tile.name}
-                </h3>
+              <div className="absolute inset-x-0 bottom-0 p-4 text-white sm:p-5 md:p-7">
+                <h3 className="font-display text-[22px] font-normal leading-none tracking-[-0.01em] sm:text-[26px] md:text-[38px]">
+  {tile.name}
+</h3>
 
                 <div className="mt-4 h-px w-7 bg-white/65" />
 
-                <div className="mt-5 flex items-center gap-5 font-body text-[10px] uppercase tracking-[0.2em] text-white/90">
+                <div className="mt-4 flex items-center gap-3 font-body text-[9px] uppercase tracking-[0.16em] text-white/90 md:mt-5 md:gap-5 md:text-[10px] md:tracking-[0.2em]">
                   <span className="border-b border-white/50 pb-1">
                     Discover
                   </span>

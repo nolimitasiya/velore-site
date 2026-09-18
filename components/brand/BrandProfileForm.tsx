@@ -7,18 +7,13 @@ import CoverImagePositionEditor from "@/components/brand/CoverImagePositionEdito
 type ReturnsPaidBy = "BUYER" | "BRAND";
 
 type ShippingTimeUnit =
-  | "working days"
   | "days"
   | "weeks"
-  | "business days"
-  | "months";
+ 
 
 const SHIPPING_TIME_UNITS: ShippingTimeUnit[] = [
-  "working days",
   "days",
   "weeks",
-  "business days",
-  "months",
 ];
 
 function parseShippingTimeframe(value?: string | null): {
@@ -27,13 +22,13 @@ function parseShippingTimeframe(value?: string | null): {
 } {
   const raw = (value ?? "").trim();
 
-  if (!raw) return { time: "", unit: "working days" };
+  if (!raw) return { time: "", unit: "days" };
 
   const matchedUnit = SHIPPING_TIME_UNITS.find((unit) =>
     raw.toLowerCase().endsWith(unit.toLowerCase()),
   );
 
-  if (!matchedUnit) return { time: raw, unit: "working days" };
+  if (!matchedUnit) return { time: raw, unit: "days" };
 
   return {
     time: raw.slice(0, -matchedUnit.length).trim(),
