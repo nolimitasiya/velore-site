@@ -78,14 +78,19 @@ export function AdminHeader({
       ],
     },
     {
-      title: "Catalogue",
-      items: [
-        { href: "/admin/products", label: "Products", icon: "ti-shirt" },
-        { href: "/admin/import", label: "Import", icon: "ti-upload" },
-        { href: "/admin/brands", label: "Brands", icon: "ti-building-store" },
-        { href: "/admin/brand-invites", label: "Brand Invites", icon: "ti-mail" },
-      ],
+  title: "Catalogue",
+  items: [
+    { href: "/admin/products", label: "Products", icon: "ti-shirt" },
+    {
+      href: "/admin/catalogue-health",
+      label: "Catalogue Health",
+      icon: "ti-heart-rate-monitor",
     },
+    { href: "/admin/import", label: "Import", icon: "ti-upload" },
+    { href: "/admin/brands", label: "Brands", icon: "ti-building-store" },
+    { href: "/admin/brand-invites", label: "Brand Invites", icon: "ti-mail" },
+  ],
+},
     {
       title: "Community",
       items: [

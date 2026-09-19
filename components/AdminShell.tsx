@@ -5,10 +5,12 @@ export default function AdminShell({
   children,
   wide = false,
   fullWidth = false,
+  unreadNotificationCount = 0,
 }: {
   children: React.ReactNode;
   wide?: boolean;
   fullWidth?: boolean;
+  unreadNotificationCount?: number;
 }) {
   return (
     <div className="min-h-screen bg-[#faf8f4] font-body text-neutral-950">
@@ -43,14 +45,37 @@ export default function AdminShell({
           
 
           {/* Right */}
-          <div className="flex w-40 justify-end">
-            <Link
-              href="/"
-              className="text-[11px] font-medium uppercase tracking-[0.22em] text-[#a89280] transition hover:text-[#7B2D3E]"
-            >
-              Storefront
-            </Link>
-          </div>
+<div className="flex w-40 items-center justify-end gap-5">
+  <Link
+    href="/"
+    className="text-[11px] font-medium uppercase tracking-[0.22em] text-[#a89280] transition hover:text-[#7B2D3E]"
+  >
+    Storefront
+  </Link>
+
+  <Link
+    href="/admin/notifications"
+    aria-label={
+      unreadNotificationCount > 0
+        ? `${unreadNotificationCount} unread admin notifications`
+        : "Admin notifications"
+    }
+    className="relative inline-flex h-8 w-8 items-center justify-center rounded-full text-[#a89280] transition hover:bg-[#faf8f4] hover:text-[#7B2D3E]"
+  >
+    <i
+      className="ti ti-bell text-[19px]"
+      aria-hidden="true"
+    />
+
+    {unreadNotificationCount > 0 && (
+      <span className="absolute -right-1 -top-1 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[#7B2D3E] px-1 text-[9px] font-semibold leading-none text-white">
+        {unreadNotificationCount > 99
+          ? "99+"
+          : unreadNotificationCount}
+      </span>
+    )}
+  </Link>
+</div>
         </div>
       </header>
 

@@ -246,36 +246,76 @@ async function handleFailedResult(args: {
     }
 
     const existingIssue = await tx.catalogueHealthIssue.findFirst({
+  where: {
+    targetId: target.id,
+    status: {
+      in: [
+        CatalogueHealthIssueStatus.OPEN,
+        CatalogueHealthIssueStatus.ACKNOWLEDGED,
+      ],
+    },
+  },
+});
+
+if (existingIssue) {
+  await tx.catalogueHealthIssue.update({
+    where: {
+      id: existingIssue.id,
+    },
+    data: {
+      latestHttpStatus: result.httpStatus,
+      failureType,
+      failureCount: {
+        increment: 1,
+      },
+      lastFailureAt: checkedAt,
+    },
+  });
+
+  return;
+}
+
+/*
+ * If this target was already broken and its current incident was
+ * deliberately ignored by an admin, keep recording failures against
+ * that ignored incident rather than opening and notifying about the
+ * same continuous failure again.
+ *
+ * A recovery changes the target back to HEALTHY, so a later,
+ * genuinely new break is allowed to create a fresh incident.
+ */
+if (target.status === CatalogueHealthStatus.BROKEN) {
+  const ignoredIssue = await tx.catalogueHealthIssue.findFirst({
+    where: {
+      targetId: target.id,
+      status: CatalogueHealthIssueStatus.IGNORED,
+      urlAtOpen: target.url,
+    },
+    orderBy: {
+      ignoredAt: "desc",
+    },
+  });
+
+  if (ignoredIssue) {
+    await tx.catalogueHealthIssue.update({
       where: {
-        targetId: target.id,
-        status: {
-          in: [
-            CatalogueHealthIssueStatus.OPEN,
-            CatalogueHealthIssueStatus.ACKNOWLEDGED,
-          ],
+        id: ignoredIssue.id,
+      },
+      data: {
+        latestHttpStatus: result.httpStatus,
+        failureType,
+        failureCount: {
+          increment: 1,
         },
+        lastFailureAt: checkedAt,
       },
     });
 
-    if (existingIssue) {
-      await tx.catalogueHealthIssue.update({
-        where: {
-          id: existingIssue.id,
-        },
-        data: {
-          latestHttpStatus: result.httpStatus,
-          failureType,
-          failureCount: {
-            increment: 1,
-          },
-          lastFailureAt: checkedAt,
-        },
-      });
+    return;
+  }
+}
 
-      return;
-    }
-
-    const issue = await tx.catalogueHealthIssue.create({
+const issue = await tx.catalogueHealthIssue.create({
   data: {
     targetId: target.id,
     urlAtOpen: target.url,

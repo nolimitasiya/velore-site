@@ -574,6 +574,7 @@ model CatalogueHealthCheck {
   @@index([targetId, checkedAt])
   @@index([status, checkedAt])
   @@index([failureType, checkedAt])
+  @@index([checkedAt])
 }
 
 model CatalogueHealthIssue {

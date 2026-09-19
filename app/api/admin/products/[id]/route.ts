@@ -43,6 +43,18 @@ export async function GET(
         originalPrice: true,
         currency: true,
         badges: true,
+
+        images: {
+  orderBy: {
+    sortOrder: "asc",
+  },
+  select: {
+    id: true,
+    url: true,
+    sortOrder: true,
+  },
+},
+
         brand: {
           select: {
             name: true,

@@ -19,16 +19,36 @@ export default async function AdminAppLayout({
   noStore();
   const { admin } = await requireAdminSession();
 
-  const unseenWaitlistCount = await prisma.waitlistSubscriber.count({
-    where: { createdAt: { gt: admin.lastSeenWaitlistAt ?? new Date(0) } },
-  });
+  const [
+  unseenWaitlistCount,
+  unseenApplicationsCount,
+  unreadNotificationCount,
+] = await Promise.all([
+  prisma.waitlistSubscriber.count({
+    where: {
+      createdAt: {
+        gt: admin.lastSeenWaitlistAt ?? new Date(0),
+      },
+    },
+  }),
 
-  const unseenApplicationsCount = await prisma.brandApplication.count({
-    where: { createdAt: { gt: admin.lastSeenApplicationsAt ?? new Date(0) } },
-  });
+  prisma.brandApplication.count({
+    where: {
+      createdAt: {
+        gt: admin.lastSeenApplicationsAt ?? new Date(0),
+      },
+    },
+  }),
+
+  prisma.adminNotification.count({
+    where: {
+      readAt: null,
+    },
+  }),
+]);
 
  return (
-  <AdminShell fullWidth>
+  <AdminShell fullWidth unreadNotificationCount={unreadNotificationCount}>
     <div className="flex min-h-screen bg-[#faf8f4]">
       <AdminTopBar
         unseenWaitlistCount={unseenWaitlistCount}

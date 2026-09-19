@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { pruneCatalogueHealthChecks } from "@/lib/catalogue-health/pruneChecks";
 import { runCatalogueHealthBatch } from "@/lib/catalogue-health/runBatch";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+const RETENTION_HOUR_UTC = 1;
 
 export async function GET(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
@@ -41,6 +44,13 @@ export async function GET(request: NextRequest) {
       syncTargets: true,
     });
 
+    const now = new Date();
+
+    const retention =
+      now.getUTCHours() === RETENTION_HOUR_UTC
+        ? await pruneCatalogueHealthChecks(now)
+        : null;
+
     console.log(
       "[catalogue-health-cron] Run completed",
       {
@@ -51,6 +61,7 @@ export async function GET(request: NextRequest) {
         failed: result.failed,
         lockAcquired: result.lockAcquired,
         timings: result.timings,
+        retention,
       }
     );
 
@@ -71,6 +82,8 @@ export async function GET(request: NextRequest) {
       timings: result.timings,
 
       sync: result.sync,
+
+      retention,
     });
   } catch (error) {
     console.error(

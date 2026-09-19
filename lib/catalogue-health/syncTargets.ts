@@ -358,3 +358,155 @@ async function resetTargetForChangedUrl(args: {
     });
   });
 }
+
+export async function syncCatalogueHealthTarget(
+  targetId: string
+) {
+  const target =
+    await prisma.catalogueHealthTarget.findUnique({
+      where: {
+        id: targetId,
+      },
+      select: {
+        id: true,
+        targetKey: true,
+        targetType: true,
+        productId: true,
+        productImageId: true,
+        url: true,
+        isActive: true,
+      },
+    });
+
+  if (!target) {
+    return {
+      outcome: "TARGET_NOT_FOUND" as const,
+    };
+  }
+
+  let currentUrl: string | null = null;
+
+  if (
+    target.targetType ===
+    CatalogueHealthTargetType.PRODUCT_SOURCE_URL
+  ) {
+    if (!target.productId) {
+      return {
+        outcome: "SOURCE_REMOVED" as const,
+      };
+    }
+
+    const product = await prisma.product.findUnique({
+      where: {
+        id: target.productId,
+      },
+      select: {
+        sourceUrl: true,
+      },
+    });
+
+    currentUrl = product?.sourceUrl?.trim() || null;
+  } else if (
+    target.targetType ===
+    CatalogueHealthTargetType.PRODUCT_AFFILIATE_URL
+  ) {
+    if (!target.productId) {
+      return {
+        outcome: "SOURCE_REMOVED" as const,
+      };
+    }
+
+    const product = await prisma.product.findUnique({
+      where: {
+        id: target.productId,
+      },
+      select: {
+        affiliateUrl: true,
+      },
+    });
+
+    currentUrl =
+      product?.affiliateUrl?.trim() || null;
+  } else if (
+    target.targetType ===
+    CatalogueHealthTargetType.PRODUCT_IMAGE
+  ) {
+    if (!target.productImageId) {
+      return {
+        outcome: "SOURCE_REMOVED" as const,
+      };
+    }
+
+    const image =
+      await prisma.productImage.findUnique({
+        where: {
+          id: target.productImageId,
+        },
+        select: {
+          productId: true,
+          url: true,
+        },
+      });
+
+    if (!image) {
+      return {
+        outcome: "SOURCE_REMOVED" as const,
+      };
+    }
+
+   currentUrl = image.url.trim() || null;
+
+if (!currentUrl) {
+  return {
+    outcome: "SOURCE_REMOVED" as const,
+  };
+}
+
+if (
+  target.productId !== image.productId ||
+  target.url !== currentUrl ||
+  !target.isActive
+) {
+  await resetTargetForChangedUrl({
+    id: target.id,
+    url: currentUrl,
+    productId: image.productId,
+    productImageId: target.productImageId,
+  });
+
+  return {
+    outcome: "UPDATED" as const,
+  };
+}
+
+    return {
+      outcome: "UNCHANGED" as const,
+    };
+  }
+
+  if (!currentUrl) {
+    return {
+      outcome: "SOURCE_REMOVED" as const,
+    };
+  }
+
+  if (
+    target.url !== currentUrl ||
+    !target.isActive
+  ) {
+    await resetTargetForChangedUrl({
+      id: target.id,
+      url: currentUrl,
+      productId: target.productId!,
+      productImageId: null,
+    });
+
+    return {
+      outcome: "UPDATED" as const,
+    };
+  }
+
+  return {
+    outcome: "UNCHANGED" as const,
+  };
+}
