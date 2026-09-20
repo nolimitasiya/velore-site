@@ -2,6 +2,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { isLoadTestRequest } from "@/lib/security/loadTest";
+
 function isPublicAsset(pathname: string) {
   if (pathname.startsWith("/_next/")) return true;
   if (pathname.startsWith("/images/")) return true;
@@ -129,6 +131,23 @@ function isLaunchPublicApi(pathname: string) {
   );
 }
 
+
+function isLoadTestAnalyticsRoute(
+  pathname: string
+) {
+  return (
+    pathname === "/api/events/session" ||
+    pathname === "/api/events/product-view" ||
+    pathname === "/api/events/product-impression" ||
+    pathname === "/api/events/search" ||
+    pathname === "/api/events/wishlist" ||
+    pathname === "/api/events/brand-view" ||
+    pathname === "/api/clicks/product-view" ||
+    pathname === "/api/diary/read"
+  );
+}
+
+
 function isUnauthedAllowedRoute(pathname: string) {
   return (
     // admin auth
@@ -184,11 +203,31 @@ export function middleware(req: NextRequest) {
   }
 
   if (pathname.startsWith("/api/cron/")) {
-    return NextResponse.next();
-  }
-  // ---------------------------
-  // PUBLIC LOCKDOWN (launch mode)
-  // ---------------------------
+  return NextResponse.next();
+}
+
+/*
+ * Recognised synthetic load-test traffic
+ * must not pollute behavioural analytics.
+ *
+ * These routes are analytics-only, so they
+ * can safely be acknowledged without
+ * invoking their route handlers.
+ */
+if (
+  isLoadTestRequest(req) &&
+  isLoadTestAnalyticsRoute(pathname)
+) {
+  return NextResponse.json({
+    ok: true,
+    skipped: "loadtest",
+  });
+}
+
+// ---------------------------
+// PUBLIC LOCKDOWN (launch mode)
+// ---------------------------
+
   if (launchMode) {
     const allowPublic =
       isLaunchPublicPage(pathname) ||

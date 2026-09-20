@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { buildTrackedProductUrl } from "@/lib/affiliate/url";
 import {  AnalyticsEventType,  AnalyticsSourcePage,  ClickSourcePage,} from "@prisma/client";
-
+import { isLoadTestRequest } from "@/lib/security/loadTest";
 import {
   attachAnalyticsSessionCookie,
   getOrCreateAnalyticsSession,
@@ -140,6 +140,9 @@ export async function POST(
 ) {
   const { id } = await ctx.params;
 
+  const isLoadTest =
+  isLoadTestRequest(req);
+
   const userAgent = req.headers.get("user-agent") ?? "";
 
   if (BOT_PATTERN.test(userAgent)) {
@@ -271,20 +274,42 @@ const entryContextType =
     searchParams.get("entry_ctx")
   );
 
-const {
-  sessionId,
-  shopperCountryCode:
-    analyticsShopperCountryCode,
-  shopperCurrencyCode:
-    analyticsShopperCurrencyCode,
-} =
-  await getOrCreateAnalyticsSession(req);
+let sessionId: string | null =
+  null;
+
+let analyticsShopperCountryCode:
+  string | null = null;
+
+let analyticsShopperCurrencyCode:
+  string | null = null;
+
+/*
+ * Synthetic load-test traffic should
+ * exercise the real outbound flow without
+ * creating analytics/session records.
+ */
+if (!isLoadTest) {
+  const analyticsSession =
+    await getOrCreateAnalyticsSession(req);
+
+  sessionId =
+    analyticsSession.sessionId;
+
+  analyticsShopperCountryCode =
+    analyticsSession.shopperCountryCode;
+
+  analyticsShopperCurrencyCode =
+    analyticsSession.shopperCurrencyCode;
 
   try {
     await prisma.affiliateClick.create({
       data: {
-        brandId: product.brandId,
-        productId: product.id,
+        brandId:
+          product.brandId,
+
+        productId:
+          product.id,
+
         destinationUrl,
 
         countryCode,
@@ -305,58 +330,64 @@ const {
       },
     });
   } catch (error) {
-    console.error("affiliateClick.create failed", error);
+    console.error(
+      "affiliateClick.create failed",
+      error
+    );
   }
 
   try {
-  await prisma.analyticsEvent.create({
-    data: {
-      sessionId,
+    await prisma.analyticsEvent.create({
+      data: {
+        sessionId,
 
-      eventType:
-        AnalyticsEventType.SHOP_CLICK,
+        eventType:
+          AnalyticsEventType.SHOP_CLICK,
 
-      productId: product.id,
-      brandId: product.brandId,
+        productId:
+          product.id,
 
-      // The click physically happened on the PDP
-      sourcePage:
-        AnalyticsSourcePage.PRODUCT,
+        brandId:
+          product.brandId,
 
-      sourcePath:
-        `/b/product`,
+        sourcePage:
+          AnalyticsSourcePage.PRODUCT,
 
-      position,
-      sectionKey,
-      pageNumber,
-      contextType,
+        sourcePath:
+          `/b/product`,
 
-      shopperCountryCode:
-        analyticsShopperCountryCode,
+        position,
+        sectionKey,
+        pageNumber,
+        contextType,
 
-      shopperCurrencyCode:
-        analyticsShopperCurrencyCode,
+        shopperCountryCode:
+          analyticsShopperCountryCode,
 
-      metadata: {
-  discoverySource,
-  searchQuery,
-  searchPosition:
-  position,
-  sectionKey,
-  pageNumber,
-  contextType,
-  entrySectionKey,
-  entryPosition,
-  entryPageNumber,
-  entryContextType,
-},
-    },
-  });
-} catch (error) {
-  console.error(
-    "SHOP_CLICK analytics failed",
-    error
-  );
+        shopperCurrencyCode:
+          analyticsShopperCurrencyCode,
+
+        metadata: {
+          discoverySource,
+          searchQuery,
+          searchPosition:
+            position,
+          sectionKey,
+          pageNumber,
+          contextType,
+          entrySectionKey,
+          entryPosition,
+          entryPageNumber,
+          entryContextType,
+        },
+      },
+    });
+  } catch (error) {
+    console.error(
+      "SHOP_CLICK analytics failed",
+      error
+    );
+  }
 }
 
   const response =
@@ -366,10 +397,12 @@ const {
       product.brand.name,
   });
 
-attachAnalyticsSessionCookie(
-  response,
-  sessionId
-);
+if (sessionId) {
+  attachAnalyticsSessionCookie(
+    response,
+    sessionId
+  );
+}
 
 return response;
 }
