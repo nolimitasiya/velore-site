@@ -63,36 +63,82 @@ useEffect(() => {
   const groups = useMemo<Record<string, LinkItem[]>>(
   () => ({
     Clothing: [
-      { label: "All Clothing", href: "/categories/clothing" },
-      { label: "Abayas", href: "/categories/clothing?type=ABAYA" },
-      { label: "Dresses", href: "/categories/clothing?type=DRESS" },
-      { label: "Hijabs", href: "/categories/clothing?type=HIJAB" },
-      { label: "Tops", href: "/categories/clothing?type=TOP" },
-      { label: "Skirts", href: "/categories/clothing?type=SKIRT" },
-      { label: "Co-ords & Sets", href: "/categories/clothing?type=SETS" },
-      { label: "Khimars", href: "/categories/clothing?type=KHIMAR" },
-      { label: "Jilbabs", href: "/categories/clothing?type=JILBAB" },
-      { label: "Activewear", href: "/categories/clothing?type=ACTIVEWEAR" },
-      { label: "Coats & Jackets", href: "/categories/clothing?type=COATS_JACKETS" },
-    ],
-    Accessories: [
-      { label: "All Accessories", href: "/categories/accessories" },
-      { label: "Rings", href: "/categories/accessories?category=rings" },
-      { label: "Necklaces", href: "/categories/accessories?category=necklaces" },
-      { label: "Bracelets", href: "/categories/accessories?category=bracelets" },
-      { label: "Earrings", href: "/categories/accessories?category=earrings" },
-      { label: "Watches", href: "/categories/accessories?category=watches" },
-    ],
-    Occasion: [
-      { label: "All Occasions", href: "/categories/occasion" },
-      { label: "Wedding", href: "/categories/occasion/wedding" },
-      { label: "Eid", href: "/categories/occasion/eid" },
-      { label: "Workwear", href: "/categories/occasion/workwear" },
-      { label: "Graduation", href: "/categories/occasion/graduation" },
-      { label: "Party", href: "/categories/occasion/party" },
-      { label: "Everyday", href: "/categories/occasion/everyday" },
-    ],
-     "Shop by Brands": brands, 
+  { label: "All Clothing", href: "/categories/clothing" },
+  { label: "Abayas", href: "/categories/clothing?type=ABAYA" },
+  { label: "Dresses", href: "/categories/clothing?type=DRESS" },
+  { label: "Sets", href: "/categories/clothing?type=SETS" },
+  { label: "Tops", href: "/categories/clothing?type=TOP" },
+  { label: "T-Shirts", href: "/categories/clothing?type=T_SHIRT" },
+  { label: "Skirts", href: "/categories/clothing?type=SKIRT" },
+  { label: "Pants", href: "/categories/clothing?type=PANTS" },
+  { label: "Blazers", href: "/categories/clothing?type=BLAZER" },
+  {
+    label: "Coats & Jackets",
+    href: "/categories/clothing?type=COATS_JACKETS",
+  },
+  {
+    label: "Hoodies & Sweatshirts",
+    href: "/categories/clothing?type=HOODIE_SWEATSHIRT",
+  },
+  { label: "Hijabs", href: "/categories/clothing?type=HIJAB" },
+  { label: "Khimars", href: "/categories/clothing?type=KHIMAR" },
+  { label: "Jilbabs", href: "/categories/clothing?type=JILBAB" },
+  {
+    label: "Activewear",
+    href: "/categories/clothing?occasion=ACTIVEWEAR",
+  },
+  { label: "Maternity", href: "/categories/clothing?type=MATERNITY" },
+],
+
+Accessories: [
+  { label: "All Accessories", href: "/categories/accessories" },
+  {
+    label: "Necklaces",
+    href: "/categories/accessories?category=necklaces",
+  },
+  {
+    label: "Earrings",
+    href: "/categories/accessories?category=earrings",
+  },
+  {
+    label: "Bracelets",
+    href: "/categories/accessories?category=bracelets",
+  },
+  {
+    label: "Rings",
+    href: "/categories/accessories?category=rings",
+  },
+  {
+    label: "Watches",
+    href: "/categories/accessories?category=watches",
+  },
+],
+
+Occasion: [
+  { label: "All Occasions", href: "/categories/occasion" },
+  {
+    label: "Everyday",
+    href: "/categories/occasion/everyday",
+  },
+  {
+    label: "Workwear",
+    href: "/categories/occasion/workwear",
+  },
+  {
+    label: "Wedding",
+    href: "/categories/occasion/wedding",
+  },
+  {
+    label: "Graduation",
+    href: "/categories/occasion/graduation",
+  },
+  {
+    label: "Evening",
+    href: "/categories/occasion/evening",
+  },
+],
+
+"Shop by Brands": brands,
   }),
   [brands]
 );
@@ -177,9 +223,9 @@ const activeRow =
 )}
 
       {/* Slide-out menu */}
-      <div
-  className={`fixed left-0 top-0 z-50 flex h-full w-[88vw] max-w-[390px] flex-col
-    border-r border-black/10 bg-[#fcfbf8]
+     <div
+  className={`fixed inset-y-0 left-0 z-50 flex h-[100dvh] w-[88vw] max-w-[390px] flex-col
+    overflow-hidden border-r border-black/10 bg-[#fcfbf8]
     shadow-[20px_0_70px_rgba(0,0,0,0.14)]
     transition-transform duration-300 ease-out ${
       open ? "translate-x-0" : "-translate-x-full"
@@ -188,7 +234,7 @@ const activeRow =
   aria-modal="true"
 >
         {/* Top bar */}
-<div className="flex min-h-[76px] items-center justify-between border-b border-black/10 px-5">
+<div className="flex min-h-[76px] shrink-0 items-center justify-between border-b border-black/10 px-5">
   <div className="flex items-center gap-3">
     {!isRoot && (
       <button
@@ -258,7 +304,13 @@ const activeRow =
 </div>
 
         {/* Content */}
-        <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white">
+        <nav
+  className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white"
+  style={{
+    WebkitOverflowScrolling: "touch",
+    touchAction: "pan-y",
+  }}
+>
             <div className="flex min-h-full flex-col">
 
 
