@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
+import { invalidateStorefrontProduct } from "@/lib/storefront/invalidate-product";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
 import { prisma } from "@/lib/prisma";
 
@@ -65,8 +65,15 @@ export async function POST(
         id,
       },
       select: {
-        id: true,
-      },
+  id: true,
+  slug: true,
+
+  brand: {
+    select: {
+      slug: true,
+    },
+  },
+},
     });
 
     if (!product) {
@@ -110,6 +117,12 @@ export async function POST(
         sortOrder: true,
       },
     });
+
+    invalidateStorefrontProduct({
+  productId: product.id,
+  productSlug: product.slug,
+  brandSlug: product.brand.slug,
+});
 
     return NextResponse.json({
       ok: true,

@@ -2,7 +2,7 @@
 
 // C:\Users\Asiya\projects\dalra\app\(storefront)\b\[brandSlug]\p\[productSlug]\ImageGallery.tsx
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 
 const BADGE_LABELS: Record<string, string> = {
@@ -28,6 +28,51 @@ export default function ImageGallery({
   badges: string[];
 }) {
   const [active, setActive] = useState(0);
+
+const touchStartX = useRef<number | null>(null);
+const touchEndX = useRef<number | null>(null);
+
+const SWIPE_THRESHOLD = 50;
+
+function handleTouchStart(e: React.TouchEvent<HTMLDivElement>) {
+  touchStartX.current = e.touches[0]?.clientX ?? null;
+  touchEndX.current = null;
+}
+
+function handleTouchMove(e: React.TouchEvent<HTMLDivElement>) {
+  touchEndX.current = e.touches[0]?.clientX ?? null;
+}
+
+function handleTouchEnd() {
+  if (
+    touchStartX.current === null ||
+    touchEndX.current === null ||
+    images.length <= 1
+  ) {
+    touchStartX.current = null;
+    touchEndX.current = null;
+    return;
+  }
+
+  const distance = touchStartX.current - touchEndX.current;
+
+  if (Math.abs(distance) >= SWIPE_THRESHOLD) {
+    if (distance > 0) {
+      // Swipe left → next image
+      setActive((current) =>
+        Math.min(current + 1, images.length - 1)
+      );
+    } else {
+      // Swipe right → previous image
+      setActive((current) =>
+        Math.max(current - 1, 0)
+      );
+    }
+  }
+
+  touchStartX.current = null;
+  touchEndX.current = null;
+}
 
   const displayBadges = badges.filter(
     (b) => BADGE_LABELS[b]
@@ -82,7 +127,12 @@ export default function ImageGallery({
         )}
 
         {/* Main image */}
-        <div className="relative aspect-[3/4] w-full overflow-hidden rounded-[28px] bg-black/5">
+        <div
+  className="relative aspect-[3/4] w-full touch-pan-y overflow-hidden rounded-[28px] bg-black/5"
+  onTouchStart={handleTouchStart}
+  onTouchMove={handleTouchMove}
+  onTouchEnd={handleTouchEnd}
+>
           {images[active] ? (
             <Image
               src={images[active]}

@@ -258,7 +258,8 @@ const activeRow =
 </div>
 
         {/* Content */}
-        <nav className="flex flex-col bg-white flex-1">
+        <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white">
+            <div className="flex min-h-full flex-col">
 
 
           {/* Root screen */}
@@ -411,6 +412,7 @@ const activeRow =
     )}
   </div>
 )}
+          </div>
         </nav>
       </div>
         </>,

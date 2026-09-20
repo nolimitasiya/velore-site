@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
+import { invalidateStorefrontProduct } from "@/lib/storefront/invalidate-product";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
 import { prisma } from "@/lib/prisma";
 
@@ -63,18 +63,29 @@ export async function PATCH(
     }
 
     const image =
-      await prisma.productImage.findFirst({
-        where: {
-          id: imageId,
-          productId: id,
-        },
+  await prisma.productImage.findFirst({
+    where: {
+      id: imageId,
+      productId: id,
+    },
+    select: {
+      id: true,
+      productId: true,
+      url: true,
+      sortOrder: true,
+
+      product: {
         select: {
-          id: true,
-          productId: true,
-          url: true,
-          sortOrder: true,
+          slug: true,
+          brand: {
+            select: {
+              slug: true,
+            },
+          },
         },
-      });
+      },
+    },
+  });
 
     if (!image) {
       return NextResponse.json(
@@ -109,6 +120,18 @@ export async function PATCH(
           sortOrder: true,
         },
       });
+
+invalidateStorefrontProduct({
+  productId: image.productId,
+  productSlug: image.product.slug,
+  brandSlug: image.product.brand.slug,
+});
+
+return NextResponse.json({
+  ok: true,
+  unchanged: false,
+  image: updatedImage,
+});
 
     return NextResponse.json({
       ok: true,
@@ -148,6 +171,30 @@ export async function DELETE(
     await requireAdminSession();
 
     const { id, imageId } = await params;
+
+    const product = await prisma.product.findUnique({
+  where: {
+    id,
+  },
+  select: {
+    slug: true,
+    brand: {
+      select: {
+        slug: true,
+      },
+    },
+  },
+});
+
+if (!product) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "Product not found.",
+    },
+    { status: 404 }
+  );
+}
 
     const images = await prisma.productImage.findMany({
       where: {
@@ -227,6 +274,12 @@ export async function DELETE(
         });
       }
     });
+
+    invalidateStorefrontProduct({
+  productId: id,
+  productSlug: product.slug,
+  brandSlug: product.brand.slug,
+});
 
     return NextResponse.json({
       ok: true,

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { Badge, Prisma } from "@prisma/client";
-
+import { invalidateStorefrontProduct } from "@/lib/storefront/invalidate-product";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
 
@@ -242,12 +242,19 @@ export async function PATCH(
     }
 
     const existing = await prisma.product.findUnique({
-      where: { id },
+  where: { id },
+  select: {
+    id: true,
+    slug: true,
+    badges: true,
+
+    brand: {
       select: {
-        id: true,
-        badges: true,
+        slug: true,
       },
-    });
+    },
+  },
+});
 
     if (!existing) {
       return NextResponse.json(
@@ -283,6 +290,13 @@ export async function PATCH(
         updatedAt: true,
       },
     });
+
+   invalidateStorefrontProduct({
+  productId: product.id,
+  productSlug: existing.slug,
+  brandSlug: existing.brand.slug,
+});
+
 
     return NextResponse.json({
       ok: true,

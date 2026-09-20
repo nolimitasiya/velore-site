@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import Papa from "papaparse";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
@@ -424,7 +425,7 @@ else results.createdProducts += 1;
     const valid = results.total - invalid;
 
 
-    await prisma.importJob.update({
+   await prisma.importJob.update({
   where: { id: jobId },
   data: {
     status: "success",
@@ -436,16 +437,20 @@ else results.createdProducts += 1;
     updatedProducts: results.updatedProducts,
     rowErrors: results.rowErrors,
     meta: {
-  syncMissing,
-  brandSlug: brandSlugForSync || null,
-  deactivatedCount,
-},
-
+      syncMissing,
+      brandSlug: brandSlugForSync || null,
+      deactivatedCount,
+    },
   },
 });
 
+// A bulk import can update products, replace images,
+// and deactivate products that are missing from the CSV.
+// Invalidate the shared storefront catalogue cache once
+// after the import has completed successfully.
+revalidateTag("storefront-products", "max");
 
-    return NextResponse.json({ ok: true, results });
+return NextResponse.json({ ok: true, results });
   } catch (e: any) {
     // ✅ Mark job failed if created
     if (jobId) {
