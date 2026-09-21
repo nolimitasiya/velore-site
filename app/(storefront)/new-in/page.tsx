@@ -29,6 +29,11 @@ import {
 } from "@/lib/storefront/getStorefrontFilterOptions";
 import { unstable_cache } from "next/cache";
 
+import {
+  createLoadTestTimer,
+  isLoadTestPageRequest,
+} from "@/lib/performance/loadTestTiming";
+
 const getCachedNewInBrandFacets = unstable_cache(
   async () => {
     const fourteenDaysAgo = new Date();
@@ -91,6 +96,15 @@ export default async function NewInPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+
+const loadTestTimingEnabled =
+  await isLoadTestPageRequest();
+
+const perf = createLoadTestTimer(
+  "new-in",
+  loadTestTimingEnabled
+);
+
   const sp = (await searchParams) ?? {};
   const filters = parseStorefrontFilters(sp);
   const { types, sort } = filters;
@@ -106,8 +120,10 @@ export default async function NewInPage({
       ? [{ price: "desc" as const }, { publishedAt: "desc" as const }]
       : [{ publishedAt: "desc" as const }];
 
- const brandsRaw =
-  await getCachedNewInBrandFacets();
+ const brandsRaw = await perf.measure(
+  "brands",
+  () => getCachedNewInBrandFacets()
+);
 
   const brandOptions: Opt[] = brandsRaw.map((b) => ({
     value: b.slug,
@@ -128,13 +144,23 @@ export default async function NewInPage({
     label: titleCaseLabel(t),
   }));
 
-  const styleOptions: Opt[] = await getAvailableStyles(types);
+ const styleOptions: Opt[] =
+  await perf.measure(
+    "styles",
+    () => getAvailableStyles(types)
+  );
 
 const colorOptions =
-  await getStorefrontColours();
+  await perf.measure(
+    "colours",
+    () => getStorefrontColours()
+  );
 
 const sizesRaw =
-  await getStorefrontSizes();
+  await perf.measure(
+    "sizes",
+    () => getStorefrontSizes()
+  );
 
 const sizeOptions = [...sizesRaw]
   .sort(sortSizes)
@@ -154,7 +180,10 @@ const where: Prisma.ProductWhereInput = {
   },
 };
 
-  let products = await prisma.product.findMany({
+  let products = await perf.measure(
+    "products",
+    () =>
+    prisma.product.findMany({
     where,
     orderBy,
     take: 120,
@@ -173,7 +202,8 @@ const where: Prisma.ProductWhereInput = {
         select: { url: true },
       },
     },
-  });
+    })
+  );
 
   const hasActiveFilters =
   filters.brands.length > 0 ||
@@ -190,8 +220,10 @@ const shouldUseMerch =
   !hasActiveFilters && sort === "new";
 
 if (shouldUseMerch) {
-  const placements =
-    await prisma.categoryMerchPlacement.findMany({
+  const placements = await perf.measure(
+  "merch",
+  () =>
+    prisma.categoryMerchPlacement.findMany({
       where: {
         scopeType:
           MerchandisingScopeType.NEW_IN,
@@ -206,7 +238,8 @@ if (shouldUseMerch) {
         productId: true,
         position: true,
       },
-    });
+    })
+  );
 
   if (placements.length > 0) {
     const productsById = new Map(
@@ -313,6 +346,8 @@ if (shouldUseMerch) {
         "NEW_IN",
     },
   }));
+
+  perf.total();
 
   return (
       <main className="min-h-screen w-full bg-white">

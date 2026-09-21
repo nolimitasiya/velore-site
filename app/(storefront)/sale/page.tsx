@@ -31,6 +31,11 @@ import {
   getStorefrontSizes,
 } from "@/lib/storefront/getStorefrontFilterOptions";
 
+import {
+  createLoadTestTimer,
+  isLoadTestPageRequest,
+} from "@/lib/performance/loadTestTiming";
+
 type Opt = { value: string; label: string };
 
 function titleCaseLabel(s: string) {
@@ -54,6 +59,15 @@ export default async function SalePage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+
+const loadTestTimingEnabled =
+  await isLoadTestPageRequest();
+
+const perf = createLoadTestTimer(
+  "sale",
+  loadTestTimingEnabled
+);
+
   const sp = (await searchParams) ?? {};
   const filters = parseStorefrontFilters(sp);
   const { types, sort } = filters;
@@ -82,7 +96,10 @@ export default async function SalePage({
       ? [{ price: "desc" as const }, { publishedAt: "desc" as const }]
       : [{ publishedAt: "desc" as const }];
 
-  const brandsRaw = await prisma.brand.findMany({
+  const brandsRaw = await perf.measure(
+  "brands",
+  () =>
+    prisma.brand.findMany({
     where: {
       accountStatus: BrandAccountStatus.ACTIVE,
       affiliateStatus: AffiliateStatus.ACTIVE,
@@ -98,7 +115,8 @@ export default async function SalePage({
     orderBy: { name: "asc" },
     select: { slug: true, name: true, baseCountryCode: true },
     take: 1000,
-  });
+  })
+);
 
   const brandOptions: Opt[] = brandsRaw.map((b) => ({
     value: b.slug,
@@ -119,13 +137,23 @@ export default async function SalePage({
     label: titleCaseLabel(t),
   }));
 
-  const styleOptions: Opt[] = await getAvailableStyles(types);
+const styleOptions: Opt[] =
+  await perf.measure(
+    "styles",
+    () => getAvailableStyles(types)
+  );
 
- const colorOptions =
-  await getStorefrontColours();
+const colorOptions =
+  await perf.measure(
+    "colours",
+    () => getStorefrontColours()
+  );
 
 const sizesRaw =
-  await getStorefrontSizes();
+  await perf.measure(
+    "sizes",
+    () => getStorefrontSizes()
+  );
 
 const sizeOptions = [...sizesRaw]
   .sort(sortSizes)
@@ -142,26 +170,33 @@ const sizeOptions = [...sizesRaw]
     has: Badge.sale,
   },
 };
-  const totalCount = await prisma.product.count({ where });
+  const totalCount = await perf.measure(
+  "count",
+  () => prisma.product.count({ where })
+);
 
   const salePlacements =
   shouldUseMerchPageOne
-    ? await prisma.categoryMerchPlacement.findMany({
-        where: {
-          scopeType:
-            MerchandisingScopeType.SALE,
-          scopeKey: "sale",
-          version:
-            MerchandisingVersion.LIVE,
-        },
-        orderBy: {
-          position: "asc",
-        },
-        select: {
-          productId: true,
-          position: true,
-        },
-      })
+    ? await perf.measure(
+        "merch",
+        () =>
+          prisma.categoryMerchPlacement.findMany({
+            where: {
+              scopeType:
+                MerchandisingScopeType.SALE,
+              scopeKey: "sale",
+              version:
+                MerchandisingVersion.LIVE,
+            },
+            orderBy: {
+              position: "asc",
+            },
+            select: {
+              productId: true,
+              position: true,
+            },
+          })
+      )
     : [];
 
 
@@ -193,8 +228,10 @@ if (
     (currentPage - 2) * 24;
 }
 
-let products =
-  await prisma.product.findMany({
+let products = await perf.measure(
+  "products",
+  () =>
+    prisma.product.findMany({
     where: whereForPage,
     orderBy,
     skip,
@@ -233,7 +270,8 @@ let products =
         },
       },
     },
-  });
+  })
+);
 
 if (
   shouldUseMerchPageOne &&
@@ -260,7 +298,11 @@ if (
 
   if (missingCuratedIds.length > 0) {
     const missingProducts =
-      await prisma.product.findMany({
+      await perf.measure(
+            "missing-curated",
+             () =>
+              prisma.product.findMany({
+
         where: {
           ...where,
           id: {
@@ -294,8 +336,8 @@ if (
             },
           },
         },
-      });
-
+      })
+  );
     for (
       const product of missingProducts
     ) {
@@ -410,8 +452,8 @@ currency:
         "SALE",
     },
   }));
+  perf.total();
   
-
   return (
       <main className="min-h-screen w-full bg-white">
         <div className="mx-auto w-full max-w-[1800px] space-y-8 px-8 py-10">
