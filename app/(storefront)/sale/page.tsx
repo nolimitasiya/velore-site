@@ -26,6 +26,11 @@ import { getStorefrontPaginationState } from "@/lib/storefront/pagination";
 
 import {  buildTrackedOutboundUrl,} from "@/lib/affiliate/tracking";
 
+import {
+  getStorefrontColours,
+  getStorefrontSizes,
+} from "@/lib/storefront/getStorefrontFilterOptions";
+
 type Opt = { value: string; label: string };
 
 function titleCaseLabel(s: string) {
@@ -116,24 +121,15 @@ export default async function SalePage({
 
   const styleOptions: Opt[] = await getAvailableStyles(types);
 
-  const coloursRaw = await prisma.colour.findMany({
-    orderBy: { name: "asc" },
-    select: { slug: true, name: true },
-    take: 300,
-  });
+ const colorOptions =
+  await getStorefrontColours();
 
-  const colorOptions: Opt[] = coloursRaw.map((c) => ({
-    value: c.slug,
-    label: c.name.toLowerCase(),
-  }));
+const sizesRaw =
+  await getStorefrontSizes();
 
-  const sizesRaw = await prisma.size.findMany({
-    orderBy: { name: "asc" },
-    select: { slug: true, name: true },
-    take: 500,
-  });
-
-  const sizeOptions = sizesRaw.sort(sortSizes).map((s) => ({
+const sizeOptions = [...sizesRaw]
+  .sort(sortSizes)
+  .map((s) => ({
     value: s.slug,
     label: formatSizeLabel(s.name),
   }));
