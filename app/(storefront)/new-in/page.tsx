@@ -27,6 +27,48 @@ import {
   getStorefrontColours,
   getStorefrontSizes,
 } from "@/lib/storefront/getStorefrontFilterOptions";
+import { unstable_cache } from "next/cache";
+
+const getCachedNewInBrandFacets = unstable_cache(
+  async () => {
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(
+      fourteenDaysAgo.getDate() - 14
+    );
+
+    return prisma.brand.findMany({
+      where: {
+        accountStatus:
+          BrandAccountStatus.ACTIVE,
+        affiliateStatus:
+          AffiliateStatus.ACTIVE,
+        products: {
+          some: {
+            status: "APPROVED",
+            isActive: true,
+            publishedAt: {
+              gte: fourteenDaysAgo,
+            },
+          },
+        },
+      },
+      orderBy: {
+        name: "asc",
+      },
+      select: {
+        slug: true,
+        name: true,
+        baseCountryCode: true,
+      },
+      take: 1000,
+    });
+  },
+  ["new-in-brand-facets"],
+  {
+    tags: ["storefront-products"],
+    revalidate: 300,
+  }
+);
 
 type Opt = { value: string; label: string };
 
@@ -64,24 +106,8 @@ export default async function NewInPage({
       ? [{ price: "desc" as const }, { publishedAt: "desc" as const }]
       : [{ publishedAt: "desc" as const }];
 
- const brandsRaw = await prisma.brand.findMany({
-  where: {
-    accountStatus: BrandAccountStatus.ACTIVE,
-    affiliateStatus: AffiliateStatus.ACTIVE,
-    products: {
-      some: {
-        status: "APPROVED",
-        isActive: true,
-        publishedAt: {
-          gte: fourteenDaysAgo,
-        },
-      },
-    },
-  },
-  orderBy: { name: "asc" },
-  select: { slug: true, name: true, baseCountryCode: true },
-  take: 1000,
-});
+ const brandsRaw =
+  await getCachedNewInBrandFacets();
 
   const brandOptions: Opt[] = brandsRaw.map((b) => ({
     value: b.slug,
@@ -116,7 +142,8 @@ const sizeOptions = [...sizesRaw]
     value: s.slug,
     label: formatSizeLabel(s.name),
   }));
-  const where: Prisma.ProductWhereInput = {
+
+const where: Prisma.ProductWhereInput = {
   ...buildStorefrontWhere({
     filters,
   }),

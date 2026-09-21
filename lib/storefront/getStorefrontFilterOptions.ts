@@ -28,11 +28,12 @@ const getCachedColours =
     },
     ["storefront-colour-options"],
     {
-      tags: [
-        "storefront-filter-options",
-        "storefront-colours",
-      ],
-    }
+  tags: [
+    "storefront-filter-options",
+    "storefront-colours",
+  ],
+  revalidate: 300,
+}
   );
 
 const getCachedSizes =
@@ -50,11 +51,12 @@ const getCachedSizes =
       }),
     ["storefront-size-options"],
     {
-      tags: [
-        "storefront-filter-options",
-        "storefront-sizes",
-      ],
-    }
+  tags: [
+    "storefront-filter-options",
+    "storefront-sizes",
+  ],
+  revalidate: 300,
+}
   );
 
 export async function getStorefrontColours() {
