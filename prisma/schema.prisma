@@ -610,6 +610,296 @@ model CatalogueHealthIssue {
   @@index([openedAt])
 }
 
+// ============================================================
+// PLATFORM HEALTH
+// ============================================================
+
+enum PlatformHealthStatus {
+  UNKNOWN
+  HEALTHY
+  DEGRADED
+  DOWN
+}
+
+enum PlatformHealthCheckType {
+  HTTP
+  DATABASE
+}
+
+enum PlatformIncidentStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+enum PlatformIncidentSeverity {
+  INFO
+  WARNING
+  HIGH
+  CRITICAL
+}
+
+enum PlatformIncidentType {
+  DATABASE_CONNECTION_EXHAUSTED
+  DATABASE_ERROR
+  SERVER_ERROR
+  HEALTH_CHECK_FAILURE
+  PERFORMANCE_DEGRADATION
+}
+
+enum PlatformIncidentSource {
+  ACTIVE_HEALTH_CHECK
+  RUNTIME_ERROR
+  EXTERNAL_MONITOR
+  MANUAL
+}
+
+enum PlatformHealthRunStatus {
+  RUNNING
+  COMPLETED
+  PARTIAL
+  FAILED
+}
+
+enum PlatformHealthAggregatePeriod {
+  HOURLY
+  DAILY
+}
+
+model PlatformHealthCheck {
+  id       String @id @default(cuid())
+  checkKey String @unique
+
+  name        String
+  description String? @db.Text
+
+  checkType PlatformHealthCheckType
+
+  isActive Boolean @default(true)
+
+  // HTTP checks only. Store a relative Veilora path rather than
+  // tying the record to a particular deployment hostname.
+  path       String? @db.Text
+  httpMethod String?
+
+  // Scheduling / stale-data policy.
+  intervalSeconds   Int
+  timeoutMs         Int
+  staleAfterSeconds Int
+
+  // Incident/recovery thresholds.
+  failureThreshold  Int @default(3)
+  recoveryThreshold Int @default(3)
+
+  status PlatformHealthStatus @default(UNKNOWN)
+
+  consecutiveFailures  Int @default(0)
+  consecutiveSuccesses Int @default(0)
+
+  firstCheckedAt DateTime?
+  lastCheckedAt  DateTime?
+  lastHealthyAt  DateTime?
+  lastFailedAt   DateTime?
+  nextCheckAt    DateTime?
+
+  lastHttpStatus     Int?
+  lastResponseTimeMs Int?
+  lastFailureReason  String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  measurements  PlatformHealthMeasurement[]
+  incidentLinks PlatformIncidentCheck[]
+  aggregates    PlatformHealthAggregate[]
+
+  @@index([isActive, nextCheckAt])
+  @@index([status, nextCheckAt])
+  @@index([checkType, status])
+  @@index([lastCheckedAt])
+}
+
+model PlatformHealthMeasurement {
+  id String @id @default(cuid())
+
+  checkId String
+  check   PlatformHealthCheck @relation(fields: [checkId], references: [id], onDelete: Restrict)
+
+  runId String?
+  run   PlatformHealthRun? @relation(fields: [runId], references: [id], onDelete: SetNull)
+
+  status PlatformHealthStatus
+
+  httpStatus     Int?
+  responseTimeMs Int?
+
+  failureReason String? @db.Text
+
+  checkedAt DateTime @default(now())
+
+  @@index([checkId, checkedAt])
+  @@index([runId])
+  @@index([status, checkedAt])
+  @@index([checkedAt])
+}
+
+model PlatformHealthRun {
+  id String @id @default(cuid())
+
+  status PlatformHealthRunStatus @default(RUNNING)
+
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  durationMs Int?
+
+  checksSelected  Int @default(0)
+  checksSucceeded Int @default(0)
+  checksFailed    Int @default(0)
+
+  errorMessage String? @db.Text
+
+  createdAt DateTime @default(now())
+
+  measurements PlatformHealthMeasurement[]
+
+  @@index([startedAt])
+  @@index([status, startedAt])
+}
+
+model PlatformIncident {
+  id String @id @default(cuid())
+
+  type     PlatformIncidentType
+  source   PlatformIncidentSource
+  status   PlatformIncidentStatus   @default(OPEN)
+  severity PlatformIncidentSeverity
+
+  title       String
+  description String? @db.Text
+
+  openedAt       DateTime  @default(now())
+  acknowledgedAt DateTime?
+  resolvedAt     DateTime?
+
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  occurrenceCount Int @default(1)
+
+  resolutionNote String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  occurrences        PlatformIncidentOccurrence[]
+  routes             PlatformIncidentRoute[]
+  affectedChecks     PlatformIncidentCheck[]
+  adminNotifications AdminNotification[]
+
+  @@index([status, severity])
+  @@index([type, status])
+  @@index([openedAt])
+  @@index([lastSeenAt])
+}
+
+model PlatformIncidentOccurrence {
+  id String @id @default(cuid())
+
+  incidentId String
+  incident   PlatformIncident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  source PlatformIncidentSource
+
+  errorName String?
+  digest    String?
+
+  method String?
+  path   String? @db.Text
+
+  routerKind String?
+  routePath  String? @db.Text
+  routeType  String?
+
+  httpStatus Int?
+
+  occurredAt DateTime @default(now())
+
+  @@index([incidentId, occurredAt])
+  @@index([occurredAt])
+}
+
+model PlatformIncidentRoute {
+  id String @id @default(cuid())
+
+  incidentId String
+  incident   PlatformIncident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  routeKey String
+  method   String?
+  path     String? @db.Text
+
+  occurrenceCount Int @default(1)
+
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  @@unique([incidentId, routeKey])
+  @@index([incidentId, occurrenceCount])
+  @@index([lastSeenAt])
+}
+
+model PlatformIncidentCheck {
+  id String @id @default(cuid())
+
+  incidentId String
+  checkId    String?
+
+  incident PlatformIncident     @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  check    PlatformHealthCheck? @relation(fields: [checkId], references: [id], onDelete: SetNull)
+
+  firstAffectedAt DateTime @default(now())
+  lastAffectedAt  DateTime @default(now())
+
+  failureCount Int @default(1)
+
+  @@unique([incidentId, checkId])
+  @@index([checkId, lastAffectedAt])
+}
+
+model PlatformHealthAggregate {
+  id String @id @default(cuid())
+
+  checkId String
+
+  period PlatformHealthAggregatePeriod
+
+  bucketStart DateTime
+  bucketEnd   DateTime
+
+  measurementCount Int
+
+  healthyCount  Int @default(0)
+  degradedCount Int @default(0)
+  downCount     Int @default(0)
+  unknownCount  Int @default(0)
+
+  availabilityPercent Float?
+
+  responseTimeAvgMs Int?
+  responseTimeP50Ms Int?
+  responseTimeP95Ms Int?
+  responseTimeMaxMs Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  check PlatformHealthCheck @relation(fields: [checkId], references: [id], onDelete: Restrict)
+
+  @@unique([checkId, period, bucketStart])
+  @@index([period, bucketStart])
+  @@index([checkId, bucketStart])
+}
+
 model AffiliateClick {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   productId   String?  @db.Uuid
@@ -879,6 +1169,7 @@ model AdminNotification {
   brandId                String?               @db.Uuid
   productId              String?               @db.Uuid
   catalogueHealthIssueId String?
+  platformIncidentId     String?
 
   createdAt DateTime  @default(now())
   readAt    DateTime?
@@ -886,10 +1177,12 @@ model AdminNotification {
   brand                Brand?                @relation(fields: [brandId], references: [id], onDelete: Cascade)
   product              Product?              @relation(fields: [productId], references: [id], onDelete: Cascade)
   catalogueHealthIssue CatalogueHealthIssue? @relation(fields: [catalogueHealthIssueId], references: [id], onDelete: SetNull)
+  platformIncident     PlatformIncident?     @relation(fields: [platformIncidentId], references: [id], onDelete: SetNull)
 
   @@index([type, createdAt])
   @@index([readAt])
   @@index([catalogueHealthIssueId])
+  @@index([platformIncidentId])
 }
 
 enum AdminNotificationType {
@@ -897,6 +1190,10 @@ enum AdminNotificationType {
   TAXONOMY_REQUEST
   CATALOGUE_HEALTH_FAILURE
   CATALOGUE_HEALTH_RECOVERED
+
+  PLATFORM_INCIDENT_OPENED
+  PLATFORM_INCIDENT_ESCALATED
+  PLATFORM_INCIDENT_RECOVERED
 }
 
 enum Region {
