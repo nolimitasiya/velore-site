@@ -31,10 +31,7 @@ import {
   getStorefrontSizes,
 } from "@/lib/storefront/getStorefrontFilterOptions";
 
-import {
-  createLoadTestTimer,
-  isLoadTestPageRequest,
-} from "@/lib/performance/loadTestTiming";
+
 
 type Opt = { value: string; label: string };
 
@@ -60,13 +57,7 @@ export default async function SalePage({
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
 
-const loadTestTimingEnabled =
-  await isLoadTestPageRequest();
 
-const perf = createLoadTestTimer(
-  "sale",
-  loadTestTimingEnabled
-);
 
   const sp = (await searchParams) ?? {};
   const filters = parseStorefrontFilters(sp);
@@ -96,10 +87,8 @@ const perf = createLoadTestTimer(
       ? [{ price: "desc" as const }, { publishedAt: "desc" as const }]
       : [{ publishedAt: "desc" as const }];
 
-  const brandsRaw = await perf.measure(
-  "brands",
-  () =>
-    prisma.brand.findMany({
+  const brandsRaw =
+  await prisma.brand.findMany({
     where: {
       accountStatus: BrandAccountStatus.ACTIVE,
       affiliateStatus: AffiliateStatus.ACTIVE,
@@ -113,10 +102,13 @@ const perf = createLoadTestTimer(
       },
     },
     orderBy: { name: "asc" },
-    select: { slug: true, name: true, baseCountryCode: true },
+    select: {
+      slug: true,
+      name: true,
+      baseCountryCode: true,
+    },
     take: 1000,
-  })
-);
+  });
 
   const brandOptions: Opt[] = brandsRaw.map((b) => ({
     value: b.slug,
@@ -138,22 +130,13 @@ const perf = createLoadTestTimer(
   }));
 
 const styleOptions: Opt[] =
-  await perf.measure(
-    "styles",
-    () => getAvailableStyles(types)
-  );
+  await getAvailableStyles(types);
 
 const colorOptions =
-  await perf.measure(
-    "colours",
-    () => getStorefrontColours()
-  );
+  await getStorefrontColours();
 
 const sizesRaw =
-  await perf.measure(
-    "sizes",
-    () => getStorefrontSizes()
-  );
+  await getStorefrontSizes();
 
 const sizeOptions = [...sizesRaw]
   .sort(sortSizes)
@@ -170,33 +153,27 @@ const sizeOptions = [...sizesRaw]
     has: Badge.sale,
   },
 };
-  const totalCount = await perf.measure(
-  "count",
-  () => prisma.product.count({ where })
-);
+const totalCount =
+  await prisma.product.count({ where });
 
-  const salePlacements =
+const salePlacements =
   shouldUseMerchPageOne
-    ? await perf.measure(
-        "merch",
-        () =>
-          prisma.categoryMerchPlacement.findMany({
-            where: {
-              scopeType:
-                MerchandisingScopeType.SALE,
-              scopeKey: "sale",
-              version:
-                MerchandisingVersion.LIVE,
-            },
-            orderBy: {
-              position: "asc",
-            },
-            select: {
-              productId: true,
-              position: true,
-            },
-          })
-      )
+    ? await prisma.categoryMerchPlacement.findMany({
+        where: {
+          scopeType:
+            MerchandisingScopeType.SALE,
+          scopeKey: "sale",
+          version:
+            MerchandisingVersion.LIVE,
+        },
+        orderBy: {
+          position: "asc",
+        },
+        select: {
+          productId: true,
+          position: true,
+        },
+      })
     : [];
 
 
@@ -228,10 +205,8 @@ if (
     (currentPage - 2) * 24;
 }
 
-let products = await perf.measure(
-  "products",
-  () =>
-    prisma.product.findMany({
+let products =
+  await prisma.product.findMany({
     where: whereForPage,
     orderBy,
     skip,
@@ -270,8 +245,7 @@ let products = await perf.measure(
         },
       },
     },
-  })
-);
+  });
 
 if (
   shouldUseMerchPageOne &&
@@ -298,46 +272,42 @@ if (
 
   if (missingCuratedIds.length > 0) {
     const missingProducts =
-      await perf.measure(
-            "missing-curated",
-             () =>
-              prisma.product.findMany({
+  await prisma.product.findMany({
+    where: {
+      ...where,
+      id: {
+        in: missingCuratedIds,
+      },
+    },
 
-        where: {
-          ...where,
-          id: {
-            in: missingCuratedIds,
-          },
-        },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      price: true,
+      originalPrice: true,
+      currency: true,
+      badges: true,
 
+      brand: {
         select: {
-          id: true,
+          name: true,
           slug: true,
-          title: true,
-          price: true,
-          originalPrice: true,
-          currency: true,
-          badges: true,
-
-          brand: {
-            select: {
-              name: true,
-              slug: true,
-            },
-          },
-
-          images: {
-            orderBy: {
-              sortOrder: "asc",
-            },
-            take: 1,
-            select: {
-              url: true,
-            },
-          },
         },
-      })
-  );
+      },
+
+      images: {
+        orderBy: {
+          sortOrder: "asc",
+        },
+        take: 1,
+        select: {
+          url: true,
+        },
+      },
+    },
+  });
+
     for (
       const product of missingProducts
     ) {
@@ -452,7 +422,6 @@ currency:
         "SALE",
     },
   }));
-  perf.total();
   
   return (
       <main className="min-h-screen w-full bg-white">

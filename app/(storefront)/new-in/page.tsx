@@ -29,10 +29,6 @@ import {
 } from "@/lib/storefront/getStorefrontFilterOptions";
 import { unstable_cache } from "next/cache";
 
-import {
-  createLoadTestTimer,
-  isLoadTestPageRequest,
-} from "@/lib/performance/loadTestTiming";
 
 const getCachedNewInBrandFacets = unstable_cache(
   async () => {
@@ -97,13 +93,7 @@ export default async function NewInPage({
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
 
-const loadTestTimingEnabled =
-  await isLoadTestPageRequest();
 
-const perf = createLoadTestTimer(
-  "new-in",
-  loadTestTimingEnabled
-);
 
   const sp = (await searchParams) ?? {};
   const filters = parseStorefrontFilters(sp);
@@ -120,10 +110,8 @@ const perf = createLoadTestTimer(
       ? [{ price: "desc" as const }, { publishedAt: "desc" as const }]
       : [{ publishedAt: "desc" as const }];
 
- const brandsRaw = await perf.measure(
-  "brands",
-  () => getCachedNewInBrandFacets()
-);
+const brandsRaw =
+  await getCachedNewInBrandFacets();
 
   const brandOptions: Opt[] = brandsRaw.map((b) => ({
     value: b.slug,
@@ -145,22 +133,13 @@ const perf = createLoadTestTimer(
   }));
 
  const styleOptions: Opt[] =
-  await perf.measure(
-    "styles",
-    () => getAvailableStyles(types)
-  );
+  await getAvailableStyles(types);
 
 const colorOptions =
-  await perf.measure(
-    "colours",
-    () => getStorefrontColours()
-  );
+  await getStorefrontColours();
 
 const sizesRaw =
-  await perf.measure(
-    "sizes",
-    () => getStorefrontSizes()
-  );
+  await getStorefrontSizes();
 
 const sizeOptions = [...sizesRaw]
   .sort(sortSizes)
@@ -180,30 +159,32 @@ const where: Prisma.ProductWhereInput = {
   },
 };
 
-  let products = await perf.measure(
-    "products",
-    () =>
-    prisma.product.findMany({
+  let products =
+  await prisma.product.findMany({
     where,
     orderBy,
     take: 120,
     select: {
       id: true,
-      slug: true, // ← ADDED
+      slug: true,
       title: true,
       price: true,
       originalPrice: true,
       currency: true,
       badges: true,
-      brand: { select: { name: true, slug: true } }, // ← slug ADDED
+      brand: {
+        select: {
+          name: true,
+          slug: true,
+        },
+      },
       images: {
         orderBy: { sortOrder: "asc" },
         take: 1,
         select: { url: true },
       },
     },
-    })
-  );
+  });
 
   const hasActiveFilters =
   filters.brands.length > 0 ||
@@ -220,26 +201,23 @@ const shouldUseMerch =
   !hasActiveFilters && sort === "new";
 
 if (shouldUseMerch) {
-  const placements = await perf.measure(
-  "merch",
-  () =>
-    prisma.categoryMerchPlacement.findMany({
-      where: {
-        scopeType:
-          MerchandisingScopeType.NEW_IN,
-        scopeKey: "new-in",
-        version:
-          MerchandisingVersion.LIVE,
-      },
-      orderBy: {
-        position: "asc",
-      },
-      select: {
-        productId: true,
-        position: true,
-      },
-    })
-  );
+  const placements =
+  await prisma.categoryMerchPlacement.findMany({
+    where: {
+      scopeType:
+        MerchandisingScopeType.NEW_IN,
+      scopeKey: "new-in",
+      version:
+        MerchandisingVersion.LIVE,
+    },
+    orderBy: {
+      position: "asc",
+    },
+    select: {
+      productId: true,
+      position: true,
+    },
+  });
 
   if (placements.length > 0) {
     const productsById = new Map(
@@ -346,9 +324,6 @@ if (shouldUseMerch) {
         "NEW_IN",
     },
   }));
-
-  perf.total();
-
   return (
       <main className="min-h-screen w-full bg-white">
         <div className="mx-auto w-full max-w-[1800px] px-8 py-10 space-y-8">
