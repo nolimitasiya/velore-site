@@ -109,9 +109,6 @@ function isLaunchPublicPage(pathname: string) {
 
 function isLaunchPublicApi(pathname: string) {
   return (
-    pathname === "/api/platform-health-hourly-aggregate-qa" ||
-    pathname === "/api/platform-health-catchup-qa" ||
-    pathname === "/api/platform-health-history-qa" ||
     pathname === "/api/waitlist" ||
     pathname.startsWith("/api/waitlist/") ||
     pathname === "/api/brand-apply" ||

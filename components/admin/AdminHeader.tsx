@@ -91,6 +91,18 @@ export function AdminHeader({
     { href: "/admin/brand-invites", label: "Brand Invites", icon: "ti-mail" },
   ],
 },
+
+{
+  title: "Operations",
+  items: [
+    {
+      href: "/admin/platform-health",
+      label: "Platform Health",
+      icon: "ti-activity-heartbeat",
+    },
+  ],
+},
+
     {
       title: "Community",
       items: [
