@@ -624,6 +624,7 @@ enum PlatformHealthStatus {
 enum PlatformHealthCheckType {
   HTTP
   DATABASE
+  ANALYTICS
 }
 
 enum PlatformIncidentStatus {
@@ -788,6 +789,12 @@ model PlatformIncident {
 
   resolutionNote String? @db.Text
 
+  // If this incident was later identified as a duplicate
+  // of another canonical incident, preserve that lineage.
+  mergedIntoId    String?
+  mergedInto      PlatformIncident?  @relation("PlatformIncidentMerge", fields: [mergedIntoId], references: [id], onDelete: SetNull)
+  mergedIncidents PlatformIncident[] @relation("PlatformIncidentMerge")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -800,6 +807,7 @@ model PlatformIncident {
   @@index([type, status])
   @@index([openedAt])
   @@index([lastSeenAt])
+  @@index([mergedIntoId])
 }
 
 model PlatformIncidentOccurrence {
@@ -885,10 +893,12 @@ model PlatformHealthAggregate {
 
   availabilityPercent Float?
 
-  responseTimeAvgMs Int?
-  responseTimeP50Ms Int?
-  responseTimeP95Ms Int?
-  responseTimeMaxMs Int?
+  responseTimeCount   Int  @default(0)
+  responseTimeTotalMs Int  @default(0)
+  responseTimeAvgMs   Int?
+  responseTimeP50Ms   Int?
+  responseTimeP95Ms   Int?
+  responseTimeMaxMs   Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

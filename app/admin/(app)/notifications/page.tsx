@@ -26,6 +26,13 @@ function getNotificationContent(
       id: string;
       name: string;
     } | null;
+
+    platformIncident: {
+      id: string;
+      title: string;
+      severity: string;
+      status: string;
+    } | null;
     catalogueHealthIssue: {
       id: string;
       failureType: string;
@@ -70,6 +77,51 @@ function getNotificationContent(
     notification.brand ??
     targetProduct?.brand ??
     null;
+
+    if (
+  notification.type ===
+  "PLATFORM_INCIDENT_OPENED"
+) {
+  return {
+    title: "Platform incident",
+    description:
+      notification.platformIncident?.title ??
+      "Platform Health detected a new operational incident.",
+    productName: null,
+    brandName: null,
+    tone: "failure" as const,
+  };
+}
+
+if (
+  notification.type ===
+  "PLATFORM_INCIDENT_ESCALATED"
+) {
+  return {
+    title: "Platform incident escalated",
+    description:
+      notification.platformIncident?.title ??
+      "An existing operational incident has increased in severity.",
+    productName: null,
+    brandName: null,
+    tone: "failure" as const,
+  };
+}
+
+if (
+  notification.type ===
+  "PLATFORM_INCIDENT_RECOVERED"
+) {
+  return {
+    title: "Platform recovered",
+    description:
+      notification.platformIncident?.title ??
+      "A platform incident has recovered.",
+    productName: null,
+    brandName: null,
+    tone: "recovered" as const,
+  };
+}
 
   if (
     notification.type === "CATALOGUE_HEALTH_FAILURE"
@@ -209,6 +261,15 @@ export default async function NotificationsPage({
           select: {
             id: true,
             title: true,
+          },
+        },
+
+        platformIncident: {
+          select: {
+            id: true,
+            title: true,
+            severity: true,
+            status: true,
           },
         },
 
@@ -429,24 +490,33 @@ export default async function NotificationsPage({
     isUnread={notification.readAt === null}
     primaryHref={
       notification.type.startsWith(
-        "CATALOGUE_HEALTH_"
-      )
-        ? "/admin/catalogue-health"
-        : notification.type ===
-            "TAXONOMY_REQUEST"
-          ? "/admin/taxonomy/requests"
-          : null
-    }
+        "PLATFORM_INCIDENT_"
+       )
+      ? "/admin/platform-health"
+      : notification.type.startsWith(
+          "CATALOGUE_HEALTH_"
+        )
+      ? "/admin/catalogue-health"
+      : notification.type ===
+          "TAXONOMY_REQUEST"
+        ? "/admin/taxonomy/requests"
+        : null
+}
+
     primaryLabel={
-      notification.type.startsWith(
-        "CATALOGUE_HEALTH_"
-      )
-        ? "View issue"
-        : notification.type ===
-            "TAXONOMY_REQUEST"
-          ? "View requests"
-          : null
-    }
+  notification.type.startsWith(
+    "PLATFORM_INCIDENT_"
+  )
+    ? "View Platform Health"
+    : notification.type.startsWith(
+          "CATALOGUE_HEALTH_"
+        )
+      ? "View issue"
+      : notification.type ===
+          "TAXONOMY_REQUEST"
+        ? "View requests"
+        : null
+}
     productHref={
       notification.productId
         ? `/admin/products/${notification.productId}`

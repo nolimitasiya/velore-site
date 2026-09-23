@@ -1,12 +1,20 @@
 {
   "crons": [
     {
-      "path": "/api/admin/snapshots/daily",
-      "schedule": "0 1 * * *"
+      "path": "/api/cron/platform-health",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/platform-health-history",
+      "schedule": "5 * * * *"
     },
     {
       "path": "/api/cron/catalogue-health",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/admin/snapshots/daily",
+      "schedule": "0 1 * * *"
     }
   ]
 }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { buildTrackedProductUrl } from "@/lib/affiliate/url";
 import {  AnalyticsEventType,  AnalyticsSourcePage,  ClickSourcePage,} from "@prisma/client";
-import { isLoadTestRequest } from "@/lib/security/loadTest";
+import { isSyntheticInternalRequest,} from "@/lib/platform-health/internalRequest";
 import {
   attachAnalyticsSessionCookie,
   getOrCreateAnalyticsSession,
@@ -140,8 +140,8 @@ export async function POST(
 ) {
   const { id } = await ctx.params;
 
-  const isLoadTest =
-  isLoadTestRequest(req);
+  const isSyntheticInternal =
+  isSyntheticInternalRequest(req);
 
   const userAgent = req.headers.get("user-agent") ?? "";
 
@@ -288,7 +288,7 @@ let analyticsShopperCurrencyCode:
  * exercise the real outbound flow without
  * creating analytics/session records.
  */
-if (!isLoadTest) {
+if (!isSyntheticInternal) {
   const analyticsSession =
     await getOrCreateAnalyticsSession(req);
 
