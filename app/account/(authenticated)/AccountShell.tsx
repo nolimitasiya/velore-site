@@ -68,6 +68,9 @@ export default function AccountShell({
   const [loading, setLoading] =
     useState(true);
 
+  const [accountMenuOpen, setAccountMenuOpen] =
+    useState(false);
+
   useEffect(() => {
     async function loadShopper() {
       try {
@@ -107,6 +110,33 @@ export default function AccountShell({
     loadShopper();
   }, [pathname, router]);
 
+  useEffect(() => {
+  if (!accountMenuOpen) return;
+
+  const previousOverflow =
+    document.body.style.overflow;
+
+  document.body.style.overflow = "hidden";
+
+  function handleKeyDown(event: KeyboardEvent) {
+    if (event.key === "Escape") {
+      setAccountMenuOpen(false);
+    }
+  }
+
+  window.addEventListener("keydown", handleKeyDown);
+
+  return () => {
+    document.body.style.overflow =
+      previousOverflow;
+
+    window.removeEventListener(
+      "keydown",
+      handleKeyDown
+    );
+  };
+}, [accountMenuOpen]);
+
   async function handleLogout() {
     await fetch(
       "/api/account/auth/logout",
@@ -139,7 +169,7 @@ export default function AccountShell({
 
   return (
     <div className="min-h-screen bg-[#faf8f4] font-body">
-      <header className="bg-[#7B2D3E] px-6 py-6 text-center">
+      <header className="hidden bg-[#7B2D3E] px-6 py-6 text-center lg:block">
         <Link
           href="/"
           className="font-heading text-2xl tracking-[0.08em] text-white transition hover:opacity-80"
@@ -152,28 +182,45 @@ export default function AccountShell({
         </div>
       </header>
 
-     <div className="mx-auto w-full max-w-7xl px-5 py-8 sm:px-6 lg:px-8 lg:py-12">
-        {/* Mobile account navigation */}
-        <nav className="mb-8 flex gap-2 overflow-x-auto border-b border-[#e8ddd4] pb-3 lg:hidden">
-          {NAVIGATION.map((item) => {
-            const active =
-              pathname === item.href;
+     <div className="mx-auto w-full max-w-7xl px-5 py-6 sm:px-6 lg:px-8 lg:py-12">
+       {/* Mobile account navigation */}
+<div className="mb-8 lg:hidden">
+  <Link
+    href="/"
+    className="mb-6 inline-block font-heading text-2xl tracking-[0.02em] text-[#7B2D3E] transition-opacity hover:opacity-70"
+  >
+    Veilora Club
+  </Link>
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`shrink-0 border-b-2 px-3 py-2 text-sm transition-colors ${
-                  active
-                  ? "border-[#7B2D3E] font-medium text-[#7B2D3E]"
-                  : "border-transparent text-[#6b5c4e]"
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+  <div>
+    <button
+    type="button"
+    onClick={() => setAccountMenuOpen(true)}
+    aria-label="Open account menu"
+    aria-expanded={accountMenuOpen}
+    className="flex items-center gap-3 text-left text-sm text-[#1a0a0e]"
+  >
+    <span className="flex h-8 w-8 items-center justify-center">
+      <svg
+        width="19"
+        height="19"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        aria-hidden="true"
+      >
+        <path
+          d="M4 7h16M4 12h16M4 17h16"
+          strokeLinecap="round"
+        />
+      </svg>
+    </span>
+
+          <span>Account menu</span>
+    </button>
+  </div>
+</div>
 
         <div className="grid gap-10 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-14">
           {/* Desktop sidebar */}
@@ -227,12 +274,132 @@ export default function AccountShell({
 </div>
             </div>
           </aside>
-<main className="min-w-0 rounded-2xl border border-[#e8ddd4] px-8 py-10 sm:px-12 sm:py-12 lg:px-14 lg:py-14">
-
-            {children}
-          </main>
+<main className="min-w-0 lg:rounded-2xl lg:border lg:border-[#e8ddd4] lg:px-14 lg:py-14">
+  {children}
+</main>
         </div>
       </div>
+
+      {/* Mobile account drawer */}
+<div
+  className={`fixed inset-0 z-50 lg:hidden ${
+    accountMenuOpen
+      ? "pointer-events-auto"
+      : "pointer-events-none"
+  }`}
+  aria-hidden={!accountMenuOpen}
+>
+  {/* Backdrop */}
+  <button
+    type="button"
+    aria-label="Close account menu"
+    onClick={() => setAccountMenuOpen(false)}
+    className={`absolute inset-0 bg-black/30 backdrop-blur-[2px] transition-opacity duration-300 ${
+      accountMenuOpen
+        ? "opacity-100"
+        : "opacity-0"
+    }`}
+  />
+
+  {/* Drawer */}
+  <aside
+    role="dialog"
+    aria-modal="true"
+    aria-label="Account menu"
+    className={`absolute inset-y-0 left-0 flex h-[100dvh] w-[88vw] max-w-[390px] flex-col bg-[#fcfbf8] shadow-[20px_0_70px_rgba(0,0,0,0.14)] transition-transform duration-300 ease-out ${
+      accountMenuOpen
+        ? "translate-x-0"
+        : "-translate-x-full"
+    }`}
+  >
+    {/* Header */}
+    <div className="flex min-h-[76px] items-center justify-between border-b border-black/10 px-5">
+      <span className="font-heading text-2xl text-[#7B2D3E]">
+        My Account
+      </span>
+
+      <button
+        type="button"
+        onClick={() => setAccountMenuOpen(false)}
+        aria-label="Close account menu"
+        className="flex h-10 w-10 items-center justify-center text-black/45"
+      >
+        <svg
+          width="19"
+          height="19"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          aria-hidden="true"
+        >
+          <path
+            d="M6 6l12 12M18 6 6 18"
+            strokeLinecap="round"
+          />
+        </svg>
+      </button>
+    </div>
+
+    {/* Shopper */}
+    <div className="border-b border-black/10 px-5 py-6">
+      <p className="font-heading text-xl text-[#1a0a0e]">
+        {displayFirstName
+          ? `Hello, ${displayFirstName}`
+          : "Welcome"}
+      </p>
+
+      <p className="mt-1 break-all text-xs text-[#a89280]">
+        {shopper.email}
+      </p>
+    </div>
+
+    {/* Navigation */}
+    <nav className="flex-1">
+      {NAVIGATION.map((item) => {
+        const active = pathname === item.href;
+
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={() =>
+              setAccountMenuOpen(false)
+            }
+            className={`flex items-center justify-between border-b border-black/5 px-5 py-4 text-[15px] transition-colors ${
+              active
+                ? "font-medium text-[#7B2D3E]"
+                : "text-[#1a0a0e]"
+            }`}
+          >
+            <span>{item.label}</span>
+
+            <span
+              className={
+                active
+                  ? "text-[#7B2D3E]"
+                  : "text-black/25"
+              }
+            >
+              ›
+            </span>
+          </Link>
+        );
+      })}
+    </nav>
+
+    {/* Sign out */}
+    <div className="border-t border-black/10 p-5">
+      <button
+        type="button"
+        onClick={handleLogout}
+        className="text-sm text-[#7B2D3E] underline underline-offset-4"
+      >
+        Sign out
+      </button>
+    </div>
+  </aside>
+</div>
 
       <footer className="pb-6 text-center text-[11px] tracking-[0.12em] text-[#7B2D3E]/40">
         © {new Date().getFullYear()} Veilora Club

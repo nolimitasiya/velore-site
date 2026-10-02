@@ -426,7 +426,7 @@ setMeasurements(
   </button>
 </div>
 
-          <div className="flex shrink-0 rounded-full border border-[#e8ddd4] bg-[#faf8f4] p-1">
+          <div className="inline-flex w-fit items-center rounded-full border border-[#e8ddd4] p-1">
             {(["CM", "IN"] as FitUnit[]).map(
               (option) => (
                 <button

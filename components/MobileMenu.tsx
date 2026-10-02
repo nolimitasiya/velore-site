@@ -40,12 +40,37 @@ export default function MobileMenu() {
 
   const [brands, setBrands] = useState<LinkItem[]>([]);
   const [brandsLoaded, setBrandsLoaded] = useState(false);
-
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
 useEffect(() => {
-  const match = document.cookie.match(/(?:^|; )shopper_authed=([^;]*)/);
-  setIsLoggedIn(!!match?.[1]);
+  let cancelled = false;
+
+  async function checkAuthentication() {
+    try {
+      const response = await fetch(
+        "/api/account/auth/me",
+        {
+          method: "GET",
+          credentials: "same-origin",
+          cache: "no-store",
+        }
+      );
+
+      if (!cancelled) {
+        setIsLoggedIn(response.ok);
+      }
+    } catch {
+      if (!cancelled) {
+        setIsLoggedIn(false);
+      }
+    }
+  }
+
+  void checkAuthentication();
+
+  return () => {
+    cancelled = true;
+  };
 }, []);
 
   // --- Menu structure (root + nested groups)
@@ -421,10 +446,10 @@ const activeRow =
     {isLoggedIn ? (
       <>
         <Link
-          href="/account"
-          onClick={closeMenu}
-          className="flex items-center gap-3 rounded-2xl px-4 py-3 hover:bg-black/[0.03] transition-colors"
-        >
+  href="/account/wishlist"
+  onClick={closeMenu}
+  className="flex items-center gap-3 rounded-2xl px-4 py-3 hover:bg-black/[0.03] transition-colors"
+>
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-black/50">
             <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
           </svg>
