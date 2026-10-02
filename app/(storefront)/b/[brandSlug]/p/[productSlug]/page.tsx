@@ -16,6 +16,35 @@ import ProductViewTracker from "@/components/analytics/ProductViewTracker";
 import {  normalizeDiscoverySource,} from "@/lib/analytics/discoverySource";
 import {  getStorefrontProductDetail,  getCompleteTheLook,  getProductDiaryPosts,  getRelatedProducts,} from "@/lib/storefront/product-detail";
 import ProductPrice from "@/components/ProductPrice";
+import {
+  getAuthenticatedShopperFromServerComponent,
+} from "@/lib/auth/ShopperSession";
+
+import {
+  getProductSizeRecommendation,
+  type ProductSizeRecommendationServiceResult,
+} from "@/lib/fit/getProductSizeRecommendation";
+
+import {
+  presentProductFit,
+} from "@/lib/fit/presentation/productFitPresentation";
+
+import {
+  presentProductLength,
+} from "@/lib/fit/presentation/productLengthPresentation";
+
+import ProductSizeAndFit from "@/components/fit/ProductSizeAndFit";
+import {
+  presentProductSizeCharts,
+} from "@/lib/fit/presentation/productSizeChartPresentation";
+
+import {
+  selectUniqueLengthMatch,
+} from "@/lib/fit/presentation/selectUniqueLengthMatch";
+
+import {
+  getProductDimensions,
+} from "@/lib/fit/getProductDimensions";
 
 function formatProductTypeLabel(value: string) {
   if (value === "COATS_JACKETS") return "Coats & Jackets";
@@ -144,6 +173,122 @@ const discoveryPosition =
   if (!product) notFound();
 
   const { brand } = product;
+  const productDimensions =
+  getProductDimensions({
+    productTypes:
+      product.productTypes,
+
+    legacyProductType:
+      product.productType,
+
+    fitProfile:
+      product.fitProfile,
+  });
+
+ const canonicalProductTypes = [
+  ...new Set(
+    product.productTypes.map(
+      (item) => item.productType
+    )
+  ),
+];
+
+const effectiveProductTypes =
+  canonicalProductTypes.length > 0
+    ? canonicalProductTypes
+    : product.productType
+      ? [product.productType]
+      : [];
+
+const oneSizeProductType =
+  effectiveProductTypes.length === 1 &&
+  (effectiveProductTypes[0] === "HIJAB" ||
+    effectiveProductTypes[0] === "KHIMAR")
+    ? effectiveProductTypes[0]
+    : null;
+
+const isOneSizeProduct =
+  oneSizeProductType !== null;
+
+  const authenticatedShopper =
+    await getAuthenticatedShopperFromServerComponent();
+
+const fitRecommendation:
+  ProductSizeRecommendationServiceResult | null =
+  authenticatedShopper
+    ? await getProductSizeRecommendation({
+        productId: product.id,
+        shopperId: authenticatedShopper.id,
+      })
+    : null;
+
+const fitPresentation =
+  presentProductFit({
+    isAuthenticated:
+      authenticatedShopper !== null,
+    result: fitRecommendation,
+  });
+
+const lengthPresentation =
+  fitRecommendation?.status === "ASSESSED"
+    ? presentProductLength(
+        fitRecommendation.lengthAssessment
+      )
+    : null;
+
+const recommendedIndependentLength =
+  lengthPresentation?.state === "ASSESSED" &&
+  lengthPresentation.structure === "INDEPENDENT"
+    ? selectUniqueLengthMatch(
+        lengthPresentation.options
+      )
+    : null;
+
+const recommendedLengthBasedSize =
+  lengthPresentation?.state === "ASSESSED" &&
+  lengthPresentation.structure ===
+    "LENGTH_BASED_SIZE"
+    ? selectUniqueLengthMatch(
+        lengthPresentation.sizes
+      )
+    : null;
+const independentLengthOptions =
+  product.lengthStructure === "INDEPENDENT"
+    ? product.lengthOptions
+    : [];
+
+const hasIndependentLengths =
+  independentLengthOptions.length > 0 &&
+  lengthPresentation?.state === "ASSESSED" &&
+  lengthPresentation.structure === "INDEPENDENT";
+const sizeChartPresentations =
+  presentProductSizeCharts(
+    product.productSizes
+  );
+
+  const initialFitDisplayUnit =
+  fitRecommendation?.status === "ASSESSED"
+    ? fitRecommendation.shopperDisplayUnit
+    : "CM";
+
+const recommendedSizeId =
+  fitPresentation.state === "RECOMMENDED"
+    ? fitPresentation.recommendedSize.id
+    : null;
+
+const displayedRecommendedSizeId =
+  recommendedLengthBasedSize?.id ??
+  recommendedSizeId;
+const suitableSizeIds =
+  fitPresentation.state === "MULTIPLE_SUITABLE"
+    ? new Set(
+        fitPresentation.suitableSizes.map(
+          (size) => size.id
+        )
+      )
+    : new Set<string>();
+
+
 
   if (
     brand.accountStatus !== BrandAccountStatus.ACTIVE ||
@@ -305,53 +450,226 @@ const shippingToLabels = getShippingToLabel(
               </div>
             )}
 
-            {/* Sizes + Length */}
-{(sortedSizes.length > 0 || product.lengths.length > 0) && (
+           {/* Sizes + Length */}
+{(
+  isOneSizeProduct ||
+  sortedSizes.length > 0 ||
+  hasIndependentLengths
+) && (
   <div>
-    {sortedSizes.length > 0 && (
+    {isOneSizeProduct && (
+  <div>
+    <p className="mb-2 text-xs font-medium uppercase tracking-[0.14em] text-black/50">
+      Size
+    </p>
+
+    <span className="inline-flex items-center rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs text-black/70">
+      One Size
+    </span>
+  </div>
+)}
+    {!isOneSizeProduct &&
+  sortedSizes.length > 0 && (
       <>
         <p className="mb-2 text-xs font-medium uppercase tracking-[0.14em] text-black/50">
           Sizes available
         </p>
 
         <div className="flex flex-wrap gap-2">
-          {sortedSizes.map(({ size }) => (
-            <span
-              key={size.id}
-              className="rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs text-black/70"
-            >
-              {formatSizeLabel(size.name)}
-            </span>
-          ))}
-        </div>
-      </>
-    )}
+  {sortedSizes.map(({ size }) => {
+    const isRecommended =
+      size.id === displayedRecommendedSizeId;
 
-    {product.lengths.length > 0 && (
-      <div className={sortedSizes.length > 0 ? "mt-4" : ""}>
-        <p className="mb-2 text-xs font-medium uppercase tracking-[0.14em] text-black/50">
-          Length
-        </p>
+    const isSuitable =
+      suitableSizeIds.has(size.id);
 
-        <div className="flex flex-wrap gap-2">
-          {product.lengths.map((length) => (
-            <span
-              key={length}
-              className="rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs text-black/70"
-            >
-              {length}&quot;
-            </span>
-          ))}
-        </div>
-      </div>
-    )}
+    const isFitHighlighted =
+      isRecommended || isSuitable;
 
-    <p className="mt-2 text-[11px] text-black/40">
-      Select your size on the brand's website
-    </p>
+    return (
+      <span
+        key={size.id}
+        className={[
+          "inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs transition-colors",
+          isFitHighlighted
+            ? "border-emerald-700/30 bg-emerald-50 text-emerald-900"
+            : "border-black/10 bg-white text-black/70",
+        ].join(" ")}
+      >
+        {formatSizeLabel(size.name)}
+
+        {isRecommended && (
+          <span
+            aria-hidden="true"
+            className="text-[10px]"
+          >
+            ✓
+          </span>
+        )}
+      </span>
+    );
+  })}
+</div>
+{recommendedLengthBasedSize && (
+  <div className="mt-3 flex items-center gap-1.5 text-xs">
+    <span className="font-medium text-black/80">
+      Recommended for your preferred length:{" "}
+      {recommendedLengthBasedSize.label}
+    </span>
+
+    <a
+      href="#size-and-fit"
+      aria-label="About your length recommendation"
+      title="About your length recommendation"
+      className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-black/20 text-[10px] font-medium leading-none text-black/50 transition hover:border-black/40 hover:text-black/80"
+    >
+      i
+    </a>
+  </div>
+)}
+{!(
+  lengthPresentation?.state === "ASSESSED" &&
+  lengthPresentation.structure ===
+    "LENGTH_BASED_SIZE"
+) &&
+  fitPresentation.state === "RECOMMENDED" && (
+  <div className="mt-3 flex items-center gap-1.5 text-xs">
+    <span className="font-medium text-black/80">
+      Recommended for you:{" "}
+      {fitPresentation.recommendedSize.label}
+    </span>
+
+    <button
+      type="button"
+      aria-label="About your size recommendation"
+      title="About your size recommendation"
+      className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-black/20 text-[10px] font-medium leading-none text-black/50 transition hover:border-black/40 hover:text-black/80"
+    >
+      i
+    </button>
   </div>
 )}
 
+{!(
+  lengthPresentation?.state === "ASSESSED" &&
+  lengthPresentation.structure ===
+    "LENGTH_BASED_SIZE"
+) &&
+  fitPresentation.state === "MULTIPLE_SUITABLE" && (
+  <div className="mt-3 flex items-center gap-1.5 text-xs">
+    <span className="font-medium text-black/80">
+      {fitPresentation.suitableSizes
+        .map((size) => size.label)
+        .join(" and ")}{" "}
+      may both work for you
+    </span>
+
+    <button
+      type="button"
+      aria-label="About your fit guidance"
+      title="About your fit guidance"
+      className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-black/20 text-[10px] font-medium leading-none text-black/50 transition hover:border-black/40 hover:text-black/80"
+    >
+      i
+    </button>
+  </div>
+)}
+
+{fitPresentation.state === "FIT_PROFILE_REQUIRED" && (
+  <div className="mt-4 mb-4">
+    <p className="text-xs font-medium text-black/80">
+      Find your fit
+    </p>
+
+    <p className="mt-1 text-[11px] leading-relaxed text-black/45">
+      Add your measurements to get personalised size guidance.
+    </p>
+
+    <Link
+      href="/account/fit"
+      className="mt-2 inline-block text-[11px] font-medium text-black underline underline-offset-4 transition hover:text-black/60"
+    >
+      Set up My Fit →
+    </Link>
+  </div>
+)}
+
+{fitPresentation.state === "SIGN_IN_REQUIRED" && (
+  <div className="mt-4 mb-4">
+    <p className="text-xs font-medium text-black/80">
+      Find your fit
+    </p>
+
+    <p className="mt-1 text-[11px] leading-relaxed text-black/45">
+      Sign in to get personalised size guidance.
+    </p>
+
+    <Link
+      href="/account/fit"
+      className="mt-2 inline-block text-[11px] font-medium text-black underline underline-offset-4 transition hover:text-black/60"
+    >
+      Sign in →
+    </Link>
+  </div>
+)}
+      </>
+    )}
+
+    {!isOneSizeProduct &&
+  hasIndependentLengths && (
+        <div className={sortedSizes.length > 0 ? "mt-4" : ""}>
+           <p className="mb-2 text-xs font-medium uppercase tracking-[0.14em] text-black/50">
+           Length
+          </p>
+
+    <div className="flex flex-wrap gap-2">
+      {independentLengthOptions.map((option) => {
+  const isRecommendedLength =
+    recommendedIndependentLength?.id ===
+    option.id;
+
+  return (
+    <span
+      key={option.id}
+      className={[
+        "inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs transition-colors",
+        isRecommendedLength
+          ? "border-emerald-700/30 bg-emerald-50 text-emerald-900"
+          : "border-black/10 bg-white text-black/70",
+      ].join(" ")}
+    >
+      {option.label}
+
+      {isRecommendedLength && (
+        <span
+          aria-hidden="true"
+          className="text-[10px]"
+        >
+          ✓
+        </span>
+      )}
+    </span>
+  );
+})}
+    </div>
+
+    {recommendedIndependentLength && (
+      <p className="mt-2 text-[11px] text-black/40">
+  {isOneSizeProduct
+    ? "One size available on the brand's website"
+    : "Select your size on the brand's website"}
+</p>
+    )}
+  </div>
+)}
+
+    <p className="mt-2 text-[11px] text-black/40">
+  {isOneSizeProduct
+    ? "One size available on the brand's website"
+    : "Select your size on the brand's website"}
+</p>
+  </div>
+)}
             {/* CTA */}
 <div className="flex flex-col gap-3">
   <div className="flex gap-3">
@@ -423,6 +741,15 @@ const shippingToLabels = getShippingToLabel(
                   )}
                 </div>
               </Accordion>
+
+              <ProductSizeAndFit
+                presentation={fitPresentation}
+                lengthPresentation={lengthPresentation}
+                productDimensions={productDimensions}
+                sizeCharts={sizeChartPresentations}
+                initialUnit={initialFitDisplayUnit}
+                isOneSizeProduct={isOneSizeProduct}
+                />
 
               {/* Shipping & returns */}
               <Accordion title="Shipping & returns">

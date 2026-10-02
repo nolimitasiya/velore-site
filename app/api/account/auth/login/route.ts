@@ -10,6 +10,15 @@ import {
   ANALYTICS_SESSION_COOKIE,
 } from "@/lib/analytics/session";
 
+import {
+  createShopperSession,
+  setShopperSessionCookie,
+} from "@/lib/auth/ShopperSession";
+
+import {
+  ShopperSessionCreationReason,
+} from "@prisma/client";
+
 export async function POST(
   req: NextRequest
 ) {
@@ -82,27 +91,20 @@ export async function POST(
       });
 
     /*
-     * Authenticate shopper.
-     */
-    res.cookies.set(
-      "shopper_authed",
-      shopper.id,
-      {
-        httpOnly: true,
-        secure:
-          process.env.NODE_ENV ===
-          "production",
-        sameSite:
-          "lax",
-        path:
-          "/",
-        maxAge:
-          60 *
-          60 *
-          24 *
-          30,
-      }
-    );
+ * Create a revocable server-side shopper
+ * session and place only the opaque token
+ * in the browser.
+ */
+const session =
+  await createShopperSession(
+  shopper.id,
+  ShopperSessionCreationReason.LOGIN
+);
+
+setShopperSessionCookie(
+  res,
+  session.token
+);
 
     /*
      * Authentication changes the

@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createHash } from "crypto";
 import bcrypt from "bcryptjs";
-import { PasswordResetUserType } from "@prisma/client";
+import {
+  PasswordResetUserType,
+  ShopperSessionRevocationReason,
+} from "@prisma/client";
 import { validatePassword } from "@/lib/auth/passwordStrength";
 
 export async function POST(req: NextRequest) {
@@ -40,21 +43,71 @@ if (!v.ok) {
       return NextResponse.json({ error: "This reset link has expired. Please request a new one." }, { status: 400 });
     }
 
-    const hashed = await bcrypt.hash(password, 12);
+   const hashed =
+  await bcrypt.hash(
+    password,
+    12
+  );
 
-    // Update password + mark token used in a transaction
-    await prisma.$transaction([
-      prisma.shopper.update({
-        where: { email: record.email },
-        data: { password: hashed },
-      }),
-      prisma.passwordResetToken.update({
-        where: { tokenHash },
-        data: { usedAt: new Date() },
-      }),
-    ]);
+const now =
+  new Date();
 
-    return NextResponse.json({ ok: true });
+/*
+ * Password recovery is a security
+ * boundary.
+ *
+ * Updating the password, consuming the
+ * reset token and revoking every active
+ * authenticated session must succeed or
+ * fail together.
+ */
+await prisma.$transaction(
+  async (tx) => {
+    const shopper =
+      await tx.shopper.update({
+        where: {
+          email:
+            record.email,
+        },
+        data: {
+          password:
+            hashed,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+    await tx.passwordResetToken.update({
+      where: {
+        tokenHash,
+      },
+      data: {
+        usedAt:
+          now,
+      },
+    });
+
+    await tx.shopperAuthSession.updateMany({
+      where: {
+        shopperId:
+          shopper.id,
+        revokedAt:
+          null,
+      },
+      data: {
+        revokedAt:
+          now,
+        revocationReason:
+          ShopperSessionRevocationReason.PASSWORD_RESET,
+      },
+    });
+  }
+);
+
+return NextResponse.json({
+  ok: true,
+});
   } catch {
     return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
   }

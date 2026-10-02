@@ -66,12 +66,97 @@ async function fetchStorefrontProductDetail(
           colour: true,
         },
       },
+      productTypes: {
+        select: {
+          productType: true,
+        },
+      },
+
+      fitProfile: {
+  select: {
+    intendedFit: true,
+    stretch: true,
+    measurementBasis: true,
+    source: true,
+
+    measurements: {
+      select: {
+        type: true,
+        component: true,
+        minValueCm: true,
+        maxValueCm: true,
+        sourceMinValue: true,
+        sourceMaxValue: true,
+        sourceUnit: true,
+      },
+
+      orderBy: [
+        {
+          component: "asc",
+        },
+        {
+          type: "asc",
+        },
+      ],
+    },
+  },
+},
 
       productSizes: {
         include: {
           size: true,
+
+    sizeChartMapping: {
+      include: {
+        chartEntry: {
+          include: {
+            chart: {
+              select: {
+                id: true,
+                name: true,
+                sourceUnit: true,
+                measurementBasis: true,
+                source: true,
+                sourceUrl: true,
+                lastVerifiedAt: true,
+              },
+            },
+
+            measurements: {
+              orderBy: [
+                {
+                  component: "asc",
+                },
+                {
+                  type: "asc",
+                },
+              ],
+            },
+          },
         },
       },
+    },
+  },
+},
+lengthOptions: {
+  orderBy: [
+    {
+      sortOrder: "asc",
+    },
+    {
+      valueCm: "asc",
+    },
+  ],
+
+  select: {
+    id: true,
+    label: true,
+    valueCm: true,
+    sourceValue: true,
+    sourceUnit: true,
+    sortOrder: true,
+  },
+},
 
       productMaterials: {
         include: {
@@ -98,7 +183,7 @@ export async function getStorefrontProductDetail(
         productSlug
       ),
     [
-      "storefront-product-detail",
+      "storefront-product-detail-V2",
       brandSlug,
       productSlug,
     ],
@@ -669,3 +754,12 @@ export async function getRelatedProducts(args: {
     }
   )();
 }
+
+export type StorefrontProductDetail =
+  NonNullable<
+    Awaited<
+      ReturnType<
+        typeof getStorefrontProductDetail
+      >
+    >
+  >;

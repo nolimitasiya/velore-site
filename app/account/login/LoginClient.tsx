@@ -10,8 +10,16 @@ export default function LoginClient() {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const sp = useSearchParams();
-  const next = sp.get("next") || "/account";
+const sp = useSearchParams();
+
+const requestedNext = sp.get("next");
+
+const next =
+  requestedNext &&
+  requestedNext.startsWith("/") &&
+  !requestedNext.startsWith("//")
+    ? requestedNext
+    : "/account/wishlist";
 
   async function onLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -80,7 +88,7 @@ export default function LoginClient() {
 
         <div className="flex items-center justify-between text-xs">
           <a
-            href="/account/register"
+            href={`/account/register?next=${encodeURIComponent(next)}`}
             className="text-[#a89280] underline underline-offset-4 hover:text-[#7B2D3E]"
           >
             Create an account

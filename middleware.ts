@@ -294,19 +294,48 @@ if (
   
 
   if (accountRoute && !isPublicAccountRoute) {
-    const authed = Boolean(req.cookies.get("shopper_authed")?.value);
-    if (!authed) {
-      if (isAccountPage(pathname)) {
-        const url = req.nextUrl.clone();
-        url.pathname = "/account/login";
-        url.searchParams.set("next", pathname);
-        return NextResponse.redirect(url);
-      }
-      const res = NextResponse.json({ ok: false }, { status: 401 });
-      res.headers.set("x-mw-block", "shopper");
-      return res;
+  /*
+   * Middleware only uses cookie presence as
+   * a lightweight routing hint.
+   *
+   * It does NOT authenticate the shopper.
+   * Protected routes must validate the real
+   * session through ShopperSession.ts.
+   */
+  const hasShopperSessionCookie = Boolean(
+    req.cookies.get("shopper_authed")?.value
+  );
+
+  if (!hasShopperSessionCookie) {
+    if (isAccountPage(pathname)) {
+      const url = req.nextUrl.clone();
+
+      url.pathname = "/account/login";
+      url.searchParams.set(
+        "next",
+        pathname
+      );
+
+      return NextResponse.redirect(url);
     }
+
+    const res = NextResponse.json(
+      {
+        ok: false,
+      },
+      {
+        status: 401,
+      }
+    );
+
+    res.headers.set(
+      "x-mw-block",
+      "shopper"
+    );
+
+    return res;
   }
+}
 
   return NextResponse.next();
 }

@@ -1,43 +1,52 @@
 import {
+  NextRequest,
   NextResponse,
 } from "next/server";
+
+import {
+  ShopperSessionRevocationReason,
+} from "@prisma/client";
+
+import {
+  clearShopperSessionCookie,
+  revokeCurrentShopperSession,
+} from "@/lib/auth/ShopperSession";
 
 import {
   ANALYTICS_SESSION_COOKIE,
 } from "@/lib/analytics/session";
 
-export async function POST() {
+export async function POST(
+  request: NextRequest
+) {
+  /*
+   * Revoke the server-side session before
+   * removing the browser credential.
+   *
+   * Logout remains safe and idempotent if
+   * the cookie is already missing or the
+   * session has already been revoked.
+   */
+  await revokeCurrentShopperSession(
+    request,
+    ShopperSessionRevocationReason.LOGOUT
+  );
+
   const res =
     NextResponse.json({
       ok: true,
     });
 
   /*
-   * Remove authenticated shopper.
+   * Remove the shopper's opaque session
+   * token from the browser.
    */
-  res.cookies.set(
-    "shopper_authed",
-    "",
-    {
-      httpOnly: true,
-      secure:
-        process.env.NODE_ENV ===
-        "production",
-      sameSite:
-        "lax",
-      path:
-        "/",
-      maxAge:
-        0,
-    }
-  );
+  clearShopperSessionCookie(res);
 
   /*
-   * Logout also changes analytics
-   * identity.
-   *
-   * The next anonymous event should
-   * therefore start a new session.
+   * Authentication identity has changed.
+   * The next anonymous analytics event
+   * should start a fresh analytics session.
    */
   res.cookies.set(
     ANALYTICS_SESSION_COOKIE,
@@ -47,12 +56,9 @@ export async function POST() {
       secure:
         process.env.NODE_ENV ===
         "production",
-      sameSite:
-        "lax",
-      path:
-        "/",
-      maxAge:
-        0,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 0,
     }
   );
 

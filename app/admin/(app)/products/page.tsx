@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AdminTable } from "@/components/admin/AdminTable";
 import {
   formatDateTime,
@@ -123,11 +123,6 @@ export default function AdminProductsPage() {
   const [q, setQ] = useState("");
   const [active, setActive] = useState<"all" | "true" | "false">("all");
   const [brand, setBrand] = useState("all");
-
-  const [brandSearch, setBrandSearch] = useState("");
-  const [brandPickerOpen, setBrandPickerOpen] = useState(false);
-  const brandPickerRef = useRef<HTMLDivElement | null>(null);
-
   const [busyId, setBusyId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState<Record<string, string>>({});
   const [affiliateDraft, setAffiliateDraft] = useState<Record<string, string>>({});
@@ -139,19 +134,6 @@ export default function AdminProductsPage() {
     setTz(getUserTimeZone());
   }, []);
 
-  useEffect(() => {
-  function handleClickOutside(event: MouseEvent) {
-    if (
-      brandPickerRef.current &&
-      !brandPickerRef.current.contains(event.target as Node)
-    ) {
-      setBrandPickerOpen(false);
-    }
-  }
-
-  document.addEventListener("mousedown", handleClickOutside);
-  return () => document.removeEventListener("mousedown", handleClickOutside);
-}, []);
 
   async function load() {
     setBusy(true);
@@ -191,48 +173,6 @@ setAffiliateDraft(affiliateInit);
     setBusy(false);
   }
 
-  async function selectBrandAndLoad(nextBrand: string) {
-  setBrand(nextBrand);
-  setBrandPickerOpen(false);
-  setBrandSearch("");
-
-  setBusy(true);
-  setError(null);
-
-  const queryParams = new URLSearchParams();
-  if (q.trim()) queryParams.set("q", q.trim());
-  if (active !== "all") queryParams.set("active", active);
-  if (nextBrand !== "all") queryParams.set("brand", nextBrand);
-
-  const r = await fetch(`/api/admin/products?${queryParams.toString()}`);
-  const j = await r.json().catch(() => ({}));
-
-  if (!r.ok || !j.ok) {
-    setError(j?.error ?? "Failed to load products");
-    setBusy(false);
-    return;
-  }
-
-  
-
-  setRows(j.products ?? []);
-  setBrands(j.brands ?? []);
-
-  const init: Record<string, string> = {};
-  for (const p of (j.products ?? []) as ProductRow[]) {
-    init[p.id] = p.reviewNote ?? "";
-  }
-
-  const affiliateInit: Record<string, string> = {};
-for (const p of (j.products ?? []) as ProductRow[]) {
-  affiliateInit[p.id] = p.affiliateUrl ?? "";
-}
-setAffiliateDraft(affiliateInit);
-
-  setNoteDraft(init);
-
-  setBusy(false);
-}
 
 
 async function saveAffiliateUrl(id: string) {
@@ -380,24 +320,6 @@ async function saveAffiliateUrl(id: string) {
   return { total, approved, pending, needsChanges, published, missingAffiliate };
 }, [rows]);
 
-  const filteredBrandOptions = useMemo(() => {
-  const term = brandSearch.trim().toLowerCase();
-
-  const allOption = { slug: "all", name: "All brands" };
-
-  const matched = brands.filter((b) =>
-    b.name.toLowerCase().includes(term)
-  );
-
-  if (!term) return [allOption, ...brands];
-  return [allOption, ...matched];
-}, [brands, brandSearch]);
-
-const selectedBrandLabel =
-  brand === "all"
-    ? "All brands"
-    : brands.find((b) => b.slug === brand)?.name ?? "All brands";
-
   return (
     <main className="min-h-screen bg-neutral-50/70">
       <div className="space-y-6">
@@ -406,17 +328,17 @@ const selectedBrandLabel =
     <div className="space-y-4">
   <div className="space-y-2">
     <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
-      Admin catalogue
-    </div>
+  Admin · Catalogue
+</div>
 
-    <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
-      Product moderation
-    </h1>
+<h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
+  Products
+</h1>
 
-    <p className="max-w-3xl text-sm leading-6 text-white/60">
-      Review, publish, activate, and manage marketplace products across all brands
-      from one clean control surface.
-    </p>
+<p className="max-w-3xl text-sm leading-6 text-white/60">
+  Manage Veilora&apos;s product catalogue, publishing, visibility,
+  affiliate readiness and brand submissions.
+</p>
   </div>
 
   <div>
@@ -495,21 +417,22 @@ const selectedBrandLabel =
       </div>
 
       <div>
-        <FilterLabel>Brand</FilterLabel>
-        <select
-          aria-label="Filter by brand"
-          value={brand}
-          onChange={(e) => setBrand(e.target.value)}
-          className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-black/20 focus:ring-4 focus:ring-black/5"
-        >
-          <option value="all">All brands</option>
-          {brands.map((b) => (
-            <option key={b.slug} value={b.slug}>
-              {b.name}
-            </option>
-          ))}
-        </select>
-      </div>
+  <FilterLabel>Brand</FilterLabel>
+  <select
+    aria-label="Filter by brand"
+    value={brand}
+    onChange={(e) => setBrand(e.target.value)}
+    className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-black/20 focus:ring-4 focus:ring-black/5"
+  >
+    <option value="all">All brands</option>
+
+    {brands.map((b) => (
+      <option key={b.slug} value={b.slug}>
+        {b.name}
+      </option>
+    ))}
+  </select>
+</div>
 
       <div>
         <FilterLabel>Affiliate status</FilterLabel>
@@ -553,71 +476,6 @@ const selectedBrandLabel =
         <div className="text-lg font-semibold text-black">All products</div>
         <div className="mt-1 text-sm text-neutral-500">
           Moderate listings, manage visibility, and send review feedback to brands.
-        </div>
-      </div>
-
-      <div className="w-full max-w-md" ref={brandPickerRef}>
-        <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-400">
-          Quick brand switcher
-        </div>
-
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setBrandPickerOpen((prev) => !prev)}
-            className="flex w-full items-center justify-between rounded-2xl border border-black/10 bg-white px-4 py-3 text-left text-sm text-black transition hover:border-black/20"
-          >
-            <div className="min-w-0">
-              <div className="truncate font-medium">{selectedBrandLabel}</div>
-              <div className="mt-0.5 text-xs text-neutral-500">
-                Switch quickly between brands
-              </div>
-            </div>
-            <span className="ml-3 text-neutral-400">⌄</span>
-          </button>
-
-          {brandPickerOpen && (
-            <div className="absolute right-0 z-20 mt-2 w-full overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
-              <div className="border-b border-black/10 p-3">
-                <input
-                  value={brandSearch}
-                  onChange={(e) => setBrandSearch(e.target.value)}
-                  placeholder="Search brand..."
-                  className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none transition placeholder:text-neutral-400 focus:border-black/20 focus:ring-4 focus:ring-black/5"
-                  autoFocus
-                />
-              </div>
-
-              <div className="max-h-72 overflow-y-auto p-2">
-                {filteredBrandOptions.length > 0 ? (
-                  filteredBrandOptions.map((option) => {
-                    const selected = brand === option.slug;
-                    return (
-                      <button
-                        key={option.slug}
-                        type="button"
-                        onClick={() => void selectBrandAndLoad(option.slug)}
-                        className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition ${
-  selected
-    ? "bg-[#7B2D3E] text-white"
-    : "text-neutral-700 hover:bg-[#fdf7f4]"
-}`}
-                      >
-                        <span className="truncate">{option.name}</span>
-                        {selected ? (
-                          <span className="ml-3 text-xs text-white/80">Selected</span>
-                        ) : null}
-                      </button>
-                    );
-                  })
-                ) : (
-                  <div className="px-3 py-4 text-sm text-neutral-500">
-                    No matching brands found.
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

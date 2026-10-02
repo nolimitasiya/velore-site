@@ -12,7 +12,10 @@ export const SIZE_ORDER = [
   "3xl",
   "4xl",
   "5xl",
-
+  "54",
+  "56",
+  "58",
+  "60",
   "one size",
 
   "petite",
@@ -61,8 +64,8 @@ export function formatSizeLabel(nameOrSlug: string) {
     .replaceAll("_", " ")
     .replace(/\s+/g, " ");
 
-  // numeric + letter sizes like 4xl, 5xl
-  if (/^\d+xl$/.test(s)) return s.toUpperCase();
+// numeric purchasable sizes such as length-based abaya sizes
+if (/^\d+$/.test(s)) return s;
 
   // standard letter sizes
   if (["xxxs","xxs","xs","s","m","l","xl","xxl","xxxl"].includes(s)) {

@@ -24,13 +24,14 @@ export default function Accordion({
       >
         <span className="text-sm font-medium text-black/80">{title}</span>
         <span
-          className={[
-            "text-black/40 transition-transform duration-200 text-lg leading-none",
-            open ? "rotate-180" : "",
-          ].join(" ")}
-        >
-          ‹
-        </span>
+  aria-hidden="true"
+  className={[
+    "text-black/40 transition-transform duration-200 text-lg leading-none",
+    open ? "rotate-90" : "",
+  ].join(" ")}
+>
+  ›
+</span>
       </button>
 
       {open && (

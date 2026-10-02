@@ -5,6 +5,15 @@ import { PRODUCT_TYPES } from "@/lib/taxonomy/productTypes";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
+type AdminProductEditorProps =
+  | {
+      mode?: "create";
+      productId?: never;
+    }
+  | {
+      mode: "edit";
+      productId: string;
+    };
 
 type BrandOption = {
   id: string;
@@ -123,7 +132,11 @@ function Chip({
 
 
 
-export default function AdminProductEditor() {
+export default function AdminProductEditor({
+  mode = "create",
+  productId,
+}: AdminProductEditorProps) {
+  const isEditMode = mode === "edit";
   const router = useRouter();
   const [brands, setBrands] = useState<BrandOption[]>([]);
   const [brandsLoading, setBrandsLoading] = useState(true);
@@ -165,6 +178,8 @@ const [imageDraft, setImageDraft] = useState("");
 const [imageError, setImageError] = useState<string | null>(null);
 const [saving, setSaving] = useState(false);
 const [saveError, setSaveError] = useState<string | null>(null);
+const [editLoading, setEditLoading] = useState(isEditMode);
+const [editLoadError, setEditLoadError] = useState<string | null>(null);
 
 function addImage() {
   const value = imageDraft.trim();
@@ -257,6 +272,169 @@ function toggleSelected(
 
     void loadBrands();
   }, []);
+
+  useEffect(() => {
+  if (!isEditMode || !productId) {
+    return;
+  }
+
+  const currentProductId = productId;
+  let cancelled = false;
+
+  async function loadProduct() {
+    setEditLoading(true);
+    setEditLoadError(null);
+
+    try {
+      const response = await fetch(
+  `/api/admin/products/${encodeURIComponent(currentProductId)}`,
+  {
+    cache: "no-store",
+  }
+);
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data.ok || !data.product) {
+        throw new Error(
+          data?.error ?? "Failed to load product."
+        );
+      }
+
+      if (cancelled) {
+        return;
+      }
+
+      const product = data.product;
+      setBrandId(
+  typeof product.brandId === "string"
+    ? product.brandId
+    : ""
+);
+
+      setTitle(product.title ?? "");
+      setSourceUrl(product.sourceUrl ?? "");
+      setAffiliateUrl(product.affiliateUrl ?? "");
+
+      setPrice(
+        product.price === null || product.price === undefined
+          ? ""
+          : String(product.price)
+      );
+
+      setOriginalPrice(
+        product.originalPrice === null ||
+          product.originalPrice === undefined
+          ? ""
+          : String(product.originalPrice)
+      );
+
+      if (
+        product.currency === "GBP" ||
+        product.currency === "EUR" ||
+        product.currency === "CHF" ||
+        product.currency === "USD"
+      ) {
+        setCurrency(product.currency);
+      }
+
+      setSelectedProductTypes(
+        Array.isArray(product.productTypes)
+          ? product.productTypes
+          : []
+      );
+
+      setSelectedMaterialIds(
+        Array.isArray(product.materialIds)
+          ? product.materialIds
+          : []
+      );
+
+      setSelectedOccasionIds(
+        Array.isArray(product.occasionIds)
+          ? product.occasionIds
+          : []
+      );
+
+      setSelectedStyleIds(
+        Array.isArray(product.styleIds)
+          ? product.styleIds
+          : []
+      );
+
+      setSelectedColourIds(
+        Array.isArray(product.colourIds)
+          ? product.colourIds
+          : []
+      );
+
+      setSelectedSizeIds(
+        Array.isArray(product.sizeIds)
+          ? product.sizeIds
+          : []
+      );
+
+      setSelectedLengths(
+        Array.isArray(product.lengths)
+          ? product.lengths
+          : []
+      );
+
+      setCategoryId(
+        typeof product.categoryId === "string"
+          ? product.categoryId
+          : null
+      );
+
+      setPolyesterFree(product.polyesterFree === true);
+
+      setSaleBadge(
+        Array.isArray(product.badges) &&
+          product.badges.includes("sale")
+      );
+
+      setImages(
+        Array.isArray(product.images)
+          ? product.images
+              .map((image: unknown) => {
+                if (
+                  image &&
+                  typeof image === "object" &&
+                  "url" in image &&
+                  typeof image.url === "string"
+                ) {
+                  return image.url;
+                }
+
+                return null;
+              })
+              .filter(
+                (url: string | null): url is string =>
+                  url !== null
+              )
+          : []
+      );
+    } catch (error) {
+      if (!cancelled) {
+        setEditLoadError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load product."
+        );
+      }
+    } finally {
+      if (!cancelled) {
+        setEditLoading(false);
+      }
+    }
+  }
+
+  void loadProduct();
+
+  return () => {
+    cancelled = true;
+  };
+}, [isEditMode, productId]);
 
   const selectedBrand = useMemo(
     () => brands.find((brand) => brand.id === brandId) ?? null,
@@ -481,11 +659,16 @@ async function saveProduct() {
   setSaving(true);
 
   try {
-    const response = await fetch("/api/admin/products/create", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+    const endpoint =
+  isEditMode && productId
+    ? `/api/admin/products/${encodeURIComponent(productId)}`
+    : "/api/admin/products/create";
+
+const response = await fetch(endpoint, {
+  method: isEditMode ? "PATCH" : "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
       body: JSON.stringify({
         brandId,
         title: title.trim(),
@@ -519,10 +702,11 @@ async function saveProduct() {
     const data = await response.json().catch(() => null);
 
     if (!response.ok || !data?.ok) {
-      throw new Error(
-        data?.error ?? `Failed to create product (${response.status})`
-      );
-    }
+  throw new Error(
+    data?.error ??
+      `Failed to ${isEditMode ? "update" : "create"} product (${response.status})`
+  );
+}
 
     router.push("/admin/products");
     router.refresh();
@@ -530,11 +714,53 @@ async function saveProduct() {
     setSaveError(
       error instanceof Error
         ? error.message
-        : "Failed to create product."
+        : isEditMode
+  ? "Failed to update product."
+  : "Failed to create product."
     );
   } finally {
     setSaving(false);
   }
+}
+
+if (isEditMode && editLoading) {
+  return (
+    <SectionCard>
+      <div className="py-12 text-center">
+        <div className="text-sm font-medium text-neutral-700">
+          Loading product…
+        </div>
+
+        <div className="mt-1 text-xs text-neutral-400">
+          Loading the existing catalogue information.
+        </div>
+      </div>
+    </SectionCard>
+  );
+}
+
+if (isEditMode && editLoadError) {
+  return (
+    <SectionCard>
+      <div className="py-8">
+        <div className="text-sm font-semibold text-red-700">
+          Unable to load product
+        </div>
+
+        <div className="mt-2 text-sm leading-6 text-neutral-500">
+          {editLoadError}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => router.refresh()}
+          className="mt-5 inline-flex items-center justify-center rounded-2xl border border-black/10 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
+        >
+          Try again
+        </button>
+      </div>
+    </SectionCard>
+  );
 }
 
   return (
@@ -564,7 +790,7 @@ async function saveProduct() {
     <select
       value={brandId}
       onChange={(e) => setBrandId(e.target.value)}
-      disabled={brandsLoading}
+      disabled={brandsLoading || isEditMode}
       className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-black/20 focus:ring-4 focus:ring-black/5 disabled:bg-neutral-50 disabled:text-neutral-400"
     >
       <option value="">
@@ -583,6 +809,12 @@ async function saveProduct() {
         Brand slug: {selectedBrand.slug}
       </div>
     ) : null}
+
+    {isEditMode ? (
+  <div className="mt-2 text-xs leading-5 text-neutral-400">
+    Brand assignment is fixed for existing products.
+  </div>
+) : null}
   </div>
 
   <div>
@@ -1139,7 +1371,11 @@ async function saveProduct() {
   disabled={saving}
   className="inline-flex items-center justify-center rounded-2xl bg-[#7B2D3E] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#6a2435] disabled:cursor-not-allowed disabled:opacity-50"
 >
-  {saving ? "Saving..." : "Save product"}
+  {saving
+  ? "Saving..."
+  : isEditMode
+    ? "Save changes"
+    : "Save product"}
 </button>
         </SectionCard>
       </div>

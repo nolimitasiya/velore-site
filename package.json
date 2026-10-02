@@ -7,6 +7,8 @@
     "build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "eslint",
+     "test": "vitest run",
+     "test:watch": "vitest",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -54,7 +56,8 @@
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

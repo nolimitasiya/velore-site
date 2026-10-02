@@ -1,20 +1,28 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
 
-export async function GET(req: NextRequest) {
-  const shopperId = req.cookies.get("shopper_authed")?.value;
-  if (!shopperId) {
-    return NextResponse.json({ shopper: null }, { status: 401 });
-  }
+import { getAuthenticatedShopper } from "@/lib/auth/ShopperSession";
 
-  const shopper = await prisma.shopper.findUnique({
-    where: { id: shopperId },
-    select: { id: true, email: true, firstName: true, lastName: true, createdAt: true },
-  });
+export async function GET(
+  request: NextRequest
+) {
+  const shopper =
+    await getAuthenticatedShopper(request);
 
   if (!shopper) {
-    return NextResponse.json({ shopper: null }, { status: 401 });
+    return NextResponse.json(
+      {
+        shopper: null,
+      },
+      {
+        status: 401,
+      }
+    );
   }
 
-  return NextResponse.json({ shopper });
+  return NextResponse.json({
+    shopper,
+  });
 }

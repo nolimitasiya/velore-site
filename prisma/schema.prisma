@@ -97,6 +97,7 @@ model Brand {
   notes BrandNote[]
 
   products         Product[]
+  sizeCharts       BrandSizeChart[]
   memberships      BrandMembership[]
   invites          BrandInvite[]
   importJobs       ImportJob[]
@@ -200,35 +201,38 @@ model Material {
 }
 
 model Product {
-  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  brandId         String           @db.Uuid
+  id              String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brandId         String                  @db.Uuid
   title           String
   slug            String
-  currency        String           @default("GBP") @db.Char(3)
+  currency        String                  @default("GBP") @db.Char(3)
   sourceUrl       String
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @default(now()) @updatedAt
-  isActive        Boolean          @default(true)
-  badges          Badge[]          @default([])
-  categoryId      String?          @db.Uuid
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @default(now()) @updatedAt
+  isActive        Boolean                 @default(true)
+  badges          Badge[]                 @default([])
+  categoryId      String?                 @db.Uuid
   note            String?
-  price           Decimal?         @db.Decimal(10, 2)
-  originalPrice   Decimal?         @db.Decimal(10, 2)
+  price           Decimal?                @db.Decimal(10, 2)
+  originalPrice   Decimal?                @db.Decimal(10, 2)
   stock           Int?
   publishedAt     DateTime?
   affiliateUrl    String?
   productType     ProductType?
   productColours  ProductColour[]
-  brand           Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  category        Category?        @relation(fields: [categoryId], references: [id])
+  brand           Brand                   @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  category        Category?               @relation(fields: [categoryId], references: [id])
   images          ProductImage[]
   affiliateClicks AffiliateClick[]
   analyticsEvents AnalyticsEvent[]
-  status          ProductStatus    @default(DRAFT)
+  status          ProductStatus           @default(DRAFT)
   lastApprovedAt  DateTime?
   productSizes    ProductSize[]
-  lengths         String[]         @default([])
-  polyesterFree   Boolean          @default(false)
+  lengths         String[]                @default([])
+  lengthStructure ProductLengthStructure?
+  lengthOptions   ProductLengthOption[]
+  polyesterFree   Boolean                 @default(false)
+  fitProfile      ProductFitProfile?
 
   worldwideShipping Boolean                  @default(false)
   shippingCountries ProductShippingCountry[]
@@ -372,6 +376,14 @@ model BrandApplicationNote {
   application BrandApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   @@index([applicationId])
+}
+
+enum ShopperEmailChangeStatus {
+  PENDING
+  VERIFIED
+  SUPERSEDED
+  EXPIRED
+  LOCKED
 }
 
 enum PlatformHosted {
@@ -1085,8 +1097,10 @@ model ProductSize {
   productId String @db.Uuid
   sizeId    String @db.Uuid
 
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  size    Size    @relation(fields: [sizeId], references: [id], onDelete: Cascade)
+  product          Product                     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size             Size                        @relation(fields: [sizeId], references: [id], onDelete: Cascade)
+  fitMeasurements  ProductSizeFitMeasurement[]
+  sizeChartMapping ProductSizeChartMapping?
 
   @@id([productId, sizeId])
   @@index([sizeId])
@@ -1713,6 +1727,58 @@ model Shopper {
 
   wishlistItems     WishlistItem[]
   analyticsSessions AnalyticsSession[]
+  fitProfile        ShopperFitProfile?
+  emailChanges      ShopperEmailChange[]
+  authSessions      ShopperAuthSession[]
+}
+
+model ShopperEmailChange {
+  id String @id @default(cuid())
+
+  shopperId String @db.Uuid
+  newEmail  String
+  codeHash  String
+
+  status ShopperEmailChangeStatus @default(PENDING)
+
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  attemptCount Int      @default(0)
+  sentAt       DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shopper Shopper @relation(fields: [shopperId], references: [id], onDelete: Cascade)
+
+  @@index([shopperId])
+  @@index([shopperId, status])
+  @@index([newEmail])
+  @@index([expiresAt])
+}
+
+model ShopperAuthSession {
+  id String @id @default(cuid())
+
+  shopperId String @db.Uuid
+  tokenHash String @unique
+
+  expiresAt  DateTime
+  lastSeenAt DateTime @default(now())
+
+  revokedAt        DateTime?
+  revocationReason ShopperSessionRevocationReason?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shopper        Shopper                      @relation(fields: [shopperId], references: [id], onDelete: Cascade)
+  creationReason ShopperSessionCreationReason
+
+  @@index([shopperId])
+  @@index([shopperId, revokedAt])
+  @@index([expiresAt])
 }
 
 model WishlistItem {
@@ -1818,6 +1884,20 @@ model ProductProductType {
   @@id([productId, productType])
   @@index([productType])
   @@index([productId])
+}
+
+enum ShopperSessionRevocationReason {
+  LOGOUT
+  PASSWORD_CHANGED
+  PASSWORD_RESET
+  SECURITY
+  ADMIN
+}
+
+enum ShopperSessionCreationReason {
+  LOGIN
+  REGISTRATION
+  PASSWORD_CHANGE
 }
 
 enum BrandApplicationSource {
@@ -1976,4 +2056,374 @@ model AnalyticsEvent {
   @@index([shopperCountryCode, createdAt])
   @@index([sourcePage, createdAt])
   @@index([sectionId, createdAt])
+}
+
+// ============================================================
+// VEILORA FIT
+// ============================================================
+
+enum FitUnit {
+  CM
+  IN
+}
+
+enum ShopperFitPreference {
+  CLOSER
+  REGULAR
+  RELAXED
+}
+
+enum ProductIntendedFit {
+  SLIM
+  REGULAR
+  RELAXED
+  OVERSIZED
+}
+
+enum FabricStretch {
+  NONE
+  LOW
+  MEDIUM
+  HIGH
+  UNKNOWN
+}
+
+enum FitMeasurementBasis {
+  BODY
+  GARMENT
+  UNKNOWN
+}
+
+enum FitDataSource {
+  BRAND_WEBSITE
+  BRAND_PORTAL
+  ADMIN
+}
+
+enum FitMeasurementType {
+  HEIGHT
+
+  BUST
+  WAIST
+  HIP
+
+  SHOULDER_WIDTH
+  SLEEVE_LENGTH
+  ARM_LENGTH
+  ARMHOLE
+  INSEAM
+
+  GARMENT_LENGTH
+  FRONT_LENGTH
+  BACK_LENGTH
+  TOP_LENGTH
+  SKIRT_LENGTH
+  TROUSER_LENGTH
+
+  WIDTH
+  NECK_OPENING
+}
+
+enum FitGarmentComponent {
+  WHOLE_GARMENT
+  TOP
+  BOTTOM
+  SKIRT
+  TROUSER
+  JACKET
+  DRESS
+  ABAYA
+  KHIMAR
+  JILBAB
+  HIJAB
+}
+
+enum HijabCoveragePreference {
+  STANDARD
+  GENEROUS
+  EXTRA_COVERAGE
+}
+
+model ShopperFitProfile {
+  id        String @id @default(cuid())
+  shopperId String @unique @db.Uuid
+
+  preferredUnit FitUnit              @default(CM)
+  fitPreference ShopperFitPreference @default(REGULAR)
+
+  hijabCoveragePreference HijabCoveragePreference?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shopper Shopper @relation(fields: [shopperId], references: [id], onDelete: Cascade)
+
+  measurements ShopperFitMeasurement[]
+
+  @@index([shopperId])
+}
+
+model ShopperFitMeasurement {
+  id String @id @default(cuid())
+
+  fitProfileId String
+  type         FitMeasurementType
+
+  // Canonical value used by Veilora Fit calculations.
+  // Always stored in centimetres regardless of shopper display preference.
+  valueCm Decimal @db.Decimal(8, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fitProfile ShopperFitProfile @relation(fields: [fitProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([fitProfileId, type])
+  @@index([fitProfileId])
+  @@index([type])
+}
+
+model BrandSizeChart {
+  id      String @id @default(cuid())
+  brandId String @db.Uuid
+
+  // Admin-facing name, e.g. "Women's General", "Abayas",
+  // "Dresses & Sets", "Bottoms".
+  name String
+
+  // What the numbers supplied by the brand represent.
+  measurementBasis FitMeasurementBasis @default(UNKNOWN)
+
+  // Unit used by the original source chart.
+  sourceUnit FitUnit
+
+  // Where Veilora obtained this chart.
+  source    FitDataSource
+  sourceUrl String?       @db.Text
+
+  // Allows a newer chart to replace an old one without deleting history.
+  isActive Boolean @default(true)
+
+  // When Veilora last confirmed the source was still current.
+  lastVerifiedAt DateTime?
+
+  // Notes supplied by the source, including tolerances or
+  // sizing guidance that should be preserved verbatim.
+  sourceNotes String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  productTypes BrandSizeChartProductType[]
+  entries      BrandSizeChartEntry[]
+
+  @@index([brandId])
+  @@index([brandId, isActive])
+  @@index([lastVerifiedAt])
+}
+
+model BrandSizeChartProductType {
+  chartId     String
+  productType ProductType
+
+  chart BrandSizeChart @relation(fields: [chartId], references: [id], onDelete: Cascade)
+
+  @@id([chartId, productType])
+  @@index([productType])
+}
+
+model BrandSizeChartEntry {
+  id      String @id @default(cuid())
+  chartId String
+
+  // The label exactly as the brand presents it:
+  // XS, S, M, L, 8, 10, 12, 36, 38, 40, etc.
+  sizeLabel String
+
+  // Keeps the source chart in its intended order.
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  chart BrandSizeChart @relation(fields: [chartId], references: [id], onDelete: Cascade)
+
+  measurements        BrandSizeChartMeasurement[]
+  productSizeMappings ProductSizeChartMapping[]
+
+  @@unique([chartId, sizeLabel])
+  @@index([chartId, sortOrder])
+}
+
+model BrandSizeChartMeasurement {
+  id      String @id @default(cuid())
+  entryId String
+
+  type      FitMeasurementType
+  component FitGarmentComponent @default(WHOLE_GARMENT)
+
+  // Canonical values used by Veilora Fit.
+  // Always stored in centimetres.
+  minValueCm Decimal @db.Decimal(8, 2)
+  maxValueCm Decimal @db.Decimal(8, 2)
+
+  // Preserve the values and unit supplied by the source.
+  sourceMinValue Decimal @db.Decimal(8, 2)
+  sourceMaxValue Decimal @db.Decimal(8, 2)
+  sourceUnit     FitUnit
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entry BrandSizeChartEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@unique([entryId, type, component])
+  @@index([entryId])
+  @@index([type])
+}
+
+model ProductFitProfile {
+  id        String @id @default(cuid())
+  productId String @unique @db.Uuid
+
+  intendedFit ProductIntendedFit?
+  stretch     FabricStretch       @default(UNKNOWN)
+
+  // Optional human/admin context that should not be used as
+  // a substitute for structured measurements.
+  fitNotes String? @db.Text
+
+  // Product-specific measurement provenance.
+  measurementBasis FitMeasurementBasis @default(UNKNOWN)
+  source           FitDataSource?
+  sourceUrl        String?             @db.Text
+  lastVerifiedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  measurements     ProductFitMeasurement[]
+  sizeMeasurements ProductSizeFitMeasurement[]
+
+  @@unique([id, productId])
+  @@index([productId])
+  @@index([lastVerifiedAt])
+}
+
+model ProductFitMeasurement {
+  id           String @id @default(cuid())
+  fitProfileId String
+
+  type      FitMeasurementType
+  component FitGarmentComponent @default(WHOLE_GARMENT)
+
+  // Canonical values used by Veilora Fit.
+  // Always stored in centimetres.
+  minValueCm Decimal @db.Decimal(8, 2)
+  maxValueCm Decimal @db.Decimal(8, 2)
+
+  // Original values supplied by the source.
+  sourceMinValue Decimal @db.Decimal(8, 2)
+  sourceMaxValue Decimal @db.Decimal(8, 2)
+  sourceUnit     FitUnit
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fitProfile ProductFitProfile @relation(fields: [fitProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([fitProfileId, type, component])
+  @@index([fitProfileId])
+  @@index([type])
+}
+
+model ProductSizeFitMeasurement {
+  id String @id @default(cuid())
+
+  fitProfileId String
+
+  productId String @db.Uuid
+  sizeId    String @db.Uuid
+
+  type      FitMeasurementType
+  component FitGarmentComponent @default(WHOLE_GARMENT)
+
+  // Canonical values used by Veilora Fit.
+  // Always stored in centimetres.
+  minValueCm Decimal @db.Decimal(8, 2)
+  maxValueCm Decimal @db.Decimal(8, 2)
+
+  // Original values supplied by the source.
+  sourceMinValue Decimal @db.Decimal(8, 2)
+  sourceMaxValue Decimal @db.Decimal(8, 2)
+  sourceUnit     FitUnit
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fitProfile ProductFitProfile @relation(fields: [fitProfileId, productId], references: [id, productId], onDelete: Cascade)
+
+  productSize      ProductSize          @relation(fields: [productId, sizeId], references: [productId, sizeId], onDelete: Cascade)
+  measurementBasis FitMeasurementBasis?
+
+  @@unique([productId, sizeId, type, component])
+  @@index([fitProfileId])
+  @@index([productId, sizeId])
+  @@index([type])
+}
+
+model ProductSizeChartMapping {
+  productId String @db.Uuid
+  sizeId    String @db.Uuid
+  entryId   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  productSize ProductSize @relation(fields: [productId, sizeId], references: [productId, sizeId], onDelete: Cascade)
+
+  chartEntry BrandSizeChartEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@id([productId, sizeId])
+  @@index([entryId])
+}
+
+enum ProductLengthStructure {
+  INDEPENDENT
+  SIZE_DEPENDENT
+  LENGTH_BASED_SIZE
+}
+
+model ProductLengthOption {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId String @db.Uuid
+
+  // What the shopper/brand sees, e.g. 58"
+  label String
+
+  // Verified garment length. Never inferred from label.
+  valueCm Decimal? @db.Decimal(8, 2)
+
+  // Preserve original brand evidence.
+  sourceValue Decimal? @db.Decimal(8, 2)
+  sourceUnit  FitUnit?
+
+  sortOrder Int @default(0)
+
+  source         FitDataSource?
+  sourceUrl      String?
+  sourceNotes    String?
+  lastVerifiedAt DateTime?
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([productId, label])
+  @@index([productId, sortOrder])
 }

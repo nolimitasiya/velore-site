@@ -15,10 +15,42 @@ export default function RegisterClient() {
 
   async function onRegister(e: React.FormEvent) {
     e.preventDefault();
-    if (password.length < 8) {
-      setErr("Password must be at least 8 characters.");
-      return;
-    }
+    const passwordErrors: string[] = [];
+
+if (password.length < 10) {
+  passwordErrors.push(
+    "Password must be at least 10 characters."
+  );
+}
+
+if (!/[a-z]/.test(password)) {
+  passwordErrors.push(
+    "Password must include a lowercase letter."
+  );
+}
+
+if (!/[A-Z]/.test(password)) {
+  passwordErrors.push(
+    "Password must include an uppercase letter."
+  );
+}
+
+if (!/[0-9]/.test(password)) {
+  passwordErrors.push(
+    "Password must include a number."
+  );
+}
+
+if (!/[^A-Za-z0-9]/.test(password)) {
+  passwordErrors.push(
+    "Password must include a symbol."
+  );
+}
+
+if (passwordErrors.length > 0) {
+  setErr(passwordErrors[0]);
+  return;
+}
 
     if (!dateOfBirth) {
   setErr("Please enter your date of birth.");
@@ -81,7 +113,7 @@ if (age < 13) {
         setErr(j?.error ?? `Registration failed (${r.status})`);
         return;
       }
-      window.location.assign("/account");
+      window.location.assign("/account/wishlist");
     } finally {
       setBusy(false);
     }
@@ -164,12 +196,16 @@ if (age < 13) {
           <input
             type="password"
             className="mt-1 w-full rounded border border-[#d8c9b5] bg-white px-4 py-3 text-sm text-[#1a0a0e] placeholder:text-[#c0b0a0] outline-none focus:border-[#7B2D3E]"
-            placeholder="Min. 8 characters"
+            placeholder="Create a secure password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            minLength={8}
+            minLength={10}
           />
+          <p className="mt-1.5 text-[11px] leading-relaxed text-[#a89280]">
+  At least 10 characters, including an uppercase
+  letter, lowercase letter, number and symbol.
+</p>
         </div>
 
         <button

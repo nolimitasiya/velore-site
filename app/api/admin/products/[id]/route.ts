@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { Badge, Prisma } from "@prisma/client";
+import {
+  Badge,
+  Prisma,
+  ProductType,
+} from "@prisma/client";
 import { invalidateStorefrontProduct } from "@/lib/storefront/invalidate-product";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
@@ -15,6 +19,19 @@ function isHttpUrl(value: string) {
   } catch {
     return false;
   }
+}
+
+function cleanStringArray(value: unknown) {
+  if (!Array.isArray(value)) return [];
+
+  return Array.from(
+    new Set(
+      value
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    )
+  );
 }
 
 type RouteContext = {
@@ -37,13 +54,76 @@ export async function GET(
       select: {
         id: true,
         title: true,
+        brandId: true,
         sourceUrl: true,
         affiliateUrl: true,
         price: true,
         originalPrice: true,
         currency: true,
         badges: true,
+        categoryId: true,
+productType: true,
+lengths: true,
+polyesterFree: true,
 
+productTypes: {
+  select: {
+    productType: true,
+  },
+},
+
+productMaterials: {
+  select: {
+    materialId: true,
+  },
+},
+
+productOccasions: {
+  select: {
+    occasionId: true,
+  },
+},
+
+productStyles: {
+  select: {
+    styleId: true,
+  },
+},
+
+productColours: {
+  select: {
+    colourId: true,
+  },
+},
+
+productSizes: {
+  select: {
+    sizeId: true,
+
+    size: {
+      select: {
+        id: true,
+        slug: true,
+      },
+    },
+
+    _count: {
+      select: {
+        fitMeasurements: true,
+      },
+    },
+
+    sizeChartMapping: {
+  select: {
+    chartEntry: {
+      select: {
+        sizeLabel: true,
+      },
+    },
+  },
+},
+  },
+},
         images: {
   orderBy: {
     sortOrder: "asc",
@@ -72,13 +152,61 @@ export async function GET(
     }
 
     return NextResponse.json({
-      ok: true,
-      product: {
-        ...product,
-        price: product.price?.toString() ?? null,
-        originalPrice: product.originalPrice?.toString() ?? null,
-      },
-    });
+  ok: true,
+  product: {
+    id: product.id,
+    title: product.title,
+    brandId: product.brandId,
+    sourceUrl: product.sourceUrl,
+    affiliateUrl: product.affiliateUrl,
+
+    price: product.price?.toString() ?? null,
+    originalPrice: product.originalPrice?.toString() ?? null,
+    currency: product.currency,
+    badges: product.badges,
+
+    categoryId: product.categoryId,
+    productType: product.productType,
+    lengths: product.lengths,
+    polyesterFree: product.polyesterFree,
+
+    productTypes: product.productTypes.map(
+      (item) => item.productType
+    ),
+
+    materialIds: product.productMaterials.map(
+  (item) => item.materialId
+),
+
+occasionIds: product.productOccasions.map(
+  (item) => item.occasionId
+),
+
+styleIds: product.productStyles.map(
+  (item) => item.styleId
+),
+
+colourIds: product.productColours.map(
+  (item) => item.colourId
+),
+sizeIds: product.productSizes.map(
+  (item) => item.sizeId
+),
+
+
+
+    productSizes: product.productSizes.map((item) => ({
+  sizeId: item.sizeId,
+  slug: item.size.slug,
+  hasFitMeasurements: item._count.fitMeasurements > 0,
+  hasSizeChartMapping: item.sizeChartMapping !== null,
+})),
+
+    images: product.images,
+
+    brand: product.brand,
+  },
+});
   } catch (error: any) {
     console.error("[admin/products/id GET]", error);
 
@@ -147,6 +275,20 @@ export async function PATCH(
         : "";
 
     const saleBadge = body.saleBadge === true;
+    const categoryId =
+  typeof body.categoryId === "string" && body.categoryId.trim()
+    ? body.categoryId.trim()
+    : null;
+
+const productTypes = cleanStringArray(body.productTypes);
+const materialIds = cleanStringArray(body.materialIds);
+const occasionIds = cleanStringArray(body.occasionIds);
+const styleIds = cleanStringArray(body.styleIds);
+const colourIds = cleanStringArray(body.colourIds);
+const sizeIds = cleanStringArray(body.sizeIds);
+const lengths = cleanStringArray(body.lengths);
+
+const polyesterFree = body.polyesterFree === true;
 
     if (!title) {
       return NextResponse.json(
@@ -177,6 +319,33 @@ export async function PATCH(
         { status: 400 }
       );
     }
+
+    if (!productTypes.length) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "Select at least one product type.",
+    },
+    { status: 400 }
+  );
+}
+
+const validProductTypes = new Set(Object.values(ProductType));
+
+if (
+  productTypes.some(
+    (productType) =>
+      !validProductTypes.has(productType as ProductType)
+  )
+) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "Invalid product type.",
+    },
+    { status: 400 }
+  );
+}
 
     let price: Prisma.Decimal | null = null;
 
@@ -241,7 +410,28 @@ export async function PATCH(
       );
     }
 
-    const existing = await prisma.product.findUnique({
+    if (categoryId) {
+  const categoryExists = await prisma.category.findUnique({
+    where: {
+      id: categoryId,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!categoryExists) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Selected category no longer exists.",
+      },
+      { status: 400 }
+    );
+  }
+}
+
+ const existing = await prisma.product.findUnique({
   where: { id },
   select: {
     id: true,
@@ -251,6 +441,34 @@ export async function PATCH(
     brand: {
       select: {
         slug: true,
+      },
+    },
+
+    productSizes: {
+      select: {
+        sizeId: true,
+
+        size: {
+          select: {
+            slug: true,
+          },
+        },
+
+        _count: {
+          select: {
+            fitMeasurements: true,
+          },
+        },
+
+        sizeChartMapping: {
+          select: {
+            chartEntry: {
+              select: {
+                sizeLabel: true,
+              },
+            },
+          },
+        },
       },
     },
   },
@@ -263,33 +481,171 @@ export async function PATCH(
       );
     }
 
+const existingSizeIds = new Set(
+  existing.productSizes.map((item) => item.sizeId)
+);
+
+const requestedSizeIds = new Set(sizeIds);
+
+const sizeIdsToAdd = sizeIds.filter(
+  (sizeId) => !existingSizeIds.has(sizeId)
+);
+
+const productSizesToRemove = existing.productSizes.filter(
+  (item) => !requestedSizeIds.has(item.sizeId)
+);
+
+const protectedProductSizes = productSizesToRemove.filter(
+  (item) =>
+    item._count.fitMeasurements > 0 ||
+    item.sizeChartMapping !== null
+);
+
+if (protectedProductSizes.length) {
+  const protectedLabels = protectedProductSizes
+    .map((item) => item.size.slug)
+    .join(", ");
+
+  return NextResponse.json(
+    {
+      ok: false,
+      error:
+        `Cannot remove size${protectedProductSizes.length === 1 ? "" : "s"} ` +
+        `${protectedLabels} because ${
+          protectedProductSizes.length === 1 ? "it has" : "they have"
+        } Fit measurements or size-chart mappings. Remove the Fit data first.`,
+    },
+    { status: 409 }
+  );
+}
+
     const badges = saleBadge
       ? Array.from(new Set([...existing.badges, Badge.sale]))
       : existing.badges.filter((badge) => badge !== Badge.sale);
 
-    const product = await prisma.product.update({
-      where: { id },
-      data: {
-        title,
-        sourceUrl,
-        affiliateUrl: affiliateUrl || null,
-        price,
-        originalPrice,
-        currency,
-        badges,
-      },
-      select: {
-        id: true,
-        title: true,
-        sourceUrl: true,
-        affiliateUrl: true,
-        price: true,
-        originalPrice: true,
-        currency: true,
-        badges: true,
-        updatedAt: true,
+   const product = await prisma.$transaction(async (tx) => {
+  const updated = await tx.product.update({
+    where: { id },
+    data: {
+      title,
+      sourceUrl,
+      affiliateUrl: affiliateUrl || null,
+      price,
+      originalPrice,
+      currency,
+      badges,
+
+      categoryId,
+      productType: productTypes[0] as ProductType,
+      lengths,
+      polyesterFree,
+    },
+    select: {
+      id: true,
+      title: true,
+      sourceUrl: true,
+      affiliateUrl: true,
+      price: true,
+      originalPrice: true,
+      currency: true,
+      badges: true,
+      updatedAt: true,
+    },
+  });
+
+  await tx.productProductType.deleteMany({
+    where: { productId: id },
+  });
+
+  if (productTypes.length) {
+    await tx.productProductType.createMany({
+      data: productTypes.map((productType) => ({
+        productId: id,
+        productType: productType as ProductType,
+      })),
+      skipDuplicates: true,
+    });
+  }
+
+  await tx.productMaterial.deleteMany({
+    where: { productId: id },
+  });
+
+  if (materialIds.length) {
+    await tx.productMaterial.createMany({
+      data: materialIds.map((materialId) => ({
+        productId: id,
+        materialId,
+      })),
+      skipDuplicates: true,
+    });
+  }
+
+  await tx.productOccasion.deleteMany({
+    where: { productId: id },
+  });
+
+  if (occasionIds.length) {
+    await tx.productOccasion.createMany({
+      data: occasionIds.map((occasionId) => ({
+        productId: id,
+        occasionId,
+      })),
+      skipDuplicates: true,
+    });
+  }
+
+  await tx.productStyle.deleteMany({
+    where: { productId: id },
+  });
+
+  if (styleIds.length) {
+    await tx.productStyle.createMany({
+      data: styleIds.map((styleId) => ({
+        productId: id,
+        styleId,
+      })),
+      skipDuplicates: true,
+    });
+  }
+
+  await tx.productColour.deleteMany({
+    where: { productId: id },
+  });
+
+  if (colourIds.length) {
+    await tx.productColour.createMany({
+      data: colourIds.map((colourId) => ({
+        productId: id,
+        colourId,
+      })),
+      skipDuplicates: true,
+    });
+  }
+
+  if (productSizesToRemove.length) {
+    await tx.productSize.deleteMany({
+      where: {
+        productId: id,
+        sizeId: {
+          in: productSizesToRemove.map((item) => item.sizeId),
+        },
       },
     });
+  }
+
+  if (sizeIdsToAdd.length) {
+    await tx.productSize.createMany({
+      data: sizeIdsToAdd.map((sizeId) => ({
+        productId: id,
+        sizeId,
+      })),
+      skipDuplicates: true,
+    });
+  }
+
+  return updated;
+});
 
    invalidateStorefrontProduct({
   productId: product.id,
@@ -306,22 +662,43 @@ export async function PATCH(
         originalPrice: product.originalPrice?.toString() ?? null,
       },
     });
-  } catch (error: any) {
-    console.error("[admin/products/id PATCH]", error);
+ } catch (error: any) {
+  console.error("[admin/products/id PATCH]", error);
 
+  if (error?.code === "P2002") {
     return NextResponse.json(
       {
         ok: false,
-        error: error?.message ?? "Failed to update product.",
+        error: "A product with these details already exists.",
       },
-      {
-        status:
-          error?.message === "UNAUTHENTICATED"
-            ? 401
-            : error?.message === "FORBIDDEN"
-            ? 403
-            : 500,
-      }
+      { status: 409 }
     );
   }
+
+  if (error?.code === "P2003") {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "One of the selected taxonomy values no longer exists. Refresh and try again.",
+      },
+      { status: 400 }
+    );
+  }
+
+  return NextResponse.json(
+    {
+      ok: false,
+      error: error?.message ?? "Failed to update product.",
+    },
+    {
+      status:
+        error?.message === "UNAUTHENTICATED"
+          ? 401
+          : error?.message === "FORBIDDEN"
+          ? 403
+          : 500,
+    }
+  );
+}
 }

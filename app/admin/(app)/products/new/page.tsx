@@ -1,5 +1,5 @@
 import Link from "next/link";
-import AdminProductEditor from "./AdminProductEditor";
+import AdminProductEditor from "../AdminProductEditor";
 
 export const dynamic = "force-dynamic";
 

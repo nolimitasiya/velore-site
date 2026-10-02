@@ -7,8 +7,20 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
 import {
+  validatePassword,
+} from "@/lib/auth/passwordStrength";
+import {
+  createShopperSession,
+  setShopperSessionCookie,
+} from "@/lib/auth/ShopperSession";
+
+import {
   sendShopperWelcomeEmail,
 } from "@/lib/email/sendShopperWelcomeEmail";
+
+import {
+  ShopperSessionCreationReason,
+} from "@prisma/client";
 
 export async function POST(
   req: NextRequest
@@ -51,21 +63,26 @@ export async function POST(
     }
 
     /*
-     * Password validation
-     */
-    if (
-      password.length < 8
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Password must be at least 8 characters.",
-        },
-        {
-          status: 400,
-        }
-      );
+ * Apply Veilora's canonical password
+ * policy.
+ */
+const passwordValidation =
+  validatePassword(password);
+
+if (!passwordValidation.ok) {
+  return NextResponse.json(
+    {
+      error:
+        passwordValidation.errors[0] ??
+        "Password does not meet the password requirements.",
+      errors:
+        passwordValidation.errors,
+    },
+    {
+      status: 400,
     }
+  );
+}
 
     /*
      * ─────────────────────────────
@@ -227,23 +244,21 @@ export async function POST(
           shopper.id,
       });
 
-    res.cookies.set(
-      "shopper_authed",
-      shopper.id,
-      {
-        httpOnly: true,
-        secure:
-          process.env.NODE_ENV ===
-          "production",
-        sameSite: "lax",
-        path: "/",
-        maxAge:
-          60 *
-          60 *
-          24 *
-          30,
-      }
-    );
+    /*
+ * Create a revocable server-side
+ * session for the newly registered
+ * shopper.
+ */
+const session =
+  await createShopperSession(
+    shopper.id,
+    ShopperSessionCreationReason.REGISTRATION
+  );
+
+setShopperSessionCookie(
+  res,
+  session.token
+);
 
     return res;
   } catch (error) {
