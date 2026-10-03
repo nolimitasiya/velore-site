@@ -144,6 +144,14 @@ async function resolveAuthenticatedShopperFromToken(
   const tokenHash =
     hashSessionToken(normalizedToken);
 
+  /*
+   * Resolve the authentication session first.
+   *
+   * Keep the opaque browser token / token hash
+   * separate from the Shopper UUID. The session's
+   * shopperId is the only value used to resolve
+   * the Shopper record.
+   */
   const session =
     await prisma.shopperAuthSession.findUnique({
       where: {
@@ -151,18 +159,9 @@ async function resolveAuthenticatedShopperFromToken(
       },
       select: {
         id: true,
+        shopperId: true,
         expiresAt: true,
         revokedAt: true,
-
-        shopper: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            createdAt: true,
-          },
-        },
       },
     });
 
@@ -178,6 +177,28 @@ async function resolveAuthenticatedShopperFromToken(
     session.expiresAt.getTime() <=
     Date.now()
   ) {
+    return null;
+  }
+
+  /*
+   * Resolve the shopper explicitly from the
+   * UUID stored on the authenticated session.
+   */
+  const shopper =
+    await prisma.shopper.findUnique({
+      where: {
+        id: session.shopperId,
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        createdAt: true,
+      },
+    });
+
+  if (!shopper) {
     return null;
   }
 
@@ -207,7 +228,7 @@ async function resolveAuthenticatedShopperFromToken(
     },
   });
 
-  return session.shopper;
+  return shopper;
 }
 
 /*
