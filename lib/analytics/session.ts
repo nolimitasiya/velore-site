@@ -4,6 +4,9 @@ import {
 } from "next/server";
 
 import { prisma } from "@/lib/prisma";
+import {
+  getAuthenticatedShopper,
+} from "@/lib/auth/ShopperSession";
 
 export const ANALYTICS_SESSION_COOKIE =
   "vc_session";
@@ -404,28 +407,19 @@ export async function getOrCreateAnalyticsSession(
       )?.value
     );
 
-  const shopperCookieId =
-    req.cookies
-      .get("shopper_authed")
-      ?.value
-      ?.trim() || null;
-
+  /*
+   * Shopper identity must be resolved
+   * through the authenticated server-side
+   * session.
+   *
+   * Analytics never interprets the
+   * authentication cookie itself.
+   */
   const authenticatedShopper =
-    shopperCookieId
-      ? await prisma.shopper.findUnique({
-          where: {
-            id: shopperCookieId,
-          },
-
-          select: {
-            id: true,
-          },
-        })
-      : null;
+    await getAuthenticatedShopper(req);
 
   const shopperId =
-    authenticatedShopper?.id ??
-    null;
+    authenticatedShopper?.id ?? null;
 
   /*
    * Existing behavioural session
