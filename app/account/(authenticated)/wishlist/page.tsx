@@ -250,7 +250,7 @@ export default function WishlistPage() {
                         rel="noopener noreferrer"
                         className="shrink-0 rounded-full bg-black px-3 py-1.5 text-[11px] font-medium text-white transition hover:opacity-80"
                       >
-                        Shop ↗
+                        Shop
                       </a>
 
                       <button
@@ -297,7 +297,7 @@ export default function WishlistPage() {
                   {group.items.length === 1
                     ? "piece"
                     : "pieces"}
-                  ) ↗
+                  )
                 </button>
               </div>
             </div>

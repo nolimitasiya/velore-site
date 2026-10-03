@@ -44,7 +44,6 @@ export default function MobileMenu() {
 
 useEffect(() => {
   let cancelled = false;
-
   async function checkAuthentication() {
     try {
       const response = await fetch(
@@ -72,6 +71,25 @@ useEffect(() => {
     cancelled = true;
   };
 }, []);
+
+  async function handleShopperLogout() {
+    try {
+      const response = await fetch("/api/account/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        console.error("Shopper logout failed", response.status);
+        return;
+      }
+
+      closeMenu();
+      window.location.assign("/");
+    } catch (error) {
+      console.error("Shopper logout failed", error);
+    }
+  }
 
   // --- Menu structure (root + nested groups)
   const rootLinks = useMemo<LinkItem[]>(
@@ -455,16 +473,16 @@ const activeRow =
           </svg>
           <span className="text-sm text-black">My account</span>
         </Link>
-        <Link
-          href="/account/logout"
-          onClick={closeMenu}
-          className="flex items-center gap-3 rounded-2xl px-4 py-3 hover:bg-black/[0.03] transition-colors"
-        >
+       <button
+  type="button"
+  onClick={handleShopperLogout}
+  className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left hover:bg-black/[0.03] transition-colors"
+>
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-black/50">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
           </svg>
           <span className="text-sm text-black">Sign out</span>
-        </Link>
+       </button>
       </>
     ) : (
       <>
