@@ -180,14 +180,6 @@ async function resolveAuthenticatedShopperFromToken(
     return null;
   }
 
-  console.log("[ShopperSession] production identity check", {
-  sessionId: session.id,
-  shopperId: session.shopperId,
-  shopperIdLength: session.shopperId.length,
-  tokenHashLength: tokenHash.length,
-  shopperIdEqualsTokenHash:
-    session.shopperId === tokenHash,
-});
   /*
    * Resolve the shopper explicitly from the
    * UUID stored on the authenticated session.

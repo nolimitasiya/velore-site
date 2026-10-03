@@ -145,14 +145,6 @@ export async function POST(
 
   const userAgent = req.headers.get("user-agent") ?? "";
 
-  console.log("[OUTBOUND DEBUG]", {
-  productId: id,
-  userAgent,
-  isBot: BOT_PATTERN.test(userAgent),
-  method: req.method,
-  url: req.url,
-});
-
   if (BOT_PATTERN.test(userAgent)) {
     return NextResponse.json(
       { error: "Automated request rejected" },
