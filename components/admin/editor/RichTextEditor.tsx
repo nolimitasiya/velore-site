@@ -1,7 +1,5 @@
 "use client";
 
-"use client";
-
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
@@ -53,6 +51,7 @@ const editor = useEditor({
       bulletList: false,
       orderedList: false,
       listItem: false,
+      link: false,
     }),
     BulletList.configure({
       HTMLAttributes: {
