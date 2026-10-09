@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "audit:security": "node scripts/audit-gate.mjs"
   },
   "dependencies": {
     "@brixtol/country-continent": "^1.0.0",
