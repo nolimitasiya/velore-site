@@ -4,6 +4,7 @@ import {
   FabricStretch,
   FitGarmentComponent,
   FitMeasurementBasis,
+  FitMeasurementRangeType,
   FitMeasurementType,
   ProductIntendedFit,
   ProductType,
@@ -24,12 +25,13 @@ function bodyMeasurement(
   type: FitMeasurementType,
   minValueCm: number,
   maxValueCm: number,
-  component: FitGarmentComponent =
-    FitGarmentComponent.DRESS
+  component: FitGarmentComponent =  FitGarmentComponent.DRESS,
+  rangeType: FitMeasurementRangeType = FitMeasurementRangeType.RANGE
 ) {
   return {
     type,
     component,
+    rangeType,
     minValueCm,
     maxValueCm,
   };
@@ -39,14 +41,15 @@ function productMeasurement(
   type: FitMeasurementType,
   minValueCm: number,
   maxValueCm: number,
-  measurementBasis: FitMeasurementBasis,
-  component: FitGarmentComponent =
-    FitGarmentComponent.DRESS
+  basis: FitMeasurementBasis,
+  component: FitGarmentComponent =  FitGarmentComponent.DRESS,
+  rangeType: FitMeasurementRangeType = FitMeasurementRangeType.RANGE
 ) {
   return {
     type,
     component,
-    measurementBasis,
+    measurementBasis: basis,
+    rangeType,
     minValueCm,
     maxValueCm,
   };
@@ -62,6 +65,7 @@ function dressSize(args: {
   return {
     sizeId: args.sizeId,
     sizeLabel: args.sizeLabel,
+    chartSortOrder: null,
 
     productSizeMeasurements: [
   productMeasurement(
@@ -91,7 +95,6 @@ function dressSize(args: {
 function evidenceDerivedDressSize(args: {
   sizeId: string;
   sizeLabel: string;
-
   bodyBust: [number, number];
   bodyWaist: [number, number];
   bodyHip: [number, number];
@@ -103,6 +106,8 @@ function evidenceDerivedDressSize(args: {
   return {
     sizeId: args.sizeId,
     sizeLabel: args.sizeLabel,
+    chartSortOrder: null,
+
 
     productSizeMeasurements: [],
     mappedChart: null,
@@ -555,7 +560,7 @@ describe("Veilora Fit recommendation engine", () => {
       ).toBe(true);
     });
 
-    it("keeps the RÅDA garment-chart case unresolved instead of declaring the shopper too large", () => {
+    it("keeps the RÃƒâ€¦DA garment-chart case unresolved instead of declaring the shopper too large", () => {
       const result = assessSize({
         productType: ProductType.DRESS,
 
@@ -637,7 +642,7 @@ describe("Veilora Fit recommendation engine", () => {
         "NOT_FOUND"
       );
     });
-    it("can mark a GARMENT-based size suitable when every required measurement has a matching calibrated policy", () => {
+    it("does not let calibrated GARMENT-only policies replace required BODY evidence", () => {
   const result = assessSize({
     ...baseDressProduct(),
 
@@ -674,7 +679,7 @@ describe("Veilora Fit recommendation engine", () => {
     mappedChart: null,
   });
 
-  expect(result.status).toBe("SUITABLE");
+  expect(result.status).toBe("INSUFFICIENT_EVIDENCE");
 
   expect(
     result.requiredMeasurements.every(
@@ -687,7 +692,7 @@ describe("Veilora Fit recommendation engine", () => {
   ).toBe(true);
 });
 
-it("can recommend a GARMENT-based size when an applicable policy explicitly allows negative ease", () => {
+it("does not let a negative-ease GARMENT-only policy create a recommendation without BODY evidence", () => {
   const negativeEasePolicies: readonly EasePolicy[] = [
     {
       productType: ProductType.DRESS,
@@ -770,6 +775,7 @@ it("can recommend a GARMENT-based size when an applicable policy explicitly allo
       {
         sizeId: "m",
         sizeLabel: "M",
+    chartSortOrder: null,
 
         productSizeMeasurements: [
           productMeasurement(
@@ -796,29 +802,35 @@ it("can recommend a GARMENT-based size when an applicable policy explicitly allo
       },
     ],
   });
+expect(result.status).toBe(
+  "INSUFFICIENT_EVIDENCE"
+);
 
-  expect(result.status).toBe("RECOMMENDED");
+expect(result.recommendedSize).toBeNull();
 
-  expect(
-    result.recommendedSize?.sizeLabel
-  ).toBe("M");
+expect(result.suitableSizes).toHaveLength(0);
 
-  expect(
-    result.recommendedSize?.status
-  ).toBe("SUITABLE");
+expect(result.assessments).toHaveLength(1);
 
-  expect(
-    result.recommendedSize?.requiredMeasurements.every(
-      (measurement) =>
-        measurement.easePolicy?.status ===
-          "FOUND" &&
-        measurement.garmentEase?.status ===
-          "MATCH"
-    )
-  ).toBe(true);
+const assessedSize = result.assessments[0];
+
+expect(
+  assessedSize.requiredMeasurements.every(
+    (measurement) =>
+      measurement.easePolicy?.status ===
+        "FOUND" &&
+      measurement.garmentEase?.status ===
+        "MATCH" &&
+      measurement.evidenceDerivedSuitability
+        .status === "INSUFFICIENT_EVIDENCE"
+  )
+).toBe(true);
 });
 
-it("can reject a GARMENT-based size when calibrated ease is too small", () => {
+
+
+
+it("does not let calibrated GARMENT-only evidence reject a size without BODY authority", () => {
   const result = assessSize({
     ...baseDressProduct(),
 
@@ -855,7 +867,7 @@ it("can reject a GARMENT-based size when calibrated ease is too small", () => {
     mappedChart: null,
   });
 
-  expect(result.status).toBe("UNSUITABLE");
+  expect(result.status).toBe("INSUFFICIENT_EVIDENCE");
 
   expect(
     result.requiredMeasurements.some(
@@ -973,6 +985,337 @@ it("remains insufficient when even one required GARMENT policy is unavailable", 
       );
     });
 
+    it("uses explicit product sizing requirements to recommend the smallest Merrachi blazer size that accommodates every required BODY dimension", () => {
+  const result = assessProductSizes({
+    productType: ProductType.BLAZER,
+
+    intendedFit:
+      ProductIntendedFit.REGULAR,
+
+    stretch: FabricStretch.NONE,
+
+    shopperFitPreference:
+      ShopperFitPreference.REGULAR,
+
+    productMeasurementBasis:
+      FitMeasurementBasis.BODY,
+
+    explicitRequiredBodyFit: [
+      {
+        type: FitMeasurementType.BUST,
+        component:
+          FitGarmentComponent.JACKET,
+      },
+      {
+        type: FitMeasurementType.WAIST,
+        component:
+          FitGarmentComponent.JACKET,
+      },
+      {
+        type: FitMeasurementType.HIP,
+        component:
+          FitGarmentComponent.JACKET,
+      },
+    ],
+
+    shopperMeasurements: [
+      {
+        type: FitMeasurementType.BUST,
+        valueCm: 94,
+      },
+      {
+        type: FitMeasurementType.WAIST,
+        valueCm: 87,
+      },
+      {
+        type: FitMeasurementType.HIP,
+        valueCm: 112,
+      },
+    ],
+
+    sizes: [
+      {
+        sizeId: "m",
+        sizeLabel: "M",
+    chartSortOrder: null,
+
+        productSizeMeasurements: [
+          productMeasurement(
+  FitMeasurementType.BUST,
+  94,
+  94,
+  FitMeasurementBasis.BODY,
+  FitGarmentComponent.JACKET,
+  FitMeasurementRangeType.UPPER_BOUND
+),
+productMeasurement(
+  FitMeasurementType.WAIST,
+  79,
+  79,
+  FitMeasurementBasis.BODY,
+  FitGarmentComponent.JACKET,
+  FitMeasurementRangeType.UPPER_BOUND
+),
+productMeasurement(
+  FitMeasurementType.HIP,
+  104,
+  104,
+  FitMeasurementBasis.BODY,
+  FitGarmentComponent.JACKET,
+  FitMeasurementRangeType.UPPER_BOUND
+),
+        ],
+
+        mappedChart: null,
+      },
+
+      {
+        sizeId: "l",
+        sizeLabel: "L",
+    chartSortOrder: null,
+
+        productSizeMeasurements: [
+          productMeasurement(
+  FitMeasurementType.BUST,
+  102,
+  102,
+  FitMeasurementBasis.BODY,
+  FitGarmentComponent.JACKET,
+  FitMeasurementRangeType.UPPER_BOUND
+),
+productMeasurement(
+  FitMeasurementType.WAIST,
+  87,
+  87,
+  FitMeasurementBasis.BODY,
+  FitGarmentComponent.JACKET,
+  FitMeasurementRangeType.UPPER_BOUND
+),
+productMeasurement(
+  FitMeasurementType.HIP,
+  112,
+  112,
+  FitMeasurementBasis.BODY,
+  FitGarmentComponent.JACKET,
+  FitMeasurementRangeType.UPPER_BOUND
+),
+        ],
+
+        mappedChart: null,
+      },
+    ],
+  });
+
+  expect(result.status).toBe("RECOMMENDED");
+
+  expect(
+    result.recommendedSize?.sizeLabel
+  ).toBe("L");
+
+  expect(result.suitableSizes).toHaveLength(1);
+
+  const medium =
+    result.assessments.find(
+      (assessment) =>
+        assessment.sizeId === "m"
+    );
+
+  const large =
+    result.assessments.find(
+      (assessment) =>
+        assessment.sizeId === "l"
+    );
+
+  expect(medium).toBeDefined();
+  expect(large).toBeDefined();
+
+  if (!medium || !large) {
+    throw new Error(
+      "Expected both Merrachi sizes to be assessed"
+    );
+  }
+
+  expect(medium.status).toBe("UNSUITABLE");
+  expect(large.status).toBe("SUITABLE");
+
+  expect(
+    medium.requiredMeasurements.map(
+      (measurement) => ({
+        type: measurement.requirement.type,
+        component:
+          measurement.requirement.component,
+        status:
+          measurement.comparison?.status,
+      })
+    )
+  ).toEqual([
+    {
+      type: FitMeasurementType.BUST,
+      component:
+        FitGarmentComponent.JACKET,
+      status: "MATCH",
+    },
+    {
+      type: FitMeasurementType.WAIST,
+      component:
+        FitGarmentComponent.JACKET,
+      status: "ABOVE_RANGE",
+    },
+    {
+      type: FitMeasurementType.HIP,
+      component:
+        FitGarmentComponent.JACKET,
+      status: "ABOVE_RANGE",
+    },
+  ]);
+});
+it("recommends a shirt using only the BODY measurements required by the brand", () => {
+  const shirtSize = {
+    sizeId: "m",
+    sizeLabel: "M",
+    chartSortOrder: null,
+
+    productSizeMeasurements: [
+  productMeasurement(
+    FitMeasurementType.BUST,
+    88,
+    94,
+    FitMeasurementBasis.BODY,
+    FitGarmentComponent.TOP
+  ),
+  productMeasurement(
+    FitMeasurementType.WAIST,
+    70,
+    76,
+    FitMeasurementBasis.BODY,
+    FitGarmentComponent.TOP
+  ),
+],
+
+    mappedChart: null,
+  };
+
+  const input: ProductSizeRecommendationInput = {
+    ...baseDressProduct(),
+
+    productType: ProductType.TOP,
+
+    explicitRequiredBodyFit: [
+      {
+        type: FitMeasurementType.BUST,
+        component: FitGarmentComponent.TOP,
+      },
+      {
+        type: FitMeasurementType.WAIST,
+        component: FitGarmentComponent.TOP,
+      },
+    ],
+
+    shopperMeasurements: [
+      {
+        type: FitMeasurementType.BUST,
+        valueCm: 90,
+      },
+      {
+        type: FitMeasurementType.WAIST,
+        valueCm: 72,
+      },
+      {
+        type: FitMeasurementType.HIP,
+        valueCm: 100,
+      },
+    ],
+
+    sizes: [shirtSize],
+  };
+
+  const withHips = assessProductSizes(input);
+  expect(withHips.status).toBe("RECOMMENDED");
+  expect(withHips.recommendedSize?.sizeLabel).toBe("M");
+
+  const withoutHips = assessProductSizes({
+    ...input,
+    shopperMeasurements: input.shopperMeasurements.filter(
+      (measurement) =>
+        measurement.type !== FitMeasurementType.HIP
+    ),
+  });
+
+  expect(withoutHips.status).toBe("RECOMMENDED");
+  expect(withoutHips.recommendedSize?.sizeLabel).toBe("M");
+  const missingRequiredWaist = assessProductSizes({
+  ...input,
+  sizes: [
+    {
+      ...shirtSize,
+      productSizeMeasurements:
+        shirtSize.productSizeMeasurements.filter(
+          (measurement) =>
+            measurement.type !== FitMeasurementType.WAIST
+        ),
+    },
+  ],
+});
+
+expect(missingRequiredWaist.status).toBe(
+  "INSUFFICIENT_EVIDENCE"
+);
+
+expect(missingRequiredWaist.recommendedSize).toBeNull();
+});
+it("recommends a shirt when the brand requires only BUST", () => {
+  const result = assessProductSizes({
+    ...baseDressProduct(),
+
+    productType: ProductType.TOP,
+
+    explicitRequiredBodyFit: [
+      {
+        type: FitMeasurementType.BUST,
+        component: FitGarmentComponent.TOP,
+      },
+    ],
+
+    shopperMeasurements: [
+      {
+        type: FitMeasurementType.BUST,
+        valueCm: 90,
+      },
+      {
+        type: FitMeasurementType.WAIST,
+        valueCm: 72,
+      },
+      {
+        type: FitMeasurementType.HIP,
+        valueCm: 100,
+      },
+    ],
+
+    sizes: [
+      {
+        sizeId: "m",
+        sizeLabel: "M",
+        chartSortOrder: null,
+
+        productSizeMeasurements: [
+          productMeasurement(
+            FitMeasurementType.BUST,
+            88,
+            94,
+            FitMeasurementBasis.BODY,
+            FitGarmentComponent.TOP
+          ),
+        ],
+
+        mappedChart: null,
+      },
+    ],
+  });
+
+  expect(result.status).toBe("RECOMMENDED");
+  expect(result.recommendedSize?.sizeLabel).toBe("M");
+});
+
     it("preserves ambiguity when multiple sizes are suitable", () => {
       const result = assessProductSizes({
         ...baseDressProduct(),
@@ -999,7 +1342,7 @@ it("remains insufficient when even one required GARMENT policy is unavailable", 
       expect(result.status).toBe(
         "MULTIPLE_SUITABLE"
       );
-
+      expect(result.recommendationReason).toBeUndefined();
       expect(result.recommendedSize).toBeNull();
 
       expect(result.suitableSizes).toHaveLength(
@@ -1072,6 +1415,10 @@ if (result.status !== "RECOMMENDED") {
 expect(
   result.recommendedSize?.sizeId
 ).toBe("m-l");
+
+expect(
+  result.recommendationReason
+).toBe("GARMENT_EASE_PREFERENCE");
 
 expect(result.suitableSizes).toHaveLength(2);
 });
@@ -1376,7 +1723,7 @@ it("does not treat a size as suitable when verified BODY evidence excludes the s
 
   /*
    * The shopper's bust is 94 cm while the verified
-   * BODY range for this size is 88–92 cm.
+   * BODY range for this size is 88Ã¢â‚¬â€œ92 cm.
    *
    * Complete GARMENT evidence must not override
    * that direct BODY incompatibility.
@@ -1431,6 +1778,7 @@ it("does not treat a size as suitable when verified BODY evidence excludes the s
           {
             sizeId: "m",
             sizeLabel: "M",
+    chartSortOrder: null,
 
             productSizeMeasurements: [
               productMeasurement(
@@ -1493,6 +1841,7 @@ it("does not treat a size as suitable when verified BODY evidence excludes the s
           {
             sizeId: "one-size",
             sizeLabel: "One Size",
+    chartSortOrder: null,
             productSizeMeasurements: [],
             mappedChart: null,
           },
@@ -1535,18 +1884,21 @@ it("does not treat a size as suitable when verified BODY evidence excludes the s
         {
           type: "BUST",
           component: "DRESS",
+          rangeType: FitMeasurementRangeType.RANGE,
           minValueCm: 96,
           maxValueCm: 98,
         },
         {
           type: "WAIST",
           component: "DRESS",
+          rangeType: FitMeasurementRangeType.RANGE,
           minValueCm: 78,
           maxValueCm: 80,
         },
         {
           type: "HIP",
           component: "DRESS",
+          rangeType: FitMeasurementRangeType.RANGE,
           minValueCm: 104,
           maxValueCm: 106,
         },
@@ -1620,18 +1972,21 @@ it("does not let observational evidence-derived fit change the existing size sta
         {
           type: "BUST",
           component: "WHOLE_GARMENT",
+          rangeType: FitMeasurementRangeType.RANGE,
           minValueCm: 96,
           maxValueCm: 98,
         },
         {
           type: "WAIST",
           component: "WHOLE_GARMENT",
+          rangeType: FitMeasurementRangeType.RANGE,
           minValueCm: 78,
           maxValueCm: 80,
         },
         {
           type: "HIP",
           component: "WHOLE_GARMENT",
+          rangeType: FitMeasurementRangeType.RANGE,
           minValueCm: 104,
           maxValueCm: 106,
         },
@@ -1686,18 +2041,21 @@ it("carries complete BODY and GARMENT evidence through the recommendation assess
         {
           type: "BUST",
           component: "DRESS",
+          rangeType: FitMeasurementRangeType.RANGE,
           minValueCm: 88,
           maxValueCm: 90,
         },
         {
           type: "WAIST",
           component: "DRESS",
+          rangeType: FitMeasurementRangeType.RANGE,
           minValueCm: 70,
           maxValueCm: 72,
         },
         {
           type: "HIP",
           component: "DRESS",
+          rangeType: FitMeasurementRangeType.RANGE,
           minValueCm: 96,
           maxValueCm: 98,
         },
@@ -1710,18 +2068,21 @@ it("carries complete BODY and GARMENT evidence through the recommendation assess
         {
           type: "BUST",
           component: "DRESS",
+          rangeType: FitMeasurementRangeType.RANGE,
           minValueCm: 96,
           maxValueCm: 98,
         },
         {
           type: "WAIST",
           component: "DRESS",
+          rangeType: FitMeasurementRangeType.RANGE,
           minValueCm: 78,
           maxValueCm: 80,
         },
         {
           type: "HIP",
           component: "DRESS",
+          rangeType: FitMeasurementRangeType.RANGE,
           minValueCm: 104,
           maxValueCm: 106,
         },
@@ -1797,7 +2158,7 @@ it("carries complete BODY and GARMENT evidence through the recommendation assess
 });
 
 
-it("uses the legacy calibrated policy when evidence-derived fit is incomplete", () => {
+it("keeps calibrated GARMENT-only policy output observational when BODY evidence is absent", () => {
   const result = assessSize({
     productType: "DRESS",
     sizeId: "m",
@@ -1828,18 +2189,21 @@ it("uses the legacy calibrated policy when evidence-derived fit is incomplete", 
         {
           type: "BUST",
           component: "DRESS",
+          rangeType: FitMeasurementRangeType.RANGE,
           minValueCm: 96,
           maxValueCm: 98,
         },
         {
           type: "WAIST",
           component: "DRESS",
+          rangeType: FitMeasurementRangeType.RANGE,
           minValueCm: 78,
           maxValueCm: 80,
         },
         {
           type: "HIP",
           component: "DRESS",
+          rangeType: FitMeasurementRangeType.RANGE,
           minValueCm: 104,
           maxValueCm: 106,
         },
@@ -1931,7 +2295,7 @@ it("uses the legacy calibrated policy when evidence-derived fit is incomplete", 
     ).toBe("MATCH");
   }
 
-  expect(result.status).toBe("SUITABLE");
+  expect(result.status).toBe("INSUFFICIENT_EVIDENCE");
 });
 it("allows complete BODY and GARMENT evidence to remain authoritative when the legacy mapped chart has UNKNOWN basis", () => {
   const result = assessSize({
@@ -2043,7 +2407,7 @@ it("allows complete BODY and GARMENT evidence to remain authoritative when the l
 });
 
   });
-  it("does not recommend between suitable sizes when one suitable candidate lacks complete cross-size actual-ease evidence", () => {
+  it("does not let a GARMENT-only calibrated candidate participate in cross-size preference ranking", () => {
   const closerEasePolicies: readonly EasePolicy[] = [
     {
       productType: ProductType.DRESS,
@@ -2153,6 +2517,7 @@ it("allows complete BODY and GARMENT evidence to remain authoritative when the l
       {
         sizeId: "l",
         sizeLabel: "L",
+    chartSortOrder: null,
 
         productSizeMeasurements: [],
 
@@ -2185,59 +2550,1295 @@ it("allows complete BODY and GARMENT evidence to remain authoritative when the l
     ],
   });
 
-  /*
-   * First prove the state we are investigating is
-   * genuinely reachable.
-   */
-  expect(result.suitableSizes).toHaveLength(2);
+ /*
+ * Only the candidate with authoritative BODY evidence
+ * may participate as a suitable size.
+ *
+ * The GARMENT-only candidate may retain calibrated
+ * policy output for diagnostics, but it cannot become
+ * suitable or participate in cross-size preference
+ * ranking.
+ */
+expect(result.suitableSizes).toHaveLength(1);
 
-  const evidenceSize =
-    result.suitableSizes.find(
-      (size) => size.sizeId === "m"
+expect(result.suitableSizes[0]?.sizeId).toBe("m");
+
+const evidenceSize =
+  result.assessments.find(
+    (size) => size.sizeId === "m"
+  );
+
+const garmentOnlySize =
+  result.assessments.find(
+    (size) => size.sizeId === "l"
+  );
+
+expect(evidenceSize).toBeDefined();
+expect(garmentOnlySize).toBeDefined();
+
+if (!evidenceSize || !garmentOnlySize) {
+  throw new Error(
+    "Expected both catalogue sizes to be assessed"
+  );
+}
+
+expect(evidenceSize.status).toBe("SUITABLE");
+
+expect(garmentOnlySize.status).toBe(
+  "INSUFFICIENT_EVIDENCE"
+);
+
+expect(
+  garmentOnlySize.requiredMeasurements.every(
+    (measurement) =>
+      measurement.easePolicy?.status ===
+        "FOUND" &&
+      measurement.garmentEase?.status ===
+        "MATCH"
+  )
+).toBe(true);
+
+/*
+ * Because M is the only authoritative suitable size,
+ * Veilora can recommend it directly. Fit preference
+ * must never manufacture suitability for L.
+ */
+expect(result.status).toBe("RECOMMENDED");
+
+expect(result.recommendedSize?.sizeId).toBe("m");
+});
+
+describe("SETS component-aware BODY authority", () => {
+  it("recommends a TOP + SKIRT set when every required BODY measurement exists on the correct component", () => {
+    const result = assessProductSizes({
+      productType: ProductType.SETS,
+
+      fitComponents: [
+        FitGarmentComponent.TOP,
+        FitGarmentComponent.SKIRT,
+      ],
+
+      intendedFit:
+        ProductIntendedFit.REGULAR,
+
+      stretch: FabricStretch.NONE,
+
+      shopperFitPreference:
+        ShopperFitPreference.REGULAR,
+
+      productMeasurementBasis:
+        FitMeasurementBasis.BODY,
+
+      shopperMeasurements: [
+        {
+          type: FitMeasurementType.BUST,
+          valueCm: 90,
+        },
+        {
+          type: FitMeasurementType.WAIST,
+          valueCm: 72,
+        },
+        {
+          type: FitMeasurementType.HIP,
+          valueCm: 98,
+        },
+      ],
+
+      sizes: [
+        {
+          sizeId: "m",
+          sizeLabel: "M",
+    chartSortOrder: null,
+
+          productSizeMeasurements: [
+            productMeasurement(
+              FitMeasurementType.BUST,
+              88,
+              92,
+              FitMeasurementBasis.BODY,
+              FitGarmentComponent.TOP
+            ),
+            productMeasurement(
+              FitMeasurementType.WAIST,
+              70,
+              74,
+              FitMeasurementBasis.BODY,
+              FitGarmentComponent.SKIRT
+            ),
+            productMeasurement(
+              FitMeasurementType.HIP,
+              96,
+              100,
+              FitMeasurementBasis.BODY,
+              FitGarmentComponent.SKIRT
+            ),
+          ],
+
+          mappedChart: null,
+        },
+      ],
+    });
+
+    expect(result.status).toBe("RECOMMENDED");
+
+    expect(result.recommendedSize?.sizeId).toBe(
+      "m"
     );
 
-  const legacySize =
-    result.suitableSizes.find(
-      (size) => size.sizeId === "l"
+    expect(result.suitableSizes).toHaveLength(1);
+
+    const assessment = result.assessments[0];
+
+    expect(assessment.status).toBe("SUITABLE");
+
+    expect(
+      assessment.requiredMeasurements.map(
+        ({ requirement }) => ({
+          type: requirement.type,
+          component: requirement.component,
+        })
+      )
+    ).toEqual([
+      {
+        type: FitMeasurementType.BUST,
+        component: FitGarmentComponent.TOP,
+      },
+      {
+        type: FitMeasurementType.WAIST,
+        component: FitGarmentComponent.SKIRT,
+      },
+      {
+        type: FitMeasurementType.HIP,
+        component: FitGarmentComponent.SKIRT,
+      },
+    ]);
+  });
+
+  it("does not let BODY evidence on the wrong set component satisfy a TOP + SKIRT requirement", () => {
+    const result = assessSize({
+      productType: ProductType.SETS,
+
+      fitComponents: [
+        FitGarmentComponent.TOP,
+        FitGarmentComponent.SKIRT,
+      ],
+
+      sizeId: "m",
+      sizeLabel: "M",
+
+      intendedFit:
+        ProductIntendedFit.REGULAR,
+
+      stretch: FabricStretch.NONE,
+
+      shopperFitPreference:
+        ShopperFitPreference.REGULAR,
+
+      productMeasurementBasis:
+        FitMeasurementBasis.BODY,
+
+      shopperMeasurements: [
+        {
+          type: FitMeasurementType.BUST,
+          valueCm: 90,
+        },
+        {
+          type: FitMeasurementType.WAIST,
+          valueCm: 72,
+        },
+        {
+          type: FitMeasurementType.HIP,
+          valueCm: 98,
+        },
+      ],
+
+      productSizeMeasurements: [
+        productMeasurement(
+          FitMeasurementType.BUST,
+          88,
+          92,
+          FitMeasurementBasis.BODY,
+          FitGarmentComponent.TOP
+        ),
+
+        /*
+         * Deliberately wrong component.
+         *
+         * TOP + SKIRT requires WAIST / SKIRT.
+         * WAIST / TOP must not satisfy it.
+         */
+        productMeasurement(
+          FitMeasurementType.WAIST,
+          70,
+          74,
+          FitMeasurementBasis.BODY,
+          FitGarmentComponent.TOP
+        ),
+
+        productMeasurement(
+          FitMeasurementType.HIP,
+          96,
+          100,
+          FitMeasurementBasis.BODY,
+          FitGarmentComponent.SKIRT
+        ),
+      ],
+
+      mappedChart: null,
+    });
+
+    expect(result.status).toBe(
+      "INSUFFICIENT_EVIDENCE"
     );
 
-  expect(evidenceSize).toBeDefined();
-  expect(legacySize).toBeDefined();
+    const waist =
+      result.requiredMeasurements.find(
+        ({ requirement }) =>
+          requirement.type ===
+            FitMeasurementType.WAIST &&
+          requirement.component ===
+            FitGarmentComponent.SKIRT
+      );
 
-  if (!evidenceSize || !legacySize) {
+    expect(waist).toBeDefined();
+
+    if (!waist) {
+      throw new Error(
+        "Expected required WAIST / SKIRT assessment"
+      );
+    }
+
+    expect(waist.evidence.body.status).toBe(
+      "MISSING"
+    );
+
+    /*
+     * Most importantly, the WAIST / TOP BODY value
+     * must not leak across the set-component boundary.
+     */
+    expect(waist.comparison).toBeNull();
+  });
+});
+
+it("recommends a TOP + TROUSER set when every required BODY measurement exists on the correct component", () => {
+  const result = assessProductSizes({
+    productType: ProductType.SETS,
+
+    fitComponents: [
+      FitGarmentComponent.TOP,
+      FitGarmentComponent.TROUSER,
+    ],
+
+    intendedFit: ProductIntendedFit.REGULAR,
+    stretch: FabricStretch.NONE,
+
+    shopperFitPreference:
+      ShopperFitPreference.REGULAR,
+
+    productMeasurementBasis:
+      FitMeasurementBasis.BODY,
+
+   shopperMeasurements: [
+  {
+    type: FitMeasurementType.BUST,
+    valueCm: 90,
+  },
+  {
+    type: FitMeasurementType.WAIST,
+    valueCm: 72,
+  },
+  {
+    type: FitMeasurementType.HIP,
+    valueCm: 98,
+  },
+],
+
+    sizes: [
+      {
+        sizeId: "m",
+        sizeLabel: "M",
+    chartSortOrder: null,
+
+        productSizeMeasurements: [
+          productMeasurement(
+            FitMeasurementType.BUST,
+            88,
+            92,
+            FitMeasurementBasis.BODY,
+            FitGarmentComponent.TOP
+          ),
+
+          productMeasurement(
+            FitMeasurementType.WAIST,
+            70,
+            74,
+            FitMeasurementBasis.BODY,
+            FitGarmentComponent.TROUSER
+          ),
+
+          productMeasurement(
+            FitMeasurementType.HIP,
+            96,
+            100,
+            FitMeasurementBasis.BODY,
+            FitGarmentComponent.TROUSER
+          ),
+        ],
+
+        mappedChart: null,
+      },
+    ],
+  });
+
+  expect(result.status).toBe("RECOMMENDED");
+
+  expect(result.recommendedSize?.sizeId).toBe(
+    "m"
+  );
+
+  expect(result.suitableSizes).toHaveLength(1);
+
+  const assessment = result.assessments[0];
+
+  expect(assessment.status).toBe("SUITABLE");
+
+  expect(
+    assessment.requiredMeasurements.map(
+      (measurement) => ({
+        type: measurement.requirement.type,
+        component:
+          measurement.requirement.component,
+      })
+    )
+  ).toEqual([
+    {
+      type: FitMeasurementType.BUST,
+      component: FitGarmentComponent.TOP,
+    },
+    {
+      type: FitMeasurementType.WAIST,
+      component: FitGarmentComponent.TROUSER,
+    },
+    {
+      type: FitMeasurementType.HIP,
+      component: FitGarmentComponent.TROUSER,
+    },
+  ]);
+});
+
+it("does not let correct-component GARMENT evidence replace missing BODY evidence for a TOP + TROUSER set", () => {
+  const result = assessSize({
+    productType: ProductType.SETS,
+
+    fitComponents: [
+      FitGarmentComponent.TOP,
+      FitGarmentComponent.TROUSER,
+    ],
+
+    sizeId: "m",
+    sizeLabel: "M",
+
+    intendedFit: ProductIntendedFit.REGULAR,
+    stretch: FabricStretch.NONE,
+
+    shopperFitPreference:
+      ShopperFitPreference.REGULAR,
+
+    productMeasurementBasis:
+      FitMeasurementBasis.BODY,
+
+    shopperMeasurements: [
+  {
+    type: FitMeasurementType.BUST,
+    valueCm: 90,
+  },
+  {
+    type: FitMeasurementType.WAIST,
+    valueCm: 72,
+  },
+  {
+    type: FitMeasurementType.HIP,
+    valueCm: 98,
+  },
+],
+
+    productSizeMeasurements: [
+      productMeasurement(
+        FitMeasurementType.BUST,
+        88,
+        92,
+        FitMeasurementBasis.BODY,
+        FitGarmentComponent.TOP
+      ),
+
+      /*
+       * Deliberately GARMENT rather than BODY.
+       *
+       * The component is correct, but garment
+       * evidence alone is not recommendation
+       * authority.
+       */
+      productMeasurement(
+        FitMeasurementType.WAIST,
+        80,
+        80,
+        FitMeasurementBasis.GARMENT,
+        FitGarmentComponent.TROUSER
+      ),
+
+      productMeasurement(
+        FitMeasurementType.HIP,
+        96,
+        100,
+        FitMeasurementBasis.BODY,
+        FitGarmentComponent.TROUSER
+      ),
+    ],
+
+    mappedChart: null,
+  });
+
+  expect(result.status).toBe(
+    "INSUFFICIENT_EVIDENCE"
+  );
+
+  const waist =
+    result.requiredMeasurements.find(
+      (measurement) =>
+        measurement.requirement.type ===
+          FitMeasurementType.WAIST &&
+        measurement.requirement.component ===
+          FitGarmentComponent.TROUSER
+    );
+
+  expect(waist).toBeDefined();
+
+  if (!waist) {
     throw new Error(
-      "Expected both evidence-derived and legacy sizes to be suitable"
+      "Expected WAIST / TROUSER assessment"
     );
   }
 
-  expect(
-    evidenceSize.requiredMeasurements.every(
-      (measurement) =>
-        measurement.evidenceDerivedFit.actualEase
-          ?.status === "CALCULATED"
-    )
-  ).toBe(true);
-
-  expect(
-    legacySize.requiredMeasurements.every(
-      (measurement) =>
-        measurement.evidenceDerivedFit.actualEase ===
-          null ||
-        measurement.evidenceDerivedFit.actualEase
-          .status !== "CALCULATED"
-    )
-  ).toBe(true);
-
-  /*
-   * Preference must not manufacture a unique winner
-   * by silently discarding the legacy candidate's
-   * missing preference dimensions.
-   */
-  expect(result.status).toBe(
-    "MULTIPLE_SUITABLE"
+  expect(waist.evidence.body.status).toBe(
+    "MISSING"
   );
 
+  expect(waist.evidence.garment.status).toBe(
+    "RESOLVED"
+  );
+
+  expect(waist.comparison).toEqual({
+  type: FitMeasurementType.WAIST,
+  shopperValueCm: 72,
+  measurementRange: {
+    minValueCm: 80,
+    maxValueCm: 80,
+  },
+  basis: FitMeasurementBasis.GARMENT,
+  status: "REQUIRES_EASE_INTERPRETATION",
+  reason: "GARMENT_MEASUREMENT",
+});
+
+  expect(
+    waist.evidenceDerivedSuitability.status
+  ).toBe("INSUFFICIENT_EVIDENCE");
+});
+describe("ACTIVEWEAR component-aware BODY authority", () => {
+  it("recommends an activewear TOP from BUST / TOP without requiring waist or hip", () => {
+    const result = assessProductSizes({
+      productType: ProductType.ACTIVEWEAR,
+
+      fitComponents: [
+        FitGarmentComponent.TOP,
+      ],
+
+      intendedFit:
+        ProductIntendedFit.REGULAR,
+
+      stretch: FabricStretch.NONE,
+
+      shopperFitPreference:
+        ShopperFitPreference.REGULAR,
+
+      productMeasurementBasis:
+        FitMeasurementBasis.BODY,
+
+      shopperMeasurements: [
+        {
+          type: FitMeasurementType.BUST,
+          valueCm: 90,
+        },
+      ],
+
+      sizes: [
+        {
+          sizeId: "m",
+          sizeLabel: "M",
+    chartSortOrder: null,
+
+          productSizeMeasurements: [
+            productMeasurement(
+              FitMeasurementType.BUST,
+              88,
+              92,
+              FitMeasurementBasis.BODY,
+              FitGarmentComponent.TOP
+            ),
+          ],
+
+          mappedChart: null,
+        },
+      ],
+    });
+
+    expect(result.status).toBe("RECOMMENDED");
+
+    expect(
+      result.recommendedSize?.sizeId
+    ).toBe("m");
+
+    expect(
+      result.assessments[0]
+        ?.requiredMeasurements.map(
+          ({ requirement }) => ({
+            type: requirement.type,
+            component:
+              requirement.component,
+          })
+        )
+    ).toEqual([
+      {
+        type: FitMeasurementType.BUST,
+        component: FitGarmentComponent.TOP,
+      },
+    ]);
+  });
+
+  it("recommends activewear TROUSER from WAIST and HIP / TROUSER without requiring bust", () => {
+    const result = assessProductSizes({
+      productType: ProductType.ACTIVEWEAR,
+
+      fitComponents: [
+        FitGarmentComponent.TROUSER,
+      ],
+
+      intendedFit:
+        ProductIntendedFit.REGULAR,
+
+      stretch: FabricStretch.NONE,
+
+      shopperFitPreference:
+        ShopperFitPreference.REGULAR,
+
+      productMeasurementBasis:
+        FitMeasurementBasis.BODY,
+
+      shopperMeasurements: [
+        {
+          type: FitMeasurementType.WAIST,
+          valueCm: 72,
+        },
+        {
+          type: FitMeasurementType.HIP,
+          valueCm: 98,
+        },
+      ],
+
+      sizes: [
+        {
+          sizeId: "m",
+          sizeLabel: "M",
+    chartSortOrder: null,
+
+          productSizeMeasurements: [
+            productMeasurement(
+              FitMeasurementType.WAIST,
+              70,
+              74,
+              FitMeasurementBasis.BODY,
+              FitGarmentComponent.TROUSER
+            ),
+            productMeasurement(
+              FitMeasurementType.HIP,
+              96,
+              100,
+              FitMeasurementBasis.BODY,
+              FitGarmentComponent.TROUSER
+            ),
+          ],
+
+          mappedChart: null,
+        },
+      ],
+    });
+
+    expect(result.status).toBe("RECOMMENDED");
+
+    expect(
+      result.recommendedSize?.sizeId
+    ).toBe("m");
+
+    expect(
+      result.assessments[0]
+        ?.requiredMeasurements.map(
+          ({ requirement }) => ({
+            type: requirement.type,
+            component:
+              requirement.component,
+          })
+        )
+    ).toEqual([
+      {
+        type: FitMeasurementType.WAIST,
+        component:
+          FitGarmentComponent.TROUSER,
+      },
+      {
+        type: FitMeasurementType.HIP,
+        component:
+          FitGarmentComponent.TROUSER,
+      },
+    ]);
+  });
+
+  it("recommends an activewear TOP + TROUSER product only when every required BODY measurement exists on the correct component", () => {
+    const result = assessProductSizes({
+      productType: ProductType.ACTIVEWEAR,
+
+      fitComponents: [
+        FitGarmentComponent.TOP,
+        FitGarmentComponent.TROUSER,
+      ],
+
+      intendedFit:
+        ProductIntendedFit.REGULAR,
+
+      stretch: FabricStretch.NONE,
+
+      shopperFitPreference:
+        ShopperFitPreference.REGULAR,
+
+      productMeasurementBasis:
+        FitMeasurementBasis.BODY,
+
+      shopperMeasurements: [
+        {
+          type: FitMeasurementType.BUST,
+          valueCm: 90,
+        },
+        {
+          type: FitMeasurementType.WAIST,
+          valueCm: 72,
+        },
+        {
+          type: FitMeasurementType.HIP,
+          valueCm: 98,
+        },
+      ],
+
+      sizes: [
+        {
+          sizeId: "m",
+          sizeLabel: "M",
+    chartSortOrder: null,
+
+          productSizeMeasurements: [
+            productMeasurement(
+              FitMeasurementType.BUST,
+              88,
+              92,
+              FitMeasurementBasis.BODY,
+              FitGarmentComponent.TOP
+            ),
+            productMeasurement(
+              FitMeasurementType.WAIST,
+              70,
+              74,
+              FitMeasurementBasis.BODY,
+              FitGarmentComponent.TROUSER
+            ),
+            productMeasurement(
+              FitMeasurementType.HIP,
+              96,
+              100,
+              FitMeasurementBasis.BODY,
+              FitGarmentComponent.TROUSER
+            ),
+          ],
+
+          mappedChart: null,
+        },
+      ],
+    });
+
+    expect(result.status).toBe("RECOMMENDED");
+
+    expect(
+      result.recommendedSize?.sizeId
+    ).toBe("m");
+
+    expect(
+      result.assessments[0]
+        ?.requiredMeasurements.map(
+          ({ requirement }) => ({
+            type: requirement.type,
+            component:
+              requirement.component,
+          })
+        )
+    ).toEqual([
+      {
+        type: FitMeasurementType.BUST,
+        component: FitGarmentComponent.TOP,
+      },
+      {
+        type: FitMeasurementType.WAIST,
+        component:
+          FitGarmentComponent.TROUSER,
+      },
+      {
+        type: FitMeasurementType.HIP,
+        component:
+          FitGarmentComponent.TROUSER,
+      },
+    ]);
+  });
+
+  it("does not let BODY evidence on the wrong component satisfy an activewear TROUSER requirement", () => {
+    const result = assessSize({
+      productType: ProductType.ACTIVEWEAR,
+
+      fitComponents: [
+        FitGarmentComponent.TROUSER,
+      ],
+
+      sizeId: "m",
+      sizeLabel: "M",
+
+      intendedFit:
+        ProductIntendedFit.REGULAR,
+
+      stretch: FabricStretch.NONE,
+
+      shopperFitPreference:
+        ShopperFitPreference.REGULAR,
+
+      productMeasurementBasis:
+        FitMeasurementBasis.BODY,
+
+      shopperMeasurements: [
+        {
+          type: FitMeasurementType.WAIST,
+          valueCm: 72,
+        },
+        {
+          type: FitMeasurementType.HIP,
+          valueCm: 98,
+        },
+      ],
+
+      productSizeMeasurements: [
+        productMeasurement(
+          FitMeasurementType.WAIST,
+          70,
+          74,
+          FitMeasurementBasis.BODY,
+          FitGarmentComponent.TOP
+        ),
+        productMeasurement(
+          FitMeasurementType.HIP,
+          96,
+          100,
+          FitMeasurementBasis.BODY,
+          FitGarmentComponent.TROUSER
+        ),
+      ],
+
+      mappedChart: null,
+    });
+
+    expect(result.status).toBe(
+      "INSUFFICIENT_EVIDENCE"
+    );
+
+    const waist =
+      result.requiredMeasurements.find(
+        ({ requirement }) =>
+          requirement.type ===
+            FitMeasurementType.WAIST &&
+          requirement.component ===
+            FitGarmentComponent.TROUSER
+      );
+
+    expect(waist).toBeDefined();
+
+    if (!waist) {
+      throw new Error(
+        "Expected required WAIST / TROUSER assessment"
+      );
+    }
+
+    expect(
+      waist.evidence.body.status
+    ).toBe("MISSING");
+
+    expect(waist.comparison).toBeNull();
+  });
+
+  it("does not let GARMENT evidence replace required BODY evidence for activewear trousers", () => {
+    const result = assessSize({
+      productType: ProductType.ACTIVEWEAR,
+
+      fitComponents: [
+        FitGarmentComponent.TROUSER,
+      ],
+
+      sizeId: "m",
+      sizeLabel: "M",
+
+      intendedFit:
+        ProductIntendedFit.REGULAR,
+
+      stretch: FabricStretch.NONE,
+
+      shopperFitPreference:
+        ShopperFitPreference.REGULAR,
+
+      productMeasurementBasis:
+        FitMeasurementBasis.BODY,
+
+      shopperMeasurements: [
+        {
+          type: FitMeasurementType.WAIST,
+          valueCm: 72,
+        },
+        {
+          type: FitMeasurementType.HIP,
+          valueCm: 98,
+        },
+      ],
+
+      productSizeMeasurements: [
+        productMeasurement(
+          FitMeasurementType.WAIST,
+          80,
+          80,
+          FitMeasurementBasis.GARMENT,
+          FitGarmentComponent.TROUSER
+        ),
+        productMeasurement(
+          FitMeasurementType.HIP,
+          100,
+          100,
+          FitMeasurementBasis.GARMENT,
+          FitGarmentComponent.TROUSER
+        ),
+      ],
+
+      mappedChart: null,
+    });
+
+    expect(result.status).toBe(
+      "INSUFFICIENT_EVIDENCE"
+    );
+
+    expect(
+      result.requiredMeasurements.every(
+        (measurement) =>
+          measurement.evidence.body.status ===
+          "MISSING"
+      )
+    ).toBe(true);
+  });
+  describe("ordered UPPER_BOUND BODY chart recommendations", () => {
+  it("recommends L for the Merrachi blazer instead of treating XL as equally recommended", () => {
+    const requirements = [
+      {
+        type: FitMeasurementType.BUST,
+        component: FitGarmentComponent.JACKET,
+      },
+      {
+        type: FitMeasurementType.WAIST,
+        component: FitGarmentComponent.JACKET,
+      },
+      {
+        type: FitMeasurementType.HIP,
+        component: FitGarmentComponent.JACKET,
+      },
+    ];
+
+    const chartSizes = [
+      { label: "XS", bust: 80, waist: 65, hip: 90 },
+      { label: "S", bust: 86, waist: 71, hip: 96 },
+      { label: "M", bust: 94, waist: 79, hip: 104 },
+      { label: "L", bust: 102, waist: 87, hip: 112 },
+      { label: "XL", bust: 112, waist: 97, hip: 122 },
+    ];
+
+    const input: ProductSizeRecommendationInput = {
+      productType: ProductType.BLAZER,
+      intendedFit: ProductIntendedFit.REGULAR,
+      stretch: FabricStretch.UNKNOWN,
+      shopperFitPreference: ShopperFitPreference.REGULAR,
+      productMeasurementBasis: FitMeasurementBasis.BODY,
+
+      explicitRequiredBodyFit: requirements,
+
+      shopperMeasurements: [
+        { type: FitMeasurementType.BUST, valueCm: 94 },
+        { type: FitMeasurementType.WAIST, valueCm: 87 },
+        { type: FitMeasurementType.HIP, valueCm: 112 },
+      ],
+
+      sizes: chartSizes.map((size, index) => ({
+        sizeId: size.label,
+        sizeLabel: size.label,
+        chartSortOrder: index,
+
+        productSizeMeasurements: [],
+        mappedChart: null,
+
+        bodyMappedChart: {
+          measurementBasis: FitMeasurementBasis.BODY,
+          measurements: [
+            bodyMeasurement(
+              FitMeasurementType.BUST,
+              size.bust,
+              size.bust,
+              FitGarmentComponent.JACKET,
+              FitMeasurementRangeType.UPPER_BOUND
+            ),
+            bodyMeasurement(
+              FitMeasurementType.WAIST,
+              size.waist,
+              size.waist,
+              FitGarmentComponent.JACKET,
+              FitMeasurementRangeType.UPPER_BOUND
+            ),
+            bodyMeasurement(
+              FitMeasurementType.HIP,
+              size.hip,
+              size.hip,
+              FitGarmentComponent.JACKET,
+              FitMeasurementRangeType.UPPER_BOUND
+            ),
+          ],
+        },
+
+        garmentMappedChart: null,
+      })),
+    };
+
+    const result = assessProductSizes(input);
+
+    expect(result.status).toBe("RECOMMENDED");
+    expect(result.recommendationReason).toBe(
+        "BODY_CHART_FIRST_SUITABLE"
+      );
+    expect(result.recommendedSize?.sizeLabel).toBe("L");
+
+    expect(
+      result.suitableSizes.map((size) => size.sizeLabel)
+    ).toEqual(["L", "XL"]);
+
+    expect(
+      result.assessments.find((size) => size.sizeLabel === "M")
+        ?.status
+    ).toBe("UNSUITABLE");
+  });
+});
+it("does not recommend a size when chart ordering contains duplicates", () => {
+  const requirements = [
+    {
+      type: FitMeasurementType.BUST,
+      component: FitGarmentComponent.JACKET,
+    },
+    {
+      type: FitMeasurementType.WAIST,
+      component: FitGarmentComponent.JACKET,
+    },
+    {
+      type: FitMeasurementType.HIP,
+      component: FitGarmentComponent.JACKET,
+    },
+  ];
+
+  const chartSizes = [
+    { label: "M", bust: 94, waist: 79, hip: 104, order: 2 },
+    { label: "L", bust: 102, waist: 87, hip: 112, order: 3 },
+    { label: "XL", bust: 112, waist: 97, hip: 122, order: 3 },
+  ];
+
+  const input: ProductSizeRecommendationInput = {
+    productType: ProductType.BLAZER,
+    intendedFit: ProductIntendedFit.REGULAR,
+    stretch: FabricStretch.UNKNOWN,
+    shopperFitPreference: ShopperFitPreference.REGULAR,
+    productMeasurementBasis: FitMeasurementBasis.BODY,
+    explicitRequiredBodyFit: requirements,
+
+    shopperMeasurements: [
+      { type: FitMeasurementType.BUST, valueCm: 94 },
+      { type: FitMeasurementType.WAIST, valueCm: 87 },
+      { type: FitMeasurementType.HIP, valueCm: 112 },
+    ],
+
+    sizes: chartSizes.map((size) => ({
+      sizeId: size.label,
+      sizeLabel: size.label,
+      chartSortOrder: size.order,
+      productSizeMeasurements: [],
+      mappedChart: null,
+
+      bodyMappedChart: {
+        measurementBasis: FitMeasurementBasis.BODY,
+        measurements: [
+          bodyMeasurement(
+            FitMeasurementType.BUST,
+            size.bust,
+            size.bust,
+            FitGarmentComponent.JACKET,
+            FitMeasurementRangeType.UPPER_BOUND
+          ),
+          bodyMeasurement(
+            FitMeasurementType.WAIST,
+            size.waist,
+            size.waist,
+            FitGarmentComponent.JACKET,
+            FitMeasurementRangeType.UPPER_BOUND
+          ),
+          bodyMeasurement(
+            FitMeasurementType.HIP,
+            size.hip,
+            size.hip,
+            FitGarmentComponent.JACKET,
+            FitMeasurementRangeType.UPPER_BOUND
+          ),
+        ],
+      },
+
+      garmentMappedChart: null,
+    })),
+  };
+
+  const result = assessProductSizes(input);
+
+  expect(result.status).toBe("MULTIPLE_SUITABLE");
+  expect(result.recommendedSize).toBeNull();
+});
+it("does not recommend a size when chart ordering is missing", () => {
+  const chartSizes = [
+    { label: "M", bust: 94, waist: 79, hip: 104, order: 2 },
+    { label: "L", bust: 102, waist: 87, hip: 112, order: null },
+    { label: "XL", bust: 112, waist: 97, hip: 122, order: 4 },
+  ];
+
+  const input: ProductSizeRecommendationInput = {
+    productType: ProductType.BLAZER,
+    intendedFit: ProductIntendedFit.REGULAR,
+    stretch: FabricStretch.UNKNOWN,
+    shopperFitPreference: ShopperFitPreference.REGULAR,
+    productMeasurementBasis: FitMeasurementBasis.BODY,
+
+    explicitRequiredBodyFit: [
+      { type: FitMeasurementType.BUST, component: FitGarmentComponent.JACKET },
+      { type: FitMeasurementType.WAIST, component: FitGarmentComponent.JACKET },
+      { type: FitMeasurementType.HIP, component: FitGarmentComponent.JACKET },
+    ],
+
+    shopperMeasurements: [
+      { type: FitMeasurementType.BUST, valueCm: 94 },
+      { type: FitMeasurementType.WAIST, valueCm: 87 },
+      { type: FitMeasurementType.HIP, valueCm: 112 },
+    ],
+
+    sizes: chartSizes.map((size) => ({
+      sizeId: size.label,
+      sizeLabel: size.label,
+      chartSortOrder: size.order,
+      productSizeMeasurements: [],
+      mappedChart: null,
+
+      bodyMappedChart: {
+        measurementBasis: FitMeasurementBasis.BODY,
+        measurements: [
+          bodyMeasurement(
+            FitMeasurementType.BUST,
+            size.bust,
+            size.bust,
+            FitGarmentComponent.JACKET,
+            FitMeasurementRangeType.UPPER_BOUND
+          ),
+          bodyMeasurement(
+            FitMeasurementType.WAIST,
+            size.waist,
+            size.waist,
+            FitGarmentComponent.JACKET,
+            FitMeasurementRangeType.UPPER_BOUND
+          ),
+          bodyMeasurement(
+            FitMeasurementType.HIP,
+            size.hip,
+            size.hip,
+            FitGarmentComponent.JACKET,
+            FitMeasurementRangeType.UPPER_BOUND
+          ),
+        ],
+      },
+
+      garmentMappedChart: null,
+    })),
+  };
+
+  const result = assessProductSizes(input);
+
+  expect(result.status).toBe("MULTIPLE_SUITABLE");
   expect(result.recommendedSize).toBeNull();
 });
 
+it("does not apply the upper-bound fallback to mixed measurement semantics", () => {
+  const chartSizes = [
+    { label: "M", bust: 94, waist: 79, hip: 104, order: 2 },
+    { label: "L", bust: 102, waist: 87, hip: 112, order: 3 },
+    { label: "XL", bust: 112, waist: 97, hip: 122, order: 4 },
+  ];
+
+  const input: ProductSizeRecommendationInput = {
+    productType: ProductType.BLAZER,
+    intendedFit: ProductIntendedFit.REGULAR,
+    stretch: FabricStretch.UNKNOWN,
+    shopperFitPreference: ShopperFitPreference.REGULAR,
+    productMeasurementBasis: FitMeasurementBasis.BODY,
+
+    explicitRequiredBodyFit: [
+      { type: FitMeasurementType.BUST, component: FitGarmentComponent.JACKET },
+      { type: FitMeasurementType.WAIST, component: FitGarmentComponent.JACKET },
+      { type: FitMeasurementType.HIP, component: FitGarmentComponent.JACKET },
+    ],
+
+    shopperMeasurements: [
+      { type: FitMeasurementType.BUST, valueCm: 94 },
+      { type: FitMeasurementType.WAIST, valueCm: 87 },
+      { type: FitMeasurementType.HIP, valueCm: 112 },
+    ],
+
+    sizes: chartSizes.map((size) => ({
+      sizeId: size.label,
+      sizeLabel: size.label,
+      chartSortOrder: size.order,
+      productSizeMeasurements: [],
+      mappedChart: null,
+
+      bodyMappedChart: {
+        measurementBasis: FitMeasurementBasis.BODY,
+        measurements: [
+          bodyMeasurement(
+            FitMeasurementType.BUST,
+            size.bust,
+            size.bust,
+            FitGarmentComponent.JACKET,
+            FitMeasurementRangeType.UPPER_BOUND
+          ),
+          bodyMeasurement(
+            FitMeasurementType.WAIST,
+            size.label === "XL" ? 80 : size.waist,
+            size.waist,
+            FitGarmentComponent.JACKET,
+            size.label === "XL"
+              ? FitMeasurementRangeType.RANGE
+              : FitMeasurementRangeType.UPPER_BOUND
+          ),
+          bodyMeasurement(
+            FitMeasurementType.HIP,
+            size.hip,
+            size.hip,
+            FitGarmentComponent.JACKET,
+            FitMeasurementRangeType.UPPER_BOUND
+          ),
+        ],
+      },
+
+      garmentMappedChart: null,
+    })),
+  };
+
+  const result = assessProductSizes(input);
+
+  expect(result.status).toBe("MULTIPLE_SUITABLE");
+  expect(result.recommendedSize).toBeNull();
+});
+it("does not apply the upper-bound fallback when chart measurements decrease", () => {
+  const chartSizes = [
+    { label: "M", bust: 94, waist: 79, hip: 104, order: 2 },
+    { label: "L", bust: 102, waist: 87, hip: 112, order: 3 },
+    { label: "XL", bust: 112, waist: 85, hip: 122, order: 4 },
+  ];
+
+  const input: ProductSizeRecommendationInput = {
+    productType: ProductType.BLAZER,
+    intendedFit: ProductIntendedFit.REGULAR,
+    stretch: FabricStretch.UNKNOWN,
+    shopperFitPreference: ShopperFitPreference.REGULAR,
+    productMeasurementBasis: FitMeasurementBasis.BODY,
+
+    explicitRequiredBodyFit: [
+      { type: FitMeasurementType.BUST, component: FitGarmentComponent.JACKET },
+      { type: FitMeasurementType.WAIST, component: FitGarmentComponent.JACKET },
+      { type: FitMeasurementType.HIP, component: FitGarmentComponent.JACKET },
+    ],
+
+    shopperMeasurements: [
+      { type: FitMeasurementType.BUST, valueCm: 94 },
+      { type: FitMeasurementType.WAIST, valueCm: 85 },
+      { type: FitMeasurementType.HIP, valueCm: 112 },
+    ],
+
+    sizes: chartSizes.map((size) => ({
+      sizeId: size.label,
+      sizeLabel: size.label,
+      chartSortOrder: size.order,
+      productSizeMeasurements: [],
+      mappedChart: null,
+
+      bodyMappedChart: {
+        measurementBasis: FitMeasurementBasis.BODY,
+        measurements: [
+          bodyMeasurement(
+            FitMeasurementType.BUST,
+            size.bust,
+            size.bust,
+            FitGarmentComponent.JACKET,
+            FitMeasurementRangeType.UPPER_BOUND
+          ),
+          bodyMeasurement(
+            FitMeasurementType.WAIST,
+            size.waist,
+            size.waist,
+            FitGarmentComponent.JACKET,
+            FitMeasurementRangeType.UPPER_BOUND
+          ),
+          bodyMeasurement(
+            FitMeasurementType.HIP,
+            size.hip,
+            size.hip,
+            FitGarmentComponent.JACKET,
+            FitMeasurementRangeType.UPPER_BOUND
+          ),
+        ],
+      },
+
+      garmentMappedChart: null,
+    })),
+  };
+
+  const result = assessProductSizes(input);
+
+  expect(result.status).toBe("MULTIPLE_SUITABLE");
+  expect(result.recommendedSize).toBeNull();
+
+  expect(
+    result.suitableSizes.map((size) => size.sizeLabel)
+  ).toEqual(["L", "XL"]);
+});
+});
 });

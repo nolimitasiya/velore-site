@@ -19,14 +19,15 @@ function makeProductSize({
   sizeLabel: string;
   sourceUnit?: "CM" | "IN";
   measurementBasis?: "BODY" | "GARMENT" | "UNKNOWN";
-  measurements?: Array<{
-    type: string;
-    component: string;
-    minValueCm?: number | null;
-    maxValueCm?: number | null;
-    sourceMinValue?: number | null;
-    sourceMaxValue?: number | null;
-  }>;
+ measurements?: Array<{
+  type: string;
+  component: string;
+  rangeType?: "RANGE" | "UPPER_BOUND";
+  minValueCm?: number | null;
+  maxValueCm?: number | null;
+  sourceMinValue?: number | null;
+  sourceMaxValue?: number | null;
+}>;
 }) {
   return {
     productId: "product-1",
@@ -67,6 +68,7 @@ function makeProductSize({
             entryId: `entry-${chartId}-${sizeLabel}`,
             type: measurement.type,
             component: measurement.component,
+            rangeType: measurement.rangeType ?? "RANGE",
             sourceUnit,
             minValueCm:
               measurement.minValueCm ?? null,
@@ -293,5 +295,88 @@ describe("presentProductSizeCharts", () => {
       (entry) => entry.productSize.label
     )
   ).toEqual(["S", "M", "L"]);
+});
+it("preserves RANGE measurement semantics", () => {
+  const result = presentProductSizeCharts([
+    makeProductSize({
+      productSizeId: "size-m",
+      productSizeName: "M",
+      sizeLabel: "M",
+      measurementBasis: "BODY",
+      measurements: [
+        {
+          type: "BUST",
+          component: "DRESS",
+          rangeType: "RANGE",
+          minValueCm: 88,
+          maxValueCm: 96,
+        },
+      ],
+    }),
+  ] as never);
+
+  expect(
+    result[0].entries[0].measurements[0]
+  ).toMatchObject({
+    rangeType: "RANGE",
+    minValueCm: 88,
+    maxValueCm: 96,
+  });
+});
+
+it("preserves UPPER_BOUND without inventing a minimum", () => {
+  const result = presentProductSizeCharts([
+    makeProductSize({
+      productSizeId: "size-m",
+      productSizeName: "M",
+      sizeLabel: "M",
+      measurementBasis: "BODY",
+      measurements: [
+        {
+          type: "BUST",
+          component: "DRESS",
+          rangeType: "UPPER_BOUND",
+          minValueCm: null,
+          maxValueCm: 96,
+        },
+      ],
+    }),
+  ] as never);
+
+  expect(
+    result[0].entries[0].measurements[0]
+  ).toMatchObject({
+    rangeType: "UPPER_BOUND",
+    minValueCm: null,
+    maxValueCm: 96,
+  });
+});
+
+it("preserves an incomplete RANGE as incomplete", () => {
+  const result = presentProductSizeCharts([
+    makeProductSize({
+      productSizeId: "size-m",
+      productSizeName: "M",
+      sizeLabel: "M",
+      measurementBasis: "BODY",
+      measurements: [
+        {
+          type: "BUST",
+          component: "DRESS",
+          rangeType: "RANGE",
+          minValueCm: null,
+          maxValueCm: 96,
+        },
+      ],
+    }),
+  ] as never);
+
+  expect(
+    result[0].entries[0].measurements[0]
+  ).toMatchObject({
+    rangeType: "RANGE",
+    minValueCm: null,
+    maxValueCm: 96,
+  });
 });
 });

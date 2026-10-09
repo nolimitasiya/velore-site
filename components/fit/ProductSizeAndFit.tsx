@@ -25,6 +25,11 @@ import {
   selectUniqueLengthMatch,
 } from "@/lib/fit/presentation/selectUniqueLengthMatch";
 
+import { getLengthMeasurementSemantic } from "@/lib/fit/lengthMeasurementSemantic";
+import {
+  formatMeasurementValue,
+} from "@/lib/fit/presentation/formatMeasurementValue";
+
 type DisplayUnit = "CM" | "IN";
 
 type Props = {
@@ -36,7 +41,6 @@ type Props = {
   isOneSizeProduct: boolean;
 };
 const CM_PER_INCH = 2.54;
-
 function formatMeasurementLabel(
   type: string,
   component: string
@@ -95,55 +99,6 @@ function formatNumber(value: number) {
     ? String(rounded)
     : rounded.toFixed(1);
 }
-
-function formatMeasurementValue(
-  minValueCm: number | null,
-  maxValueCm: number | null,
-  unit: DisplayUnit
-) {
-  if (
-    minValueCm === null &&
-    maxValueCm === null
-  ) {
-    return "—";
-  }
-
-  const convert = (value: number) =>
-    unit === "CM"
-      ? value
-      : value / CM_PER_INCH;
-
-  const minValue =
-    minValueCm === null
-      ? null
-      : convert(minValueCm);
-
-  const maxValue =
-    maxValueCm === null
-      ? null
-      : convert(maxValueCm);
-
-  if (
-    minValue !== null &&
-    maxValue !== null
-  ) {
-    if (
-      Math.abs(minValue - maxValue) <
-      0.0001
-    ) {
-      return formatNumber(minValue);
-    }
-
-    return `${formatNumber(
-      minValue
-    )}–${formatNumber(maxValue)}`;
-  }
-
-  return formatNumber(
-    minValue ?? maxValue!
-  );
-}
-
 function formatLengthRange(
   range: {
     min: number;
@@ -215,7 +170,15 @@ export default function ProductSizeAndFit({
   lengthPresentation.structure === "SIZE_ATTACHED"
     ? lengthPresentation
     : null;
-    const lengthBasedSizePresentation =
+
+  const sizeAttachedLengthSemantic =
+    sizeAttachedLengthPresentation
+    ? getLengthMeasurementSemantic(
+        sizeAttachedLengthPresentation.measurementType
+      )
+    : null;
+
+  const lengthBasedSizePresentation =
   lengthPresentation?.state === "ASSESSED" &&
   lengthPresentation.structure ===
     "LENGTH_BASED_SIZE"
@@ -264,16 +227,44 @@ const recommendedSizeLength =
       ) ?? null
     : null;
 
-  const recommendedSizeLengthDifferenceCm =
-    recommendedSizeLength
+  const alternativeExactLengthMatch =
+      presentation.state === "RECOMMENDED" &&
+  sizeAttachedLengthPresentation
+    ? selectUniqueLengthMatch(
+        sizeAttachedLengthPresentation.sizes.filter(
+          (size) =>
+            size.id !==
+            presentation.recommendedSize.id
+        )
+      )
+    : null;
+
+ const recommendedSizeLengthDifferenceCm =
+  recommendedSizeLength
     ? (() => {
-  const garmentLength =
-          recommendedSizeLength.garmentRangeCm.min;
+        const garmentRange =
+          recommendedSizeLength.garmentRangeCm;
 
-  const preferredLength =
-          recommendedSizeLength.shopperReferenceCm.min;
+        const shopperRange =
+          recommendedSizeLength.shopperReferenceCm;
 
-        return garmentLength - preferredLength;
+        const garmentIsExact =
+          garmentRange.min === garmentRange.max;
+
+        const shopperReferenceIsExact =
+          shopperRange.min === shopperRange.max;
+
+        if (
+          !garmentIsExact ||
+          !shopperReferenceIsExact
+        ) {
+          return null;
+        }
+
+        return (
+          garmentRange.min -
+          shopperRange.min
+        );
       })()
     : null;
 const shopperLengthReference =
@@ -397,9 +388,15 @@ const shopperLengthReference =
               {presentation.recommendedSize.label}
             </p>
 
-            <p className="mt-2 max-w-md text-xs leading-relaxed text-black/50">
-              Based on your measurements and fit preference.
-            </p>
+           <p className="mt-2 max-w-md text-xs leading-relaxed text-black/50">
+  {presentation.recommendationReason ===
+  "BODY_CHART_FIRST_SUITABLE"
+    ? "Based on your measurements, this is the first suitable size according to the brand's body-size chart."
+    : presentation.recommendationReason ===
+        "GARMENT_EASE_PREFERENCE"
+      ? "Based on the garment measurements and your preferred fit."
+      : "Based on your measurements and the available size information."}
+</p>
           </div>
         )}
 
@@ -585,8 +582,8 @@ const shopperLengthReference =
     {shopperLengthReference && (
       <div>
         <p className="text-[11px] text-black/45">
-          Your preferred length
-        </p>
+          {sizeAttachedLengthSemantic?.shopperLabel}
+          </p>
 
         <p className="mt-1 text-sm font-medium text-black/80">
           {formatLengthRange(
@@ -604,7 +601,7 @@ const shopperLengthReference =
         </p>
 
         <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-black/40">
-          Garment length
+        {sizeAttachedLengthSemantic?.garmentLabel}
         </p>
       </div>
 
@@ -662,45 +659,72 @@ const shopperLengthReference =
       </div>
     </div>
 
-    {recommendedSizeLength &&
-      recommendedSizeLength.status !== "MATCH" && (
-        <div className="mt-4 border-l-2 border-amber-500/40 pl-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-800">
-  Length note
-</p>
-          <p className="mt-1 max-w-md text-xs leading-relaxed text-black/55">
-            Your recommended size{" "}
-            {presentation.state === "RECOMMENDED"
-              ? presentation.recommendedSize.label
-              : recommendedSizeLength.label}{" "}
-            has a garment length of{" "}
+   {recommendedSizeLength &&
+  recommendedSizeLength.status !== "MATCH" &&
+  sizeAttachedLengthSemantic && (
+    <div className="mt-4 border-l-2 border-amber-500/40 pl-3">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-800">
+        Length note
+      </p>
+
+      <p className="mt-1 max-w-md text-xs leading-relaxed text-black/55">
+        The{" "}
+        {sizeAttachedLengthSemantic.garmentLabel.toLowerCase()}{" "}
+        in{" "}
+        <span className="font-semibold text-black/75">
+          {recommendedSizeLength.label}
+        </span>{" "}
+        is{" "}
+        {recommendedSizeLengthDifferenceCm !== null && (
+          <>
+            <span className="font-semibold text-black/75">
+              {formatLengthDifference(
+                recommendedSizeLengthDifferenceCm,
+                displayUnit
+              )}{" "}
+              {recommendedSizeLength.status === "SHORTER"
+                ? "shorter"
+                : "longer"}
+            </span>{" "}
+          </>
+        )}
+        {recommendedSizeLengthDifferenceCm === null &&
+          (recommendedSizeLength.status === "SHORTER"
+            ? "shorter "
+            : "longer ")}
+        than{" "}
+        {sizeAttachedLengthSemantic.shopperReferencePhrase}.
+      </p>
+
+      {alternativeExactLengthMatch && (
+        <p className="mt-2 max-w-md text-xs leading-relaxed text-black/55">
+          <span className="font-semibold text-black/75">
+            {alternativeExactLengthMatch.label}
+          </span>{" "}
+          has a{" "}
+          <span className="font-semibold text-black/75">
             {formatLengthRange(
-              recommendedSizeLength.garmentRangeCm,
+              alternativeExactLengthMatch.garmentRangeCm,
               displayUnit
             )}
-            , which is{" "}
-{recommendedSizeLengthDifferenceCm !== null && (
-  <span className="font-semibold text-black/75">
-    {formatLengthDifference(
-      recommendedSizeLengthDifferenceCm,
-      displayUnit
-    )}{" "}
-    {recommendedSizeLength.status === "SHORTER"
-      ? "shorter"
-      : "longer"}
-  </span>
-)}{" "}
-than your preferred length.
-          </p>
-        </div>
+          </span>{" "}
+          {sizeAttachedLengthSemantic.garmentLabel.toLowerCase()},
+          {" "}
+          {sizeAttachedLengthSemantic.matchPhrase}.
+        </p>
       )}
+    </div>
+  )}
 
-    {recommendedSizeLength?.status === "MATCH" && (
-      <p className="mt-4 text-xs leading-relaxed text-black/50">
-        The garment length of your recommended size
-        matches your preferred maxi length.
-      </p>
-    )}
+    {recommendedSizeLength?.status === "MATCH" &&
+  sizeAttachedLengthSemantic && (
+    <p className="mt-4 text-xs leading-relaxed text-black/50">
+      The{" "}
+      {sizeAttachedLengthSemantic.garmentLabel.toLowerCase()}{" "}
+      of your recommended size{" "}
+      {sizeAttachedLengthSemantic.matchPhrase}.
+    </p>
+  )}
   </div>
 )}
 
@@ -1030,13 +1054,13 @@ than your preferred length.
                             className="whitespace-nowrap px-5 py-3 text-center text-black/70"
                           >
                             {measurement
-                              ? formatMeasurementValue(
-                                  measurement.minValueCm,
-                                  measurement.maxValueCm,
-                                  displayUnit
-
-                                )
-                              : "—"}
+  ? formatMeasurementValue(
+      measurement.minValueCm,
+      measurement.maxValueCm,
+      displayUnit,
+      measurement.rangeType
+    )
+  : "—"}
                           </td>
                         );
                       }

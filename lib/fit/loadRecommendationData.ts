@@ -30,6 +30,17 @@ export const recommendationProductInclude = {
     stretch: true,
     measurementBasis: true,
     source: true,
+    components: {
+        select: {
+          component: true,
+        },
+},
+sizingRequirements: {
+  select: {
+    type: true,
+    component: true,
+  },
+},
 
     measurements: {
       select: {
@@ -46,42 +57,45 @@ export const recommendationProductInclude = {
 },
 
   productSizes: {
-    select: {
-      sizeId: true,
+  select: {
+    sizeId: true,
 
-      size: {
-        select: {
-          name: true,
-        },
+    size: {
+      select: {
+        name: true,
       },
+    },
 
-      fitMeasurements: {
-        select: {
-          type: true,
-          component: true,
-          measurementBasis: true,
-          minValueCm: true,
-          maxValueCm: true,
-        },
+    fitMeasurements: {
+      select: {
+        type: true,
+        component: true,
+        measurementBasis: true,
+        rangeType: true,
+        minValueCm: true,
+        maxValueCm: true,
       },
+    },
 
-      sizeChartMapping: {
-        select: {
-          chartEntry: {
-            select: {
-              chart: {
-                select: {
-                  measurementBasis: true,
-                },
+    sizeChartMapping: {
+      select: {
+        chartEntry: {
+          select: {
+            sortOrder: true,
+
+            chart: {
+              select: {
+                measurementBasis: true,
               },
+            },
 
-              measurements: {
-                select: {
-                  type: true,
-                  component: true,
-                  minValueCm: true,
-                  maxValueCm: true,
-                },
+            measurements: {
+              select: {
+                type: true,
+                component: true,
+                rangeType: true,
+                minValueCm: true,
+                maxValueCm: true,
               },
             },
           },
@@ -89,6 +103,7 @@ export const recommendationProductInclude = {
       },
     },
   },
+},
 } as const;
 
 export const recommendationShopperInclude = {

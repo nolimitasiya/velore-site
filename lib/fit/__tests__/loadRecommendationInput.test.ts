@@ -5,6 +5,7 @@ import {
   FitDataSource,
   FitGarmentComponent,
   FitMeasurementBasis,
+  FitMeasurementRangeType,
   FitMeasurementType,
   FitUnit,
   ProductIntendedFit,
@@ -88,6 +89,7 @@ function makeProduct(
             type: FitMeasurementType.BUST,
             component:FitGarmentComponent.DRESS,
             measurementBasis: null,
+            rangeType: FitMeasurementRangeType.RANGE,
             minValueCm: decimal(98),
             maxValueCm: decimal(102),
           },
@@ -177,6 +179,160 @@ describe("loadRecommendationInput", () => {
       garmentMappedChart: null,
     });
   });
+
+  it("carries persisted set composition into the engine contract", () => {
+  const product = makeProduct({
+    productTypes: [
+      {
+        productType: ProductType.SETS,
+      },
+    ],
+
+    fitProfile: {
+      intendedFit:
+        ProductIntendedFit.REGULAR,
+      stretch: FabricStretch.NONE,
+      measurementBasis:
+        FitMeasurementBasis.GARMENT,
+
+      components: [
+        {
+          component:
+            FitGarmentComponent.TOP,
+        },
+        {
+          component:
+            FitGarmentComponent.SKIRT,
+        },
+      ],
+    },
+  });
+
+  const result =
+    loadRecommendationInput({
+      product,
+      shopper: makeShopper(),
+    });
+
+  expect(result.status).toBe("READY");
+
+  if (result.status !== "READY") {
+    throw new Error(
+      "Expected loader result to be READY"
+    );
+  }
+
+  expect(result.input.productType).toBe(
+    ProductType.SETS
+  );
+
+  expect(result.input.fitComponents).toEqual([
+    FitGarmentComponent.TOP,
+    FitGarmentComponent.SKIRT,
+  ]);
+});
+
+it("preserves canonical sizing defaults when no explicit product sizing requirements are configured", () => {
+  const product = makeProduct({
+    fitProfile: {
+      intendedFit:
+        ProductIntendedFit.REGULAR,
+      stretch: FabricStretch.NONE,
+      measurementBasis:
+        FitMeasurementBasis.BODY,
+
+      sizingRequirements: [],
+    },
+  });
+
+  const result =
+    loadRecommendationInput({
+      product,
+      shopper: makeShopper(),
+    });
+
+  expect(result.status).toBe("READY");
+
+  if (result.status !== "READY") {
+    throw new Error(
+      "Expected loader result to be READY"
+    );
+  }
+
+  expect(
+    result.input.explicitRequiredBodyFit
+  ).toBeUndefined();
+});
+
+it("translates explicit product sizing requirements into the recommendation engine contract", () => {
+  const product = makeProduct({
+    productTypes: [
+      {
+        productType: ProductType.BLAZER,
+      },
+    ],
+
+    fitProfile: {
+      intendedFit:
+        ProductIntendedFit.REGULAR,
+      stretch: FabricStretch.NONE,
+      measurementBasis:
+        FitMeasurementBasis.BODY,
+
+      sizingRequirements: [
+        {
+          type: FitMeasurementType.BUST,
+          component:
+            FitGarmentComponent.JACKET,
+        },
+        {
+          type: FitMeasurementType.WAIST,
+          component:
+            FitGarmentComponent.JACKET,
+        },
+        {
+          type: FitMeasurementType.HIP,
+          component:
+            FitGarmentComponent.JACKET,
+        },
+      ],
+    },
+  });
+
+  const result =
+    loadRecommendationInput({
+      product,
+      shopper: makeShopper(),
+    });
+
+  expect(result.status).toBe("READY");
+
+  if (result.status !== "READY") {
+    throw new Error(
+      "Expected loader result to be READY"
+    );
+  }
+
+  expect(
+    result.input.explicitRequiredBodyFit
+  ).toEqual([
+    {
+      type: FitMeasurementType.BUST,
+      component:
+        FitGarmentComponent.JACKET,
+    },
+    {
+      type: FitMeasurementType.WAIST,
+      component:
+        FitGarmentComponent.JACKET,
+    },
+    {
+      type: FitMeasurementType.HIP,
+      component:
+        FitGarmentComponent.JACKET,
+    },
+  ]);
+});
 
   it("uses the canonical ProductProductType relation instead of the legacy productType", () => {
     const result =
@@ -286,17 +442,19 @@ describe("loadRecommendationInput", () => {
 
     product.productSizes[0].sizeChartMapping = {
       chartEntry: {
-        chart: {
-          measurementBasis:
-            FitMeasurementBasis.BODY,
-        },
+  sortOrder: 0,
 
-        measurements: [
+  chart: {
+    measurementBasis: FitMeasurementBasis.BODY,
+  },
+
+  measurements: [
           {
             type:
               FitMeasurementType.BUST,
             component:
               FitGarmentComponent.DRESS,
+              rangeType: FitMeasurementRangeType.RANGE,
             minValueCm: decimal(88),
             maxValueCm: decimal(92),
           },
@@ -332,6 +490,7 @@ describe("loadRecommendationInput", () => {
         type: FitMeasurementType.BUST,
         component:
           FitGarmentComponent.DRESS,
+        rangeType: FitMeasurementRangeType.RANGE,
         minValueCm: 88,
         maxValueCm: 92,
       },
@@ -351,17 +510,19 @@ describe("loadRecommendationInput", () => {
 
     product.productSizes[0].sizeChartMapping = {
       chartEntry: {
-        chart: {
-          measurementBasis:
-            FitMeasurementBasis.GARMENT,
-        },
+  sortOrder: 0,
 
-        measurements: [
+  chart: {
+    measurementBasis: FitMeasurementBasis.GARMENT,
+  },
+
+  measurements: [
           {
             type:
               FitMeasurementType.BUST,
             component:
               FitGarmentComponent.DRESS,
+            rangeType: FitMeasurementRangeType.RANGE,
             minValueCm: decimal(98),
             maxValueCm: decimal(102),
           },
@@ -404,17 +565,19 @@ describe("loadRecommendationInput", () => {
 
     product.productSizes[0].sizeChartMapping = {
       chartEntry: {
-        chart: {
-          measurementBasis:
-            FitMeasurementBasis.UNKNOWN,
-        },
+  sortOrder: 0,
 
-        measurements: [
+  chart: {
+    measurementBasis: FitMeasurementBasis.UNKNOWN,
+  },
+
+  measurements: [
           {
             type:
               FitMeasurementType.BUST,
             component:
               FitGarmentComponent.DRESS,
+            rangeType: FitMeasurementRangeType.RANGE,
             minValueCm: decimal(90),
             maxValueCm: decimal(94),
           },
@@ -475,6 +638,9 @@ describe("loadRecommendationInput", () => {
     expect(
       result.input.productMeasurementBasis
     ).toBe(FitMeasurementBasis.UNKNOWN);
+    expect(
+  result.input.fitComponents
+).toEqual([]);
   });
 
   it("inherits ProductFitProfile measurement basis when a product-size measurement basis is null", () => {

@@ -10,16 +10,23 @@ export type ProductFitPresentation =
       state: "FIT_PROFILE_REQUIRED";
     }
   | {
-      state: "RECOMMENDED";
-      recommendedSize: {
-        id: string;
-        label: string;
-      };
-      suitableSizes: readonly {
-        id: string;
-        label: string;
-      }[];
-    }
+    state: "RECOMMENDED";
+
+    recommendationReason:
+      | "GARMENT_EASE_PREFERENCE"
+      | "BODY_CHART_FIRST_SUITABLE"
+      | null;
+
+    recommendedSize: {
+      id: string;
+      label: string;
+    };
+
+    suitableSizes: readonly {
+      id: string;
+      label: string;
+    }[];
+  }
   | {
       state: "MULTIPLE_SUITABLE";
       suitableSizes: readonly {
@@ -120,6 +127,9 @@ export function presentProductFit(
 
       return {
         state: "RECOMMENDED",
+
+        recommendationReason:
+        recommendation.recommendationReason ?? null,
 
         recommendedSize: {
           id: recommendation.recommendedSize.sizeId,

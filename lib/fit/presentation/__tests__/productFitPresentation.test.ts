@@ -3,6 +3,9 @@ import {
   expect,
   it,
 } from "vitest";
+import {
+  FitMeasurementType,
+} from "@prisma/client";
 
 import {
   ProductType,
@@ -46,11 +49,13 @@ function assessed(
  lengthAssessment: {
   structure: "SIZE_DEPENDENT",
   result: {
-    status: "INSUFFICIENT_EVIDENCE",
-    structure: "SIZE_DEPENDENT",
-    assessments: [],
-    reason: "MISSING_GARMENT_LENGTH",
-  },
+  status: "INSUFFICIENT_EVIDENCE",
+  structure: "SIZE_DEPENDENT",
+  measurementType:
+    FitMeasurementType.GARMENT_LENGTH,
+  assessments: [],
+  reason: "MISSING_GARMENT_LENGTH",
+},
 },
 
 productDimensions: {
@@ -132,6 +137,9 @@ describe("presentProductFit", () => {
       })
     ).toEqual({
       state: "RECOMMENDED",
+      recommendationReason: null,
+
+
 
       recommendedSize: {
         id: "m",

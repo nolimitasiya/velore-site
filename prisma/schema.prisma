@@ -2094,6 +2094,11 @@ enum FitMeasurementBasis {
   UNKNOWN
 }
 
+enum FitMeasurementRangeType {
+  RANGE
+  UPPER_BOUND
+}
+
 enum FitDataSource {
   BRAND_WEBSITE
   BRAND_PORTAL
@@ -2264,6 +2269,8 @@ model BrandSizeChartMeasurement {
   type      FitMeasurementType
   component FitGarmentComponent @default(WHOLE_GARMENT)
 
+  rangeType FitMeasurementRangeType @default(RANGE)
+
   // Canonical values used by Veilora Fit.
   // Always stored in centimetres.
   minValueCm Decimal @db.Decimal(8, 2)
@@ -2306,12 +2313,47 @@ model ProductFitProfile {
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  measurements     ProductFitMeasurement[]
-  sizeMeasurements ProductSizeFitMeasurement[]
+  measurements       ProductFitMeasurement[]
+  sizeMeasurements   ProductSizeFitMeasurement[]
+  components         ProductFitComponent[]
+  sizingRequirements ProductFitSizingRequirement[]
 
   @@unique([id, productId])
   @@index([productId])
   @@index([lastVerifiedAt])
+}
+
+model ProductFitComponent {
+  id           String @id @default(cuid())
+  fitProfileId String
+
+  component FitGarmentComponent
+
+  createdAt DateTime @default(now())
+
+  fitProfile ProductFitProfile @relation(fields: [fitProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([fitProfileId, component])
+  @@index([fitProfileId])
+}
+
+model ProductFitSizingRequirement {
+  id           String @id @default(cuid())
+  fitProfileId String
+
+  // BODY measurements the brand/product uses to determine its size.
+  // Presence of a row means this measurement is required when
+  // evaluating size suitability for this product.
+  type      FitMeasurementType
+  component FitGarmentComponent
+
+  createdAt DateTime @default(now())
+
+  fitProfile ProductFitProfile @relation(fields: [fitProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([fitProfileId, type, component])
+  @@index([fitProfileId])
+  @@index([type])
 }
 
 model ProductFitMeasurement {
@@ -2351,6 +2393,8 @@ model ProductSizeFitMeasurement {
 
   type      FitMeasurementType
   component FitGarmentComponent @default(WHOLE_GARMENT)
+
+  rangeType FitMeasurementRangeType @default(RANGE)
 
   // Canonical values used by Veilora Fit.
   // Always stored in centimetres.

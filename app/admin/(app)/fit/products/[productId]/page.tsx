@@ -127,13 +127,14 @@ export default async function ProductFitPage({
     },
 
     measurements: {
-      select: {
-        type: true,
-        component: true,
-        minValueCm: true,
-        maxValueCm: true,
-      },
-    },
+  select: {
+    type: true,
+    component: true,
+    rangeType: true,
+    minValueCm: true,
+    maxValueCm: true,
+  },
+},
   },
 },
             },
@@ -143,6 +144,23 @@ export default async function ProductFitPage({
 
       fitProfile: {
   include: {
+    components: {
+      orderBy: {
+        component: "asc",
+      },
+    },
+
+    sizingRequirements: {
+      orderBy: [
+        {
+          component: "asc",
+        },
+        {
+          type: "asc",
+        },
+      ],
+    },
+
     measurements: {
       orderBy: [
         {
@@ -283,15 +301,27 @@ const oneSizeDimensionCount =
             },
 
             entries: {
-              orderBy: [
-                {
-                  sortOrder: "asc",
-                },
-                {
-                  createdAt: "asc",
-                },
-              ],
-            },
+  orderBy: [
+    {
+      sortOrder: "asc",
+    },
+    {
+      createdAt: "asc",
+    },
+  ],
+
+  include: {
+    measurements: {
+      select: {
+        type: true,
+        component: true,
+        rangeType: true,
+        minValueCm: true,
+        maxValueCm: true,
+      },
+    },
+  },
+},
           },
         })
       : [];
@@ -419,6 +449,12 @@ const catalogueEvidenceStatus = isLengthBasedSize
 
 const fitReadiness = assessProductFitReadiness({
   productTypes: canonicalProductTypes,
+
+  fitComponents:
+    product.fitProfile?.components.map(
+      ({ component }) => component
+    ) ?? [],
+
   catalogueSizeCount: product.productSizes.length,
   mappedSizeCount,
   measurements: fitReadinessMeasurements,
@@ -446,25 +482,23 @@ const displayedReadiness = isLengthBasedSize
       label: "Recommendation readiness",
       status: fitReadiness.status,
       message:
-        fitReadiness.reason === "BODY_AND_GARMENT_EVIDENCE_COMPLETE"
-          ? "Required body measurements and additional garment measurements are available."
-          : fitReadiness.reason === "BODY_EVIDENCE_COMPLETE"
-            ? "Required body measurement evidence is available for size recommendation."
-            : fitReadiness.reason === "GARMENT_EVIDENCE_REQUIRES_EASE"
-              ? "Garment measurements are available, but body measurements or sufficient designed-ease evidence are still needed."
-              : fitReadiness.reason === "DESIGNED_EASE_EVIDENCE_COMPLETE"
-                ? "Garment measurements are supported by sufficient designed-ease evidence."
-                : fitReadiness.reason === "INCOMPLETE_SIZE_MAPPING"
-                  ? "Map every catalogue size before this product is recommendation-ready."
-                  : fitReadiness.reason === "NO_CATALOGUE_SIZES"
-                    ? "Add catalogue sizes before configuring size recommendation."
-                    : fitReadiness.reason === "MISSING_REQUIRED_BODY_EVIDENCE"
-                      ? "Required body measurement evidence is missing."
-                      : fitReadiness.reason === "MULTIPLE_PRODUCT_TYPES"
-                        ? "This product has multiple canonical product types and cannot currently be loaded by the recommendation engine."
-                        : fitReadiness.reason === "MISSING_PRODUCT_TYPE"
-                          ? "A canonical product type is required before Fit can assess recommendation readiness."
-                          : "Conventional size recommendation does not apply to this product type.",
+  fitReadiness.reason === "BODY_AND_GARMENT_EVIDENCE_COMPLETE"
+    ? "Required body measurements and additional garment measurements are available. Veilora can use the body evidence for recommendation and the corresponding garment evidence for designed-fit interpretation."
+    : fitReadiness.reason === "BODY_EVIDENCE_COMPLETE"
+      ? "Required body measurement evidence is available for size recommendation."
+      : fitReadiness.reason === "GARMENT_EVIDENCE_REQUIRES_BODY"
+        ? "Garment measurements are available, but required body sizing evidence must also be provided before Veilora can recommend a size."
+        : fitReadiness.reason === "INCOMPLETE_SIZE_MAPPING"
+          ? "Map every catalogue size before this product is recommendation-ready."
+          : fitReadiness.reason === "NO_CATALOGUE_SIZES"
+            ? "Add catalogue sizes before configuring size recommendation."
+            : fitReadiness.reason === "MISSING_REQUIRED_BODY_EVIDENCE"
+              ? "Required body measurement evidence is missing."
+              : fitReadiness.reason === "MULTIPLE_PRODUCT_TYPES"
+                ? "This product has multiple canonical product types and cannot currently be loaded by the recommendation engine."
+                : fitReadiness.reason === "MISSING_PRODUCT_TYPE"
+                  ? "A canonical product type is required before Fit can assess recommendation readiness."
+                  : "Conventional size recommendation does not apply to this product type.",
     };
 
   return (
@@ -870,6 +904,22 @@ const displayedReadiness = isLengthBasedSize
         <ProductFitEditor
   productId={product.id}
   lengthStructure={product.lengthStructure}
+  productTypes={canonicalProductTypes}
+initialComponents={
+  product.fitProfile?.components.map(
+    (item) => item.component
+  ) ?? []
+}
+
+  initialSizingRequirements={
+    product.fitProfile?.sizingRequirements.map(
+      (requirement) => ({
+        type: requirement.type,
+        component: requirement.component,
+      })
+    ) ?? []
+  }
+
   initialProfile={
     product.fitProfile
       ? {
@@ -891,25 +941,56 @@ const displayedReadiness = isLengthBasedSize
         }
       : null
   }
-  productSizes={sortedProductSizes.map(
-    (productSize) => ({
-      sizeId: productSize.sizeId,
-      sizeName: productSize.size.name,
-      mappedEntryId:
-        productSize.sizeChartMapping?.entryId ??
-        null,
+  productSizes={sortedProductSizes.map((productSize) => ({
+  sizeId: productSize.sizeId,
+  sizeName: productSize.size.name,
+  mappedEntryId:
+    productSize.sizeChartMapping?.entryId ?? null,
+
+  fitMeasurements: productSize.fitMeasurements.map(
+    (measurement) => ({
+      type: measurement.type,
+      component: measurement.component,
+      measurementBasis: measurement.measurementBasis,
+      rangeType: measurement.rangeType,
+      minValueCm:
+        measurement.minValueCm === null
+          ? null
+          : Number(measurement.minValueCm.toString()),
+      maxValueCm:
+        measurement.maxValueCm === null
+          ? null
+          : Number(measurement.maxValueCm.toString()),
     })
-  )}
-  compatibleCharts={compatibleCharts.map(
-    (chart) => ({
-      id: chart.id,
-      name: chart.name,
-      entries: chart.entries.map((entry) => ({
-        id: entry.id,
-        sizeLabel: entry.sizeLabel,
-      })),
-    })
-  )}
+  ),
+}))}
+
+compatibleCharts={compatibleCharts.map((chart) => ({
+  id: chart.id,
+  name: chart.name,
+  measurementBasis: chart.measurementBasis,
+
+  entries: chart.entries.map((entry) => ({
+    id: entry.id,
+    sizeLabel: entry.sizeLabel,
+
+    measurements: entry.measurements.map(
+      (measurement) => ({
+        type: measurement.type,
+        component: measurement.component,
+        rangeType: measurement.rangeType,
+        minValueCm:
+          measurement.minValueCm === null
+            ? null
+            : Number(measurement.minValueCm.toString()),
+        maxValueCm:
+          measurement.maxValueCm === null
+            ? null
+            : Number(measurement.maxValueCm.toString()),
+      })
+    ),
+  })),
+}))}
 />
 
 <ProductFitMeasurementEditor
@@ -941,6 +1022,7 @@ const displayedReadiness = isLengthBasedSize
         type: measurement.type,
         component: measurement.component,
         measurementBasis: measurement.measurementBasis,
+        rangeType: measurement.rangeType,
         sourceMinValue:
           measurement.sourceMinValue.toString(),
         sourceMaxValue:

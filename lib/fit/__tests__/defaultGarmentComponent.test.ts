@@ -51,6 +51,10 @@ describe("getDefaultGarmentComponent", () => {
       FitGarmentComponent.TROUSER,
     ],
     [
+      ProductType.HOODIE_SWEATSHIRT,
+      FitGarmentComponent.TOP,
+    ],
+    [
       ProductType.BLAZER,
       FitGarmentComponent.JACKET,
     ],

@@ -61,7 +61,7 @@ describe("assessProductFitReadiness", () => {
     expect(result.missingBodyMeasurements).toEqual([]);
   });
 
-  it("marks a fully mapped GARMENT-only Abaya without designed ease as CONDITIONAL", () => {
+  it("marks a fully mapped GARMENT-only Abaya as requiring BODY evidence", () => {
     const result = assessProductFitReadiness({
       productTypes: [ProductType.ABAYA],
       catalogueSizeCount: 3,
@@ -84,8 +84,8 @@ describe("assessProductFitReadiness", () => {
 
     expect(result.status).toBe("CONDITIONAL");
     expect(result.reason).toBe(
-      "GARMENT_EVIDENCE_REQUIRES_EASE"
-    );
+     "GARMENT_EVIDENCE_REQUIRES_BODY"
+);
     expect(result.hasBodyEvidence).toBe(false);
     expect(result.hasGarmentEvidence).toBe(true);
 
@@ -125,7 +125,7 @@ describe("assessProductFitReadiness", () => {
     expect(result.hasGarmentEvidence).toBe(true);
   });
 
-  it("accepts GARMENT evidence when sufficient designed-ease evidence exists without pretending BODY evidence exists", () => {
+  it("does not allow designed-ease evidence to replace required BODY evidence", () => {
     const result = assessProductFitReadiness({
       productTypes: [ProductType.ABAYA],
       catalogueSizeCount: 3,
@@ -141,10 +141,19 @@ describe("assessProductFitReadiness", () => {
       ],
     });
 
-    expect(result.status).toBe("READY");
-    expect(result.reason).toBe(
-      "DESIGNED_EASE_EVIDENCE_COMPLETE"
-    );
+    expect(result.status).toBe("CONDITIONAL");
+expect(result.reason).toBe(
+  "GARMENT_EVIDENCE_REQUIRES_BODY"
+);
+
+expect(result.hasBodyEvidence).toBe(false);
+expect(result.hasGarmentEvidence).toBe(true);
+
+expect(
+  result.missingBodyMeasurements.map(
+    (requirement) => requirement.type
+  )
+).toContain(FitMeasurementType.BUST);
 
     expect(result.hasBodyEvidence).toBe(false);
     expect(result.hasGarmentEvidence).toBe(true);
@@ -286,4 +295,57 @@ describe("assessProductFitReadiness", () => {
     expect(result.hasBodyEvidence).toBe(false);
     expect(result.hasGarmentEvidence).toBe(false);
   });
+
+  it("fails closed for SETS when no composition is configured", () => {
+  const result = assessProductFitReadiness({
+    productTypes: [ProductType.SETS],
+    fitComponents: [],
+    catalogueSizeCount: 4,
+    mappedSizeCount: 0,
+    hasSufficientDesignedEaseEvidence: false,
+    measurements: [],
+  });
+
+  expect(result.supportsSizeRecommendation).toBe(false);
+  expect(result.status).toBe("NOT_APPLICABLE");
+  expect(result.reason).toBe(
+    "SIZE_RECOMMENDATION_NOT_SUPPORTED"
+  );
+});
+
+it("recognises TOP + SKIRT SETS as recommendation-capable", () => {
+  const result = assessProductFitReadiness({
+    productTypes: [ProductType.SETS],
+    fitComponents: [
+      FitGarmentComponent.TOP,
+      FitGarmentComponent.SKIRT,
+    ],
+    catalogueSizeCount: 4,
+    mappedSizeCount: 0,
+    hasSufficientDesignedEaseEvidence: false,
+    measurements: [],
+  });
+
+  expect(result.supportsSizeRecommendation).toBe(true);
+
+  expect(result.status).toBe("NOT_READY");
+  expect(result.reason).toBe(
+    "INCOMPLETE_SIZE_MAPPING"
+  );
+
+  expect(result.requiredBodyMeasurements).toEqual([
+    {
+      type: FitMeasurementType.BUST,
+      component: FitGarmentComponent.TOP,
+    },
+    {
+      type: FitMeasurementType.WAIST,
+      component: FitGarmentComponent.SKIRT,
+    },
+    {
+      type: FitMeasurementType.HIP,
+      component: FitGarmentComponent.SKIRT,
+    },
+  ]);
+});
 });

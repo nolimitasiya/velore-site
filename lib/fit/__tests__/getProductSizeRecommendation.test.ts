@@ -320,9 +320,11 @@ describe(
 ).toEqual({
   structure: "SIZE_DEPENDENT",
 
- result: {
+result: {
   status: "INSUFFICIENT_EVIDENCE",
   structure: "SIZE_DEPENDENT",
+  measurementType:
+    FitMeasurementType.GARMENT_LENGTH,
   assessments: [],
   reason: "MISSING_SHOPPER_PREFERENCE",
 },
@@ -506,6 +508,8 @@ it("keeps missing product garment-length evidence distinct from a missing shoppe
   result: {
   status: "INSUFFICIENT_EVIDENCE",
   structure: "SIZE_DEPENDENT",
+  measurementType:
+    FitMeasurementType.GARMENT_LENGTH,
   assessments: [],
   reason: "MISSING_GARMENT_LENGTH",
 },
@@ -798,6 +802,1272 @@ expect(
       status: "LONGER_THAN_PREFERENCE",
     },
   ]);
+});
+it("carries TOP + TROUSER set composition through the production recommendation service", async () => {
+  mockLoadProductRecommendationData.mockResolvedValue({
+    id: "set-top-trouser-regression",
+
+    productType: ProductType.SETS,
+
+    productTypes: [
+      {
+        productType: ProductType.SETS,
+      },
+    ],
+
+    lengthStructure: null,
+    lengthOptions: [],
+
+    fitProfile: {
+      intendedFit:
+        ProductIntendedFit.REGULAR,
+
+      stretch:
+        FabricStretch.NONE,
+
+      measurementBasis:
+        FitMeasurementBasis.BODY,
+
+      components: [
+        {
+          component:
+            FitGarmentComponent.TOP,
+        },
+        {
+          component:
+            FitGarmentComponent.TROUSER,
+        },
+      ],
+    },
+
+    productSizes: [
+      {
+        sizeId: "size-m",
+
+        size: {
+          name: "M",
+        },
+
+        fitMeasurements: [],
+
+        sizeChartMapping: {
+          chartEntry: {
+            chart: {
+              measurementBasis:
+                FitMeasurementBasis.BODY,
+            },
+
+            measurements: [
+              {
+                type:
+                  FitMeasurementType.BUST,
+
+                component:
+                  FitGarmentComponent.TOP,
+
+                minValueCm:
+                  decimal(88),
+
+                maxValueCm:
+                  decimal(92),
+              },
+
+              {
+                type:
+                  FitMeasurementType.WAIST,
+
+                component:
+                  FitGarmentComponent.TROUSER,
+
+                minValueCm:
+                  decimal(70),
+
+                maxValueCm:
+                  decimal(74),
+              },
+
+              {
+                type:
+                  FitMeasurementType.HIP,
+
+                component:
+                  FitGarmentComponent.TROUSER,
+
+                minValueCm:
+                  decimal(96),
+
+                maxValueCm:
+                  decimal(100),
+              },
+            ],
+          },
+        },
+      },
+    ],
+  } as never);
+
+  mockLoadShopperRecommendationData.mockResolvedValue({
+    fitProfile: {
+      fitPreference:
+        ShopperFitPreference.REGULAR,
+
+      preferredUnit: "CM",
+
+      measurements: [
+        {
+          type:
+            FitMeasurementType.BUST,
+          valueCm:
+            decimal(90),
+        },
+        {
+          type:
+            FitMeasurementType.WAIST,
+          valueCm:
+            decimal(72),
+        },
+        {
+          type:
+            FitMeasurementType.HIP,
+          valueCm:
+            decimal(98),
+        },
+      ],
+    },
+  } as never);
+
+  const result =
+    await getProductSizeRecommendation({
+      productId:
+        "set-top-trouser-regression",
+
+      shopperId:
+        "shopper-1",
+    });
+
+  expect(result.status).toBe(
+    "ASSESSED"
+  );
+
+  if (result.status !== "ASSESSED") {
+    throw new Error(
+      "Expected TOP + TROUSER set recommendation to be assessed"
+    );
+  }
+
+  expect(
+    result.recommendation.status
+  ).toBe("RECOMMENDED");
+
+  if (
+    result.recommendation.status !==
+      "RECOMMENDED" ||
+    result.recommendation
+      .recommendedSize === null
+  ) {
+    throw new Error(
+      "Expected TOP + TROUSER set to produce a size recommendation"
+    );
+  }
+
+  expect(
+    result.recommendation
+      .recommendedSize.sizeId
+  ).toBe("size-m");
+
+  expect(
+    result.recommendation
+      .recommendedSize.sizeLabel
+  ).toBe("M");
+
+  expect(
+    result.recommendation
+      .assessments[0]
+      .requiredMeasurements.map(
+        (measurement) => ({
+          type:
+            measurement.requirement.type,
+
+          component:
+            measurement.requirement.component,
+        })
+      )
+  ).toEqual([
+    {
+      type:
+        FitMeasurementType.BUST,
+
+      component:
+        FitGarmentComponent.TOP,
+    },
+    {
+      type:
+        FitMeasurementType.WAIST,
+
+      component:
+        FitGarmentComponent.TROUSER,
+    },
+    {
+      type:
+        FitMeasurementType.HIP,
+
+      component:
+        FitGarmentComponent.TROUSER,
+    },
+  ]);
+
+  expect(
+    result.shopperDisplayUnit
+  ).toBe("CM");
+});
+
+it("keeps the BODY-fit set size when another TOP + TROUSER size has the shopper's exact inseam", async () => {
+  const makeSetBodyChartEntry = (
+    bustMin: number,
+    bustMax: number,
+    waistMin: number,
+    waistMax: number,
+    hipMin: number,
+    hipMax: number
+  ) => ({
+    chart: {
+      measurementBasis:
+        FitMeasurementBasis.BODY,
+    },
+
+    measurements: [
+      {
+        type:
+          FitMeasurementType.BUST,
+
+        component:
+          FitGarmentComponent.TOP,
+
+        minValueCm:
+          decimal(bustMin),
+
+        maxValueCm:
+          decimal(bustMax),
+      },
+
+      {
+        type:
+          FitMeasurementType.WAIST,
+
+        component:
+          FitGarmentComponent.TROUSER,
+
+        minValueCm:
+          decimal(waistMin),
+
+        maxValueCm:
+          decimal(waistMax),
+      },
+
+      {
+        type:
+          FitMeasurementType.HIP,
+
+        component:
+          FitGarmentComponent.TROUSER,
+
+        minValueCm:
+          decimal(hipMin),
+
+        maxValueCm:
+          decimal(hipMax),
+      },
+    ],
+  });
+
+  mockLoadProductRecommendationData
+    .mockResolvedValue({
+      id:
+        "set-body-fit-vs-inseam-regression",
+
+      productType:
+        ProductType.SETS,
+
+      productTypes: [
+        {
+          productType:
+            ProductType.SETS,
+        },
+      ],
+
+      lengthStructure:
+        ProductLengthStructure.SIZE_DEPENDENT,
+
+      lengthOptions: [],
+
+      fitProfile: {
+        intendedFit:
+          ProductIntendedFit.REGULAR,
+
+        stretch:
+          FabricStretch.NONE,
+
+        measurementBasis:
+          FitMeasurementBasis.BODY,
+
+        components: [
+          {
+            component:
+              FitGarmentComponent.TOP,
+          },
+          {
+            component:
+              FitGarmentComponent.TROUSER,
+          },
+        ],
+      },
+
+      productSizes: [
+        {
+          sizeId: "size-m",
+
+          size: {
+            name: "M",
+          },
+
+          fitMeasurements: [
+            {
+              type:
+                FitMeasurementType.INSEAM,
+
+              component:
+                FitGarmentComponent.TROUSER,
+
+              minValueCm:
+                decimal(71.12),
+
+              maxValueCm:
+                decimal(71.12),
+
+              measurementBasis:
+                FitMeasurementBasis.GARMENT,
+            },
+          ],
+
+          sizeChartMapping: {
+            chartEntry:
+              makeSetBodyChartEntry(
+                88,
+                92,
+                70,
+                74,
+                96,
+                100
+              ),
+          },
+        },
+
+        {
+          sizeId: "size-l",
+
+          size: {
+            name: "L",
+          },
+
+          fitMeasurements: [
+            {
+              type:
+                FitMeasurementType.INSEAM,
+
+              component:
+                FitGarmentComponent.TROUSER,
+
+              minValueCm:
+                decimal(76.2),
+
+              maxValueCm:
+                decimal(76.2),
+
+              measurementBasis:
+                FitMeasurementBasis.GARMENT,
+            },
+          ],
+
+          sizeChartMapping: {
+            chartEntry:
+              makeSetBodyChartEntry(
+                93,
+                97,
+                75,
+                79,
+                101,
+                105
+              ),
+          },
+        },
+      ],
+    } as never);
+
+  mockLoadShopperRecommendationData
+    .mockResolvedValue({
+      fitProfile: {
+        fitPreference:
+          ShopperFitPreference.REGULAR,
+
+        preferredUnit: "IN",
+
+        measurements: [
+          {
+            type:
+              FitMeasurementType.BUST,
+            valueCm:
+              decimal(90),
+          },
+          {
+            type:
+              FitMeasurementType.WAIST,
+            valueCm:
+              decimal(72),
+          },
+          {
+            type:
+              FitMeasurementType.HIP,
+            valueCm:
+              decimal(98),
+          },
+          {
+            type:
+              FitMeasurementType.INSEAM,
+            valueCm:
+              decimal(76.2),
+          },
+        ],
+      },
+    } as never);
+
+  const result =
+    await getProductSizeRecommendation({
+      productId:
+        "set-body-fit-vs-inseam-regression",
+
+      shopperId:
+        "shopper-1",
+    });
+
+  expect(result.status).toBe(
+    "ASSESSED"
+  );
+
+  if (result.status !== "ASSESSED") {
+    throw new Error(
+      "Expected TOP + TROUSER set recommendation to be assessed"
+    );
+  }
+
+  /*
+   * M is the authoritative BODY-fit recommendation.
+   *
+   * L has the shopper's exact inseam, but supplemental
+   * length evidence must never override conventional
+   * BODY sizing.
+   */
+  expect(
+    result.recommendation.status
+  ).toBe("RECOMMENDED");
+
+  if (
+    result.recommendation.status !==
+      "RECOMMENDED" ||
+    result.recommendation
+      .recommendedSize === null
+  ) {
+    throw new Error(
+      "Expected a conventional set size recommendation"
+    );
+  }
+
+  expect(
+    result.recommendation
+      .recommendedSize.sizeId
+  ).toBe("size-m");
+
+  expect(
+    result.recommendation
+      .recommendedSize.sizeLabel
+  ).toBe("M");
+
+  expect(
+    result.lengthAssessment.structure
+  ).toBe("SIZE_DEPENDENT");
+
+  if (
+    result.lengthAssessment.structure !==
+      "SIZE_DEPENDENT" ||
+    result.lengthAssessment.result.status !==
+      "ASSESSED"
+  ) {
+    throw new Error(
+      "Expected TOP + TROUSER set inseam assessment"
+    );
+  }
+
+  expect(
+    result.lengthAssessment.result
+      .measurementType
+  ).toBe(FitMeasurementType.INSEAM);
+
+  expect(
+    result.lengthAssessment.result
+      .assessments.map((item) => ({
+        id: item.sizeId,
+        status:
+          item.assessment.status,
+      }))
+  ).toEqual([
+    {
+      id: "size-m",
+      status:
+        "SHORTER_THAN_PREFERENCE",
+    },
+    {
+      id: "size-l",
+      status: "MATCH",
+    },
+  ]);
+
+  expect(
+    result.shopperDisplayUnit
+  ).toBe("IN");
+});
+
+it("keeps the BODY-fit activewear trouser size when another size has the shopper's exact inseam", async () => {
+  const makeActivewearTrouserBodyChartEntry = (
+    waistMin: number,
+    waistMax: number,
+    hipMin: number,
+    hipMax: number
+  ) => ({
+    chart: {
+      measurementBasis:
+        FitMeasurementBasis.BODY,
+    },
+
+    measurements: [
+      {
+        type:
+          FitMeasurementType.WAIST,
+
+        component:
+          FitGarmentComponent.TROUSER,
+
+        minValueCm:
+          decimal(waistMin),
+
+        maxValueCm:
+          decimal(waistMax),
+      },
+
+      {
+        type:
+          FitMeasurementType.HIP,
+
+        component:
+          FitGarmentComponent.TROUSER,
+
+        minValueCm:
+          decimal(hipMin),
+
+        maxValueCm:
+          decimal(hipMax),
+      },
+    ],
+  });
+
+  mockLoadProductRecommendationData
+    .mockResolvedValue({
+      id:
+        "activewear-trouser-body-fit-vs-inseam-regression",
+
+      productType:
+        ProductType.ACTIVEWEAR,
+
+      productTypes: [
+        {
+          productType:
+            ProductType.ACTIVEWEAR,
+        },
+      ],
+
+      lengthStructure:
+        ProductLengthStructure.SIZE_DEPENDENT,
+
+      lengthOptions: [],
+
+      fitProfile: {
+        intendedFit:
+          ProductIntendedFit.REGULAR,
+
+        stretch:
+          FabricStretch.UNKNOWN,
+
+        measurementBasis:
+          FitMeasurementBasis.BODY,
+
+        components: [
+          {
+            component:
+              FitGarmentComponent.TROUSER,
+          },
+        ],
+      },
+
+      productSizes: [
+        {
+          sizeId: "size-m",
+
+          size: {
+            name: "M",
+          },
+
+          fitMeasurements: [
+            {
+              type:
+                FitMeasurementType.INSEAM,
+
+              component:
+                FitGarmentComponent.TROUSER,
+
+              minValueCm:
+                decimal(71.12),
+
+              maxValueCm:
+                decimal(71.12),
+
+              measurementBasis:
+                FitMeasurementBasis.GARMENT,
+            },
+          ],
+
+          sizeChartMapping: {
+            chartEntry:
+              makeActivewearTrouserBodyChartEntry(
+                70,
+                74,
+                96,
+                100
+              ),
+          },
+        },
+
+        {
+          sizeId: "size-l",
+
+          size: {
+            name: "L",
+          },
+
+          fitMeasurements: [
+            {
+              type:
+                FitMeasurementType.INSEAM,
+
+              component:
+                FitGarmentComponent.TROUSER,
+
+              minValueCm:
+                decimal(76.2),
+
+              maxValueCm:
+                decimal(76.2),
+
+              measurementBasis:
+                FitMeasurementBasis.GARMENT,
+            },
+          ],
+
+          sizeChartMapping: {
+            chartEntry:
+              makeActivewearTrouserBodyChartEntry(
+                75,
+                79,
+                101,
+                105
+              ),
+          },
+        },
+      ],
+    } as never);
+
+  mockLoadShopperRecommendationData
+    .mockResolvedValue({
+      fitProfile: {
+        fitPreference:
+          ShopperFitPreference.REGULAR,
+
+        preferredUnit: "IN",
+
+        measurements: [
+          {
+            type:
+              FitMeasurementType.WAIST,
+            valueCm:
+              decimal(72),
+          },
+          {
+            type:
+              FitMeasurementType.HIP,
+            valueCm:
+              decimal(98),
+          },
+          {
+            type:
+              FitMeasurementType.INSEAM,
+            valueCm:
+              decimal(76.2),
+          },
+        ],
+      },
+    } as never);
+
+  const result =
+    await getProductSizeRecommendation({
+      productId:
+        "activewear-trouser-body-fit-vs-inseam-regression",
+
+      shopperId:
+        "shopper-1",
+    });
+
+  expect(result.status).toBe(
+    "ASSESSED"
+  );
+
+  if (result.status !== "ASSESSED") {
+    throw new Error(
+      "Expected activewear trouser recommendation to be assessed"
+    );
+  }
+
+  /*
+   * M is the authoritative BODY-fit recommendation
+   * from waist + hip.
+   *
+   * L has the shopper's exact inseam, but
+   * supplemental length evidence must never
+   * override BODY sizing.
+   */
+  expect(
+    result.recommendation.status
+  ).toBe("RECOMMENDED");
+
+  if (
+    result.recommendation.status !==
+      "RECOMMENDED" ||
+    result.recommendation
+      .recommendedSize === null
+  ) {
+    throw new Error(
+      "Expected an activewear trouser size recommendation"
+    );
+  }
+
+  expect(
+    result.recommendation
+      .recommendedSize.sizeId
+  ).toBe("size-m");
+
+  expect(
+    result.recommendation
+      .recommendedSize.sizeLabel
+  ).toBe("M");
+
+  expect(
+    result.lengthAssessment.structure
+  ).toBe("SIZE_DEPENDENT");
+
+  if (
+    result.lengthAssessment.structure !==
+      "SIZE_DEPENDENT" ||
+    result.lengthAssessment.result.status !==
+      "ASSESSED"
+  ) {
+    throw new Error(
+      "Expected activewear trouser inseam assessment"
+    );
+  }
+
+  expect(
+    result.lengthAssessment.result
+      .measurementType
+  ).toBe(FitMeasurementType.INSEAM);
+
+  expect(
+    result.lengthAssessment.result
+      .assessments.map((item) => ({
+        id: item.sizeId,
+        status:
+          item.assessment.status,
+      }))
+  ).toEqual([
+    {
+      id: "size-m",
+      status:
+        "SHORTER_THAN_PREFERENCE",
+    },
+    {
+      id: "size-l",
+      status: "MATCH",
+    },
+  ]);
+
+  expect(
+    result.shopperDisplayUnit
+  ).toBe("IN");
+});
+
+it("keeps the BODY-fit pants recommendation even when the next size has the shopper's exact inseam", async () => {
+  mockLoadProductRecommendationData.mockResolvedValue({
+    id: "pants-inseam-regression",
+
+    productTypes: [
+      {
+        productType: ProductType.PANTS,
+      },
+    ],
+
+    productType: ProductType.PANTS,
+
+    fitProfile: {
+      intendedFit: ProductIntendedFit.REGULAR,
+      stretch: FabricStretch.UNKNOWN,
+      measurementBasis:
+        FitMeasurementBasis.BODY,
+    },
+
+    lengthStructure:
+      ProductLengthStructure.SIZE_DEPENDENT,
+
+    lengthOptions: [],
+
+    productSizes: [
+      {
+        sizeId: "size-m",
+
+        size: {
+          name: "M",
+        },
+
+        fitMeasurements: [
+          {
+            type: FitMeasurementType.INSEAM,
+            component:
+              FitGarmentComponent.TROUSER,
+            minValueCm: decimal(71.12),
+            maxValueCm: decimal(71.12),
+            measurementBasis:
+              FitMeasurementBasis.GARMENT,
+          },
+        ],
+
+        sizeChartMapping: {
+  chartEntry: {
+    chart: {
+      measurementBasis:
+        FitMeasurementBasis.BODY,
+    },
+
+    measurements: [
+              {
+                type:
+                  FitMeasurementType.WAIST,
+                component:
+                  FitGarmentComponent.TROUSER,
+                minValueCm: decimal(76),
+                maxValueCm: decimal(80),
+              },
+              {
+                type: FitMeasurementType.HIP,
+                component:
+                  FitGarmentComponent.TROUSER,
+                minValueCm: decimal(98),
+                maxValueCm: decimal(104),
+              },
+            ],
+          },
+        },
+      },
+
+      {
+        sizeId: "size-l",
+
+        size: {
+          name: "L",
+        },
+
+        fitMeasurements: [
+          {
+            type: FitMeasurementType.INSEAM,
+            component:
+              FitGarmentComponent.TROUSER,
+            minValueCm: decimal(76.2),
+            maxValueCm: decimal(76.2),
+            measurementBasis:
+              FitMeasurementBasis.GARMENT,
+          },
+        ],
+
+        sizeChartMapping: {
+  chartEntry: {
+    chart: {
+      measurementBasis:
+        FitMeasurementBasis.BODY,
+    },
+
+    measurements: [
+              {
+                type:
+                  FitMeasurementType.WAIST,
+                component:
+                  FitGarmentComponent.TROUSER,
+                minValueCm: decimal(81),
+                maxValueCm: decimal(85),
+              },
+              {
+                type: FitMeasurementType.HIP,
+                component:
+                  FitGarmentComponent.TROUSER,
+                minValueCm: decimal(105),
+                maxValueCm: decimal(111),
+              },
+            ],
+          },
+        },
+      },
+    ],
+  } as never);
+
+  mockLoadShopperRecommendationData.mockResolvedValue({
+    fitProfile: {
+      fitPreference:
+        ShopperFitPreference.REGULAR,
+
+      preferredUnit: "IN",
+
+      measurements: [
+        {
+          type: FitMeasurementType.WAIST,
+          valueCm: decimal(78),
+        },
+        {
+          type: FitMeasurementType.HIP,
+          valueCm: decimal(101),
+        },
+        {
+          type: FitMeasurementType.INSEAM,
+          valueCm: decimal(76.2),
+        },
+      ],
+    },
+  } as never);
+
+  const result =
+    await getProductSizeRecommendation({
+      productId: "pants-inseam-regression",
+      shopperId: "shopper-1",
+    });
+
+  expect(result.status).toBe("ASSESSED");
+
+  if (result.status !== "ASSESSED") {
+    throw new Error(
+      "Expected pants recommendation to be assessed"
+    );
+  }
+
+  /*
+   * M is the BODY-fit recommendation from
+   * waist + hip.
+   *
+   * L has the shopper's exact 30" inseam,
+   * but length must never override body fit.
+   */
+  expect(result.recommendation.status).toBe(
+    "RECOMMENDED"
+  );
+
+  if (
+    result.recommendation.status !==
+      "RECOMMENDED" ||
+    result.recommendation.recommendedSize === null
+  ) {
+    throw new Error(
+      "Expected a conventional pants size recommendation"
+    );
+  }
+
+  expect(
+    result.recommendation.recommendedSize.sizeId
+  ).toBe("size-m");
+
+  expect(
+    result.lengthAssessment.structure
+  ).toBe("SIZE_DEPENDENT");
+
+  if (
+    result.lengthAssessment.structure !==
+      "SIZE_DEPENDENT" ||
+    result.lengthAssessment.result.status !==
+      "ASSESSED"
+  ) {
+    throw new Error(
+      "Expected pants inseam assessment"
+    );
+  }
+
+  expect(
+    result.lengthAssessment.result.assessments.map(
+      (item) => ({
+        id: item.sizeId,
+        status: item.assessment.status,
+      })
+    )
+  ).toEqual([
+    {
+      id: "size-m",
+      status: "SHORTER_THAN_PREFERENCE",
+    },
+    {
+      id: "size-l",
+      status: "MATCH",
+    },
+  ]);
+
+  expect(result.shopperDisplayUnit).toBe("IN");
+});
+
+it("keeps the BODY-fit skirt recommendation even when the next size has the shopper's exact preferred skirt length", async () => {
+  mockLoadProductRecommendationData.mockResolvedValue({
+    id: "skirt-length-regression",
+
+    productTypes: [
+      {
+        productType: ProductType.SKIRT,
+      },
+    ],
+
+    productType: ProductType.SKIRT,
+
+    fitProfile: {
+      intendedFit: ProductIntendedFit.REGULAR,
+      stretch: FabricStretch.UNKNOWN,
+      measurementBasis:
+        FitMeasurementBasis.BODY,
+    },
+
+    lengthStructure:
+      ProductLengthStructure.SIZE_DEPENDENT,
+
+    lengthOptions: [],
+
+    productSizes: [
+      {
+        sizeId: "size-m",
+
+        size: {
+          name: "M",
+        },
+
+        fitMeasurements: [
+          {
+            type:
+              FitMeasurementType.SKIRT_LENGTH,
+            component:
+              FitGarmentComponent.SKIRT,
+            minValueCm: decimal(85),
+            maxValueCm: decimal(85),
+            measurementBasis:
+              FitMeasurementBasis.GARMENT,
+          },
+        ],
+
+        sizeChartMapping: {
+          chartEntry: {
+            chart: {
+              measurementBasis:
+                FitMeasurementBasis.BODY,
+            },
+
+           measurements: [
+  {
+    type:
+      FitMeasurementType.WAIST,
+    component:
+      FitGarmentComponent.SKIRT,
+    minValueCm: decimal(76),
+    maxValueCm: decimal(80),
+  },
+  {
+    type:
+      FitMeasurementType.HIP,
+    component:
+      FitGarmentComponent.SKIRT,
+    minValueCm: decimal(98),
+    maxValueCm: decimal(104),
+  },
+],
+          },
+        },
+      },
+
+      {
+        sizeId: "size-l",
+
+        size: {
+          name: "L",
+        },
+
+        fitMeasurements: [
+          {
+            type:
+              FitMeasurementType.SKIRT_LENGTH,
+            component:
+              FitGarmentComponent.SKIRT,
+            minValueCm: decimal(90),
+            maxValueCm: decimal(90),
+            measurementBasis:
+              FitMeasurementBasis.GARMENT,
+          },
+        ],
+
+        sizeChartMapping: {
+          chartEntry: {
+            chart: {
+              measurementBasis:
+                FitMeasurementBasis.BODY,
+            },
+
+           measurements: [
+  {
+    type:
+      FitMeasurementType.WAIST,
+    component:
+      FitGarmentComponent.SKIRT,
+    minValueCm: decimal(81),
+    maxValueCm: decimal(85),
+  },
+  {
+    type:
+      FitMeasurementType.HIP,
+    component:
+      FitGarmentComponent.SKIRT,
+    minValueCm: decimal(105),
+    maxValueCm: decimal(111),
+  },
+],
+          },
+        },
+      },
+    ],
+  } as never);
+
+  mockLoadShopperRecommendationData.mockResolvedValue({
+    fitProfile: {
+      fitPreference:
+        ShopperFitPreference.REGULAR,
+
+      preferredUnit: "CM",
+
+      measurements: [
+        {
+          type: FitMeasurementType.WAIST,
+          valueCm: decimal(78),
+        },
+        {
+          type: FitMeasurementType.HIP,
+          valueCm: decimal(101),
+        },
+        {
+          type:
+            FitMeasurementType.SKIRT_LENGTH,
+          valueCm: decimal(90),
+        },
+      ],
+    },
+  } as never);
+
+  const result =
+    await getProductSizeRecommendation({
+      productId: "skirt-length-regression",
+      shopperId: "shopper-1",
+    });
+
+  expect(result.status).toBe("ASSESSED");
+
+  if (result.status !== "ASSESSED") {
+    throw new Error(
+      "Expected skirt recommendation to be assessed"
+    );
+  }
+
+  /*
+   * M is the authoritative BODY-fit recommendation
+   * from waist + hip.
+   *
+   * L has the shopper's exact preferred skirt
+   * length, but length must never override body fit.
+   */
+
+  expect(result.recommendation.status).toBe(
+    "RECOMMENDED"
+  );
+
+  if (
+    result.recommendation.status !==
+      "RECOMMENDED" ||
+    result.recommendation.recommendedSize === null
+  ) {
+    throw new Error(
+      "Expected a conventional skirt size recommendation"
+    );
+  }
+
+  expect(
+    result.recommendation.recommendedSize.sizeId
+  ).toBe("size-m");
+
+  expect(
+    result.lengthAssessment.structure
+  ).toBe("SIZE_DEPENDENT");
+
+  if (
+    result.lengthAssessment.structure !==
+      "SIZE_DEPENDENT" ||
+    result.lengthAssessment.result.status !==
+      "ASSESSED"
+  ) {
+    throw new Error(
+      "Expected skirt length assessment"
+    );
+  }
+
+  expect(
+    result.lengthAssessment.result.measurementType
+  ).toBe(FitMeasurementType.SKIRT_LENGTH);
+
+  expect(
+    result.lengthAssessment.result.assessments.map(
+      (item) => ({
+        id: item.sizeId,
+        status: item.assessment.status,
+      })
+    )
+  ).toEqual([
+    {
+      id: "size-m",
+      status: "SHORTER_THAN_PREFERENCE",
+    },
+    {
+      id: "size-l",
+      status: "MATCH",
+    },
+  ]);
+
+  expect(result.shopperDisplayUnit).toBe("CM");
 });
 
 it("routes independent product length options through the normalized independent length assessment path", async () => {

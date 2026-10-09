@@ -1,6 +1,7 @@
 import {
   FitGarmentComponent,
   FitMeasurementBasis,
+  FitMeasurementRangeType,
   FitMeasurementType,
 } from "@prisma/client";
 
@@ -28,6 +29,8 @@ function makeSize(
     sizeId: "size-m",
     sizeLabel: "M",
 
+    chartSortOrder: null,
+
     productSizeMeasurements: [],
 
     mappedChart: null,
@@ -49,6 +52,8 @@ function garmentLengthMeasurement(
     measurementBasis:
       FitMeasurementBasis.GARMENT,
 
+    rangeType: FitMeasurementRangeType.RANGE,
+
     minValueCm: valueCm,
     maxValueCm: valueCm,
   };
@@ -67,6 +72,10 @@ function garmentChart(
           FitMeasurementType.GARMENT_LENGTH,
         component:
           FitGarmentComponent.WHOLE_GARMENT,
+
+        rangeType:
+          FitMeasurementRangeType.RANGE,
+
         minValueCm: valueCm,
         maxValueCm: valueCm,
       },
@@ -87,6 +96,10 @@ function bodyChart(
           FitMeasurementType.GARMENT_LENGTH,
         component:
           FitGarmentComponent.WHOLE_GARMENT,
+
+        rangeType:
+          FitMeasurementRangeType.RANGE,
+
         minValueCm: valueCm,
         maxValueCm: valueCm,
       },

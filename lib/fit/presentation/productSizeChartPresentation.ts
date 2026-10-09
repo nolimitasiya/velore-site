@@ -9,6 +9,8 @@ export type ProductSizeChartMeasurement = {
   type: string;
   component: string;
 
+  rangeType: "RANGE" | "UPPER_BOUND";
+
   minValueCm: number | null;
   maxValueCm: number | null;
 
@@ -123,6 +125,7 @@ export function presentProductSizeCharts(
       (measurement) => ({
         type: measurement.type,
         component: measurement.component,
+        rangeType: measurement.rangeType,
 
         minValueCm: toNumber(
           measurement.minValueCm

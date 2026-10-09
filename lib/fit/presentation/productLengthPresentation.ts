@@ -1,13 +1,18 @@
 import type {
   ProductLengthServiceAssessment,
 } from "@/lib/fit/getProductSizeRecommendation";
+import type {
+  FitMeasurementType,
+} from "@prisma/client";
 
 export type ProductLengthPresentation =
   | {
-    state: "ASSESSED";
-    structure:
-      | "SIZE_ATTACHED"
-      | "LENGTH_BASED_SIZE";
+      state: "ASSESSED";
+      structure:
+        | "SIZE_ATTACHED"
+        | "LENGTH_BASED_SIZE";
+
+      measurementType: FitMeasurementType;
 
       sizes: readonly {
         id: string;
@@ -29,9 +34,11 @@ export type ProductLengthPresentation =
         };
       }[];
     }
-  | {
+    | {
       state: "ASSESSED";
       structure: "INDEPENDENT";
+
+      measurementType: FitMeasurementType;
 
       options: readonly {
         id: string;
@@ -206,10 +213,12 @@ export function presentProductLength(
     }
 
     return {
-      state: "ASSESSED",
-      structure: "INDEPENDENT",
-      options,
-    };
+  state: "ASSESSED",
+  structure: "INDEPENDENT",
+  measurementType:
+    result.measurementType,
+  options,
+};
   }
 
   /*
@@ -322,7 +331,7 @@ export function presentProductLength(
     };
   }
 
-  return {
+ return {
   state: "ASSESSED",
 
   structure:
@@ -330,6 +339,9 @@ export function presentProductLength(
     "LENGTH_BASED_SIZE"
       ? "LENGTH_BASED_SIZE"
       : "SIZE_ATTACHED",
+
+  measurementType:
+    result.measurementType,
 
   sizes,
 };

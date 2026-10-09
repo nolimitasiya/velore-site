@@ -21,6 +21,8 @@ describe("presentProductLength", () => {
         result: {
   status: "ASSESSED",
   structure: "SIZE_DEPENDENT",
+  measurementType:
+    FitMeasurementType.GARMENT_LENGTH,
   assessments: [
             {
               sizeId: "size-m",
@@ -51,6 +53,8 @@ describe("presentProductLength", () => {
     ).toEqual({
   state: "ASSESSED",
   structure: "SIZE_ATTACHED",
+  measurementType:
+    FitMeasurementType.GARMENT_LENGTH,
 
       sizes: [
         {
@@ -80,6 +84,8 @@ describe("presentProductLength", () => {
         result: {
   status: "ASSESSED",
   structure: "SIZE_DEPENDENT",
+  measurementType:
+    FitMeasurementType.GARMENT_LENGTH,
   assessments: [
 
             {
@@ -134,6 +140,8 @@ describe("presentProductLength", () => {
         result: {
   status: "ASSESSED",
   structure: "SIZE_DEPENDENT",
+  measurementType:
+    FitMeasurementType.GARMENT_LENGTH,
   assessments: [
             {
               sizeId: "size-l",
@@ -187,6 +195,8 @@ describe("presentProductLength", () => {
         result: {
   status: "ASSESSED",
   structure: "SIZE_DEPENDENT",
+  measurementType:
+    FitMeasurementType.GARMENT_LENGTH,
   assessments: [
             {
               sizeId: "size-56",
@@ -305,6 +315,7 @@ describe("presentProductLength", () => {
       result: {
   status: "ASSESSED",
   structure: "SIZE_DEPENDENT",
+  measurementType: FitMeasurementType.GARMENT_LENGTH,
   assessments: [
           {
             sizeId: "size-s",
@@ -458,7 +469,7 @@ describe("presentProductLength", () => {
         result: {
           status: "ASSESSED",
           structure: "INDEPENDENT",
-
+          measurementType: FitMeasurementType.GARMENT_LENGTH,
           assessments: [
             {
               optionId: "length-54",
@@ -582,6 +593,8 @@ describe("presentProductLength", () => {
         result: {
   status: "INSUFFICIENT_EVIDENCE",
   structure: "SIZE_DEPENDENT",
+  measurementType:
+    FitMeasurementType.GARMENT_LENGTH,
   assessments: [],
   reason: "MISSING_SHOPPER_PREFERENCE",
 },
@@ -599,6 +612,7 @@ describe("presentProductLength", () => {
         result: {
   status: "INSUFFICIENT_EVIDENCE",
   structure: "SIZE_DEPENDENT",
+  measurementType: FitMeasurementType.GARMENT_LENGTH,
   assessments: [],
   reason: "MISSING_GARMENT_LENGTH",
 },
@@ -632,6 +646,8 @@ describe("presentProductLength", () => {
         result: {
   status: "ASSESSED",
   structure: "SIZE_DEPENDENT",
+  measurementType:
+    FitMeasurementType.GARMENT_LENGTH,
   assessments: [],
         },
       })
@@ -648,6 +664,8 @@ describe("presentProductLength", () => {
         result: {
   status: "ASSESSED",
   structure: "SIZE_DEPENDENT",
+  measurementType:
+    FitMeasurementType.GARMENT_LENGTH,
   assessments: [
             {
               sizeId: "size-m",
@@ -686,6 +704,8 @@ describe("presentProductLength", () => {
       result: {
         status: "ASSESSED",
         structure: "LENGTH_BASED_SIZE",
+        measurementType:
+            FitMeasurementType.GARMENT_LENGTH,
 
         assessments: [
           {
@@ -846,6 +866,8 @@ describe("presentProductLength", () => {
       result: {
         status: "ASSESSED",
         structure: "INDEPENDENT",
+        measurementType:
+            FitMeasurementType.GARMENT_LENGTH,
         assessments: [],
       },
     })
@@ -860,7 +882,7 @@ it("preserves a complete length-based assessment with no exact match without inv
     result: {
       status: "ASSESSED",
       structure: "LENGTH_BASED_SIZE",
-
+      measurementType: FitMeasurementType.GARMENT_LENGTH,
       assessments: [
         {
           sizeId: "size-54",
@@ -970,6 +992,111 @@ it("preserves a complete length-based assessment with no exact match without inv
       (size) => size.status === "MATCH"
     )
   ).toHaveLength(0);
+});
+
+it("preserves INSEAM semantics for size-attached pants length assessment", () => {
+  const result = presentProductLength({
+    structure: "SIZE_DEPENDENT",
+
+    result: {
+      status: "ASSESSED",
+      structure: "SIZE_DEPENDENT",
+      measurementType:
+        FitMeasurementType.INSEAM,
+
+      assessments: [
+        {
+          sizeId: "size-m",
+          sizeLabel: "M",
+
+          assessment: {
+            measurementType:
+              FitMeasurementType.INSEAM,
+
+            garmentRange: {
+              minValueCm: 71.12,
+              maxValueCm: 71.12,
+            },
+
+            shopperReference: {
+              minValueCm: 76.2,
+              maxValueCm: 76.2,
+            },
+
+            status:
+              "SHORTER_THAN_PREFERENCE",
+            reason:
+              "BELOW_PREFERRED_RANGE",
+          },
+        },
+
+        {
+          sizeId: "size-l",
+          sizeLabel: "L",
+
+          assessment: {
+            measurementType:
+              FitMeasurementType.INSEAM,
+
+            garmentRange: {
+              minValueCm: 76.2,
+              maxValueCm: 76.2,
+            },
+
+            shopperReference: {
+              minValueCm: 76.2,
+              maxValueCm: 76.2,
+            },
+
+            status: "MATCH",
+            reason:
+              "WITHIN_PREFERRED_RANGE",
+          },
+        },
+      ],
+    },
+  });
+
+  expect(result).toEqual({
+    state: "ASSESSED",
+    structure: "SIZE_ATTACHED",
+    measurementType:
+      FitMeasurementType.INSEAM,
+
+    sizes: [
+      {
+        id: "size-m",
+        label: "M",
+        status: "SHORTER",
+
+        garmentRangeCm: {
+          min: 71.12,
+          max: 71.12,
+        },
+
+        shopperReferenceCm: {
+          min: 76.2,
+          max: 76.2,
+        },
+      },
+
+      {
+        id: "size-l",
+        label: "L",
+        status: "MATCH",
+
+        garmentRangeCm: {
+          min: 76.2,
+          max: 76.2,
+        },
+
+        shopperReferenceCm: {
+          min: 76.2,
+          max: 76.2,
+        },
+      },
+    ],
+  });
 });
 
 });

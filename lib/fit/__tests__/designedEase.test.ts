@@ -1,6 +1,7 @@
 import {
   FitGarmentComponent,
   FitMeasurementBasis,
+  FitMeasurementRangeType,
   FitMeasurementType,
 } from "@prisma/client";
 import { describe, expect, it } from "vitest";
@@ -27,6 +28,7 @@ function measurement(
     },
 
     basis: FitMeasurementBasis.BODY,
+    rangeType: FitMeasurementRangeType.RANGE,
     source: "BRAND_SIZE_CHART",
 
     ...overrides,
@@ -293,4 +295,30 @@ it("does not derive designed ease when GARMENT evidence is invalid", () => {
       evidence: null,
     });
   });
+  it("does not derive designed ease from UPPER_BOUND BODY evidence without a minimum", () => {
+    const body = measurement({
+      rangeType: FitMeasurementRangeType.UPPER_BOUND,
+      range: {
+        minValueCm: NaN,
+        maxValueCm: 96,
+      },
+    });
+
+    const garment = measurement({
+      basis: FitMeasurementBasis.GARMENT,
+      source: "PRODUCT_SIZE",
+      range: {
+        minValueCm: 108,
+        maxValueCm: 108,
+      },
+    });
+
+    const result = deriveDesignedEase(body, garment);
+
+    expect(result).toEqual({
+      status: "INSUFFICIENT_EVIDENCE",
+      evidence: null,
+    });
+  });
+
 });

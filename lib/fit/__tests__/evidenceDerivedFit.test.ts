@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import {
+  FitMeasurementRangeType,
+} from "@prisma/client";
 
 import {
   assessEvidenceDerivedFit,
@@ -28,6 +31,7 @@ function resolvedEvidence(args: {
           maxValueCm: args.bodyMax,
         },
         basis: "BODY",
+        rangeType: FitMeasurementRangeType.RANGE,
         source: "BRAND_SIZE_CHART",
       },
     },
@@ -42,6 +46,7 @@ function resolvedEvidence(args: {
           maxValueCm: args.garmentMax,
         },
         basis: "GARMENT",
+        rangeType: FitMeasurementRangeType.RANGE,
         source: "BRAND_SIZE_CHART",
       },
     },

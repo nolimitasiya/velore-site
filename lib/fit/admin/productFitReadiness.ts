@@ -20,14 +20,13 @@ export type ProductFitReadinessStatus =
 export type ProductFitReadinessReason =
   | "BODY_EVIDENCE_COMPLETE"
   | "BODY_AND_GARMENT_EVIDENCE_COMPLETE"
-  | "GARMENT_EVIDENCE_REQUIRES_EASE"
+  | "GARMENT_EVIDENCE_REQUIRES_BODY"
   | "MISSING_REQUIRED_BODY_EVIDENCE"
   | "INCOMPLETE_SIZE_MAPPING"
   | "NO_CATALOGUE_SIZES"
   | "SIZE_RECOMMENDATION_NOT_SUPPORTED"
   | "MISSING_PRODUCT_TYPE"
-  | "MULTIPLE_PRODUCT_TYPES"
-  | "DESIGNED_EASE_EVIDENCE_COMPLETE";
+  | "MULTIPLE_PRODUCT_TYPES";
 
 export type ProductFitReadinessMeasurement = {
   type: FitMeasurementType;
@@ -39,6 +38,7 @@ export type ProductFitReadinessMeasurement = {
 
 export type ProductFitReadinessInput = {
   productTypes: readonly ProductType[];
+  fitComponents?: readonly FitGarmentComponent[];
 
   catalogueSizeCount: number;
   mappedSizeCount: number;
@@ -129,7 +129,8 @@ export function assessProductFitReadiness(
 const rules =
   resolvedProductType !== null
     ? getProductMeasurementRules(
-        resolvedProductType
+        resolvedProductType,
+        input.fitComponents ?? []
       )
     : null;
 
@@ -246,27 +247,13 @@ if (input.productTypes.length > 1) {
     };
   }
 
-  if (
-    hasGarmentEvidence &&
-    !input.hasSufficientDesignedEaseEvidence
-  ) {
+   if (hasGarmentEvidence) {
     return {
       ...baseResult,
       status: "CONDITIONAL",
-      reason: "GARMENT_EVIDENCE_REQUIRES_EASE",
+      reason: "GARMENT_EVIDENCE_REQUIRES_BODY",
     };
   }
-
- if (
-  hasGarmentEvidence &&
-  input.hasSufficientDesignedEaseEvidence
-) {
-  return {
-    ...baseResult,
-    status: "READY",
-    reason: "DESIGNED_EASE_EVIDENCE_COMPLETE",
-  };
-}
 
   return {
     ...baseResult,

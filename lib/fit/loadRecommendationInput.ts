@@ -3,6 +3,7 @@ import {
   FitDataSource,
   FitGarmentComponent,
   FitMeasurementBasis,
+  FitMeasurementRangeType,
   FitMeasurementType,
   FitUnit,
   ProductIntendedFit,
@@ -54,6 +55,8 @@ export type RecommendationShopperRecord = {
  * brand size entry mapped to this ProductSize.
  */
 export type RecommendationChartEntryRecord = {
+  sortOrder: number;
+
   chart: {
     measurementBasis: FitMeasurementBasis;
   };
@@ -61,6 +64,7 @@ export type RecommendationChartEntryRecord = {
   measurements: readonly {
     type: FitMeasurementType;
     component: FitGarmentComponent;
+    rangeType: FitMeasurementRangeType;
 
     minValueCm: FitNumericValue;
     maxValueCm: FitNumericValue;
@@ -84,13 +88,14 @@ export type RecommendationProductSizeRecord = {
   };
 
   fitMeasurements: readonly {
-    type: FitMeasurementType;
-    component: FitGarmentComponent;
-    measurementBasis: FitMeasurementBasis | null;
+  type: FitMeasurementType;
+  component: FitGarmentComponent;
+  measurementBasis: FitMeasurementBasis | null;
+  rangeType: FitMeasurementRangeType;
 
-    minValueCm: FitNumericValue;
-    maxValueCm: FitNumericValue;
-  }[];
+  minValueCm: FitNumericValue;
+  maxValueCm: FitNumericValue;
+}[];
 
   sizeChartMapping: {
     chartEntry: RecommendationChartEntryRecord;
@@ -184,6 +189,14 @@ export type RecommendationProductRecord = {
   intendedFit: ProductIntendedFit | null;
   stretch: FabricStretch;
   measurementBasis: FitMeasurementBasis;
+  components?: readonly {
+      component: FitGarmentComponent;
+    }[];
+
+sizingRequirements?: readonly {
+  type: FitMeasurementType;
+  component: FitGarmentComponent;
+}[];
 
   measurements?: readonly {
   type: FitMeasurementType;
@@ -313,6 +326,8 @@ function toProductSizeMeasurement(
       measurement.measurementBasis ??
       inheritedMeasurementBasis,
 
+    rangeType: measurement.rangeType,
+
     minValueCm: toNumber(
       measurement.minValueCm
     ),
@@ -330,6 +345,7 @@ function toChartMeasurement(
   return {
     type: measurement.type,
     component: measurement.component,
+    rangeType: measurement.rangeType,
     minValueCm: toNumber(
       measurement.minValueCm
     ),
@@ -508,11 +524,15 @@ export function loadNormalizedRecommendationSizes(
         );
 
       return {
-        sizeId: productSize.sizeId,
+  sizeId: productSize.sizeId,
 
-        sizeLabel: productSize.size.name,
+  sizeLabel: productSize.size.name,
 
-        productSizeMeasurements:
+  chartSortOrder:
+    productSize.sizeChartMapping?.chartEntry.sortOrder ??
+    null,
+
+  productSizeMeasurements:
           productSize.fitMeasurements.map(
             (measurement) =>
               toProductSizeMeasurement(
@@ -583,6 +603,21 @@ export function loadRecommendationInput(
     input: {
       productType:
         productTypeResolution.productType,
+        fitComponents:
+          product.fitProfile?.components?.map(
+                ({ component }) => component
+          ) ?? [],
+
+          explicitRequiredBodyFit:
+  product.fitProfile?.sizingRequirements &&
+  product.fitProfile.sizingRequirements.length > 0
+    ? product.fitProfile.sizingRequirements.map(
+        (requirement) => ({
+          type: requirement.type,
+          component: requirement.component,
+        })
+      )
+    : undefined,
 
       intendedFit,
 

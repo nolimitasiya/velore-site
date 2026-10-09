@@ -6,23 +6,11 @@ import { prisma } from "@/lib/prisma";
 
 import SizeChartMeasurementEditor from "./SizeChartMeasurementEditor";
 import SizeChartProvenanceEditor from "./SizeChartProvenanceEditor";
+import SizeChartProductTypeEditor from "./SizeChartProductTypeEditor";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-function formatProductType(value: string) {
-  if (value === "COATS_JACKETS") return "Coats & Jackets";
-  if (value === "HOODIE_SWEATSHIRT") return "Hoodie & Sweatshirt";
-  if (value === "T_SHIRT") return "T-Shirt";
-
-  return value
-    .toLowerCase()
-    .replaceAll("_", " ")
-    .split(" ")
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
 
 function formatBasis(value: string) {
   if (value === "BODY") return "Body measurements";
@@ -171,22 +159,12 @@ export default async function BrandSizeChartPage({
                 }
               />
 
-              <div>
-                <div className="text-xs font-medium text-neutral-400">
-                  Product types
-                </div>
-
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {chart.productTypes.map((item) => (
-                    <span
-                      key={item.productType}
-                      className="rounded-full border border-black/10 bg-neutral-50 px-3 py-1.5 text-xs text-neutral-600"
-                    >
-                      {formatProductType(item.productType)}
-                    </span>
-                  ))}
-                </div>
-              </div>
+              <SizeChartProductTypeEditor
+  chartId={chart.id}
+  initialProductTypes={chart.productTypes.map(
+    (item) => item.productType
+  )}
+/>
             </div>
           </div>
 
@@ -219,6 +197,7 @@ export default async function BrandSizeChartPage({
         (measurement) => ({
           type: measurement.type,
           component: measurement.component,
+          rangeType: measurement.rangeType,
 
           sourceMinValue:
             measurement.sourceMinValue.toString(),

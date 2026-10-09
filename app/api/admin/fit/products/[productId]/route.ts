@@ -1,15 +1,19 @@
 import {
   FabricStretch,
   FitDataSource,
+  FitGarmentComponent,
   FitMeasurementBasis,
+  FitMeasurementType,
   ProductIntendedFit,
   ProductType,
 } from "@prisma/client";
 
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 
 import { requireAdminSession } from "@/lib/auth/AdminSession";
 import { prisma } from "@/lib/prisma";
+import { getProductMeasurementRules } from "@/lib/fit/measurementRules";
 
 function isEnumValue<T extends Record<string, string>>(
   enumObject: T,
@@ -66,6 +70,11 @@ function parseOptionalUrl(value: unknown) {
     return undefined;
   }
 }
+
+type SizingRequirementInput = {
+  type: FitMeasurementType;
+  component: FitGarmentComponent;
+};
 
 type MappingInput = {
   sizeId: string;
@@ -228,6 +237,148 @@ export async function PUT(
   }
 
   /*
+ * -----------------------------
+ * Product Fit components
+ * -----------------------------
+ */
+
+if (!Array.isArray(input.fitComponents)) {
+  return NextResponse.json(
+    {
+      error: "Fit components must be provided.",
+    },
+    {
+      status: 400,
+    }
+  );
+}
+
+const fitComponents: FitGarmentComponent[] = [];
+
+for (const rawComponent of input.fitComponents) {
+  if (
+    !isEnumValue(
+      FitGarmentComponent,
+      rawComponent
+    )
+  ) {
+    return NextResponse.json(
+      {
+        error: "Invalid Fit component.",
+      },
+      {
+        status: 400,
+      }
+    );
+  }
+
+  fitComponents.push(rawComponent);
+}
+
+if (
+  new Set(fitComponents).size !==
+  fitComponents.length
+) {
+  return NextResponse.json(
+    {
+      error:
+        "A Fit component was submitted more than once.",
+    },
+    {
+      status: 400,
+    }
+  );
+}
+
+/*
+ * -----------------------------
+ * Product sizing requirements
+ * -----------------------------
+ *
+ * An empty array means this product has no explicit
+ * override and should fall back to its canonical
+ * product-type sizing requirements.
+ */
+
+if (!Array.isArray(input.sizingRequirements)) {
+  return NextResponse.json(
+    {
+      error: "Sizing requirements must be provided.",
+    },
+    {
+      status: 400,
+    }
+  );
+}
+
+const sizingRequirements: SizingRequirementInput[] = [];
+
+for (const rawRequirement of input.sizingRequirements) {
+  if (
+    !rawRequirement ||
+    typeof rawRequirement !== "object"
+  ) {
+    return NextResponse.json(
+      {
+        error: "Invalid sizing requirement.",
+      },
+      {
+        status: 400,
+      }
+    );
+  }
+
+  const requirement =
+    rawRequirement as Record<string, unknown>;
+
+  if (
+    !isEnumValue(
+      FitMeasurementType,
+      requirement.type
+    ) ||
+    !isEnumValue(
+      FitGarmentComponent,
+      requirement.component
+    )
+  ) {
+    return NextResponse.json(
+      {
+        error: "Invalid sizing requirement.",
+      },
+      {
+        status: 400,
+      }
+    );
+  }
+
+  sizingRequirements.push({
+    type: requirement.type,
+    component: requirement.component,
+  });
+}
+
+const sizingRequirementKeys =
+  sizingRequirements.map(
+    (requirement) =>
+      `${requirement.component}:${requirement.type}`
+  );
+
+if (
+  new Set(sizingRequirementKeys).size !==
+  sizingRequirementKeys.length
+) {
+  return NextResponse.json(
+    {
+      error:
+        "A sizing requirement was submitted more than once.",
+    },
+    {
+      status: 400,
+    }
+  );
+}
+
+  /*
    * -----------------------------
    * Chart + mapping input
    * -----------------------------
@@ -345,11 +496,18 @@ export async function PUT(
     },
 
     select: {
-      id: true,
-      brandId: true,
-      productType: true,
+  id: true,
+  brandId: true,
+  slug: true,
+  productType: true,
 
-      productTypes: {
+  brand: {
+    select: {
+      slug: true,
+    },
+  },
+
+  productTypes: {
         select: {
           productType: true,
         },
@@ -390,6 +548,184 @@ export async function PUT(
         : []),
     ]),
   ];
+
+ /*
+ * -----------------------------
+ * Product Fit composition
+ * -----------------------------
+ *
+ * Composition is supported only for a single
+ * canonical SETS or ACTIVEWEAR product.
+ *
+ * SETS:
+ * - TOP + SKIRT
+ * - TOP + TROUSER
+ *
+ * ACTIVEWEAR:
+ * - TOP
+ * - TROUSER
+ * - TOP + TROUSER
+ *
+ * Every other product type must persist no
+ * Fit components.
+ */
+
+const isCanonicalSetsProduct =
+  canonicalProductTypes.length === 1 &&
+  canonicalProductTypes[0] === ProductType.SETS;
+
+const isCanonicalActivewearProduct =
+  canonicalProductTypes.length === 1 &&
+  canonicalProductTypes[0] ===
+    ProductType.ACTIVEWEAR;
+
+if (isCanonicalSetsProduct) {
+  const componentSet = new Set(fitComponents);
+
+  const isTopSkirt =
+    componentSet.size === 2 &&
+    componentSet.has(FitGarmentComponent.TOP) &&
+    componentSet.has(FitGarmentComponent.SKIRT);
+
+  const isTopTrouser =
+    componentSet.size === 2 &&
+    componentSet.has(FitGarmentComponent.TOP) &&
+    componentSet.has(FitGarmentComponent.TROUSER);
+
+  if (!isTopSkirt && !isTopTrouser) {
+    return NextResponse.json(
+      {
+        error:
+          "SETS products must use a supported composition: Top + Skirt or Top + Trouser.",
+      },
+      {
+        status: 400,
+      }
+    );
+  }
+} else if (isCanonicalActivewearProduct) {
+  const componentSet = new Set(fitComponents);
+
+  const isTop =
+    componentSet.size === 1 &&
+    componentSet.has(FitGarmentComponent.TOP);
+
+  const isTrouser =
+    componentSet.size === 1 &&
+    componentSet.has(
+      FitGarmentComponent.TROUSER
+    );
+
+  const isTopTrouser =
+    componentSet.size === 2 &&
+    componentSet.has(FitGarmentComponent.TOP) &&
+    componentSet.has(
+      FitGarmentComponent.TROUSER
+    );
+
+  if (
+    !isTop &&
+    !isTrouser &&
+    !isTopTrouser
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "ACTIVEWEAR products must use a supported composition: Top, Trouser, or Top + Trouser.",
+      },
+      {
+        status: 400,
+      }
+    );
+  }
+} else if (fitComponents.length > 0) {
+  return NextResponse.json(
+    {
+      error:
+        "Fit components can only be configured for a SETS or ACTIVEWEAR product.",
+    },
+    {
+      status: 400,
+    }
+  );
+}
+
+/*
+ * -----------------------------
+ * Sizing requirement integrity
+ * -----------------------------
+ *
+ * Explicit product requirements may only use BODY
+ * sizing dimensions supported by the canonical
+ * measurement rules for this exact product structure.
+ *
+ * Length and coverage measurements are intentionally
+ * excluded.
+ */
+
+if (sizingRequirements.length > 0) {
+  if (canonicalProductTypes.length !== 1) {
+    return NextResponse.json(
+      {
+        error:
+          "Product-specific sizing requirements require exactly one canonical product type.",
+      },
+      {
+        status: 400,
+      }
+    );
+  }
+
+  const measurementRules =
+    getProductMeasurementRules(
+      canonicalProductTypes[0],
+      fitComponents
+    );
+
+  if (!measurementRules.supportsSizeRecommendation) {
+    return NextResponse.json(
+      {
+        error:
+          "Product-specific sizing requirements are not supported for this product.",
+      },
+      {
+        status: 400,
+      }
+    );
+  }
+
+  const allowedRequirements = [
+    ...measurementRules.requiredBodyFit,
+    ...measurementRules.optionalBodyFit,
+  ];
+
+  const allowedRequirementKeys = new Set(
+    allowedRequirements.flatMap((requirement) =>
+      requirement.component
+        ? [
+            `${requirement.component}:${requirement.type}`,
+          ]
+        : []
+    )
+  );
+
+  for (const requirement of sizingRequirements) {
+    const key =
+      `${requirement.component}:${requirement.type}`;
+
+    if (!allowedRequirementKeys.has(key)) {
+      return NextResponse.json(
+        {
+          error:
+            "A sizing requirement is not valid for this product type and garment component.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+  }
+}
 
   /*
    * -----------------------------
@@ -591,7 +927,8 @@ export async function PUT(
      * Product Fit profile:
      * create once, update thereafter.
      */
-    await tx.productFitProfile.upsert({
+    const fitProfile =
+      await tx.productFitProfile.upsert({
       where: {
         productId,
       },
@@ -619,6 +956,54 @@ export async function PUT(
     });
 
     /*
+ * The Product Fit editor represents the complete
+ * component state for this product.
+ *
+ * Replace the normalized component rows atomically.
+ */
+await tx.productFitComponent.deleteMany({
+  where: {
+    fitProfileId: fitProfile.id,
+  },
+});
+
+if (fitComponents.length > 0) {
+  await tx.productFitComponent.createMany({
+    data: fitComponents.map((component) => ({
+      fitProfileId: fitProfile.id,
+      component,
+    })),
+  });
+}
+
+/*
+ * The Product Fit editor represents the complete
+ * explicit sizing-requirement state for this product.
+ *
+ * No rows means there is no product-specific override,
+ * so the recommendation engine falls back to the
+ * canonical product-type requirements.
+ *
+ * One or more rows means those BODY measurements are
+ * the authoritative requirements for this product.
+ */
+await tx.productFitSizingRequirement.deleteMany({
+  where: {
+    fitProfileId: fitProfile.id,
+  },
+});
+
+if (sizingRequirements.length > 0) {
+  await tx.productFitSizingRequirement.createMany({
+    data: sizingRequirements.map((requirement) => ({
+      fitProfileId: fitProfile.id,
+      type: requirement.type,
+      component: requirement.component,
+    })),
+  });
+}
+
+    /*
      * The submitted editor represents the
      * complete mapping state for this product.
      *
@@ -641,6 +1026,18 @@ export async function PUT(
       });
     }
   });
+
+revalidateTag(
+  `product:${product.brand.slug}:${product.slug}`,
+  "max"
+);
+
+revalidateTag(
+  `brand:${product.brand.slug}`,
+  "max"
+);
+
+revalidateTag("storefront-products", "max");
 
   return NextResponse.json({
     ok: true,

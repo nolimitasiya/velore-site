@@ -16,7 +16,9 @@ type MeasurementType =
   | "BUST"
   | "WAIST"
   | "HIP"
-  | "GARMENT_LENGTH";
+  | "INSEAM"
+  | "GARMENT_LENGTH"
+  | "SKIRT_LENGTH";
 
 type SavedMeasurement = {
   type: MeasurementType;
@@ -43,7 +45,9 @@ const EMPTY_MEASUREMENTS: MeasurementValues = {
   BUST: "",
   WAIST: "",
   HIP: "",
+  INSEAM: "",
   GARMENT_LENGTH: "",
+  SKIRT_LENGTH: "",
 };
 
 const MEASUREMENT_FIELDS: Array<{
@@ -73,10 +77,22 @@ const MEASUREMENT_FIELDS: Array<{
   },
 
   {
+  type: "INSEAM",
+  label: "Inseam",
+  help: "Measure from the crotch seam down the inside of your leg to where you want your trousers to finish.",
+},
+
+  {
   type: "GARMENT_LENGTH",
   label: "Preferred maxi length",
   help:
     "Measure from the highest point of your shoulder down to where you prefer a full-length dress, abaya or jilbab to finish.",
+},
+{
+  type: "SKIRT_LENGTH",
+  label: "Preferred skirt length",
+  help:
+    "Measure from your natural waist down to where you prefer your skirt to finish.",
 },
 ];
 
@@ -85,10 +101,13 @@ const BODY_MEASUREMENT_TYPES: MeasurementType[] = [
   "BUST",
   "WAIST",
   "HIP",
+  "INSEAM"
 ];
 
 const PREFERENCE_MEASUREMENT_TYPES: MeasurementType[] = [
   "GARMENT_LENGTH",
+  "SKIRT_LENGTH",
+
 ];
 
 const BODY_MEASUREMENT_FIELDS =
@@ -519,7 +538,7 @@ setMeasurements(
   We&apos;ll use these alongside your measurements when
   they&apos;re relevant to a product.
 </p>
-<div className="mt-10 max-w-md">
+<div className="mt-10 grid gap-x-12 gap-y-8 sm:grid-cols-2">
   {PREFERENCE_MEASUREMENT_FIELDS.map((field) => (
     <label key={field.type} className="block">
       <div className="mb-2 flex items-center justify-between gap-4">

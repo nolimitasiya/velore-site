@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import {
+  FitMeasurementRangeType,
+} from "@prisma/client";
 
 import {
   assessEvidenceDerivedSuitability,
@@ -39,6 +42,7 @@ function assessed(
             maxValueCm: 90,
           },
           basis: "BODY",
+          rangeType: FitMeasurementRangeType.RANGE,
           source: "BRAND_SIZE_CHART",
         },
         garmentEvidence: {
@@ -49,6 +53,7 @@ function assessed(
             maxValueCm: 98,
           },
           basis: "GARMENT",
+          rangeType: FitMeasurementRangeType.RANGE,
           source: "BRAND_SIZE_CHART",
         },
       },

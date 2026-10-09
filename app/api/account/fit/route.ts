@@ -38,6 +38,8 @@ const ALLOWED_PROFILE_MEASUREMENTS = new Set<FitMeasurementType>([
   FitMeasurementType.ARM_LENGTH,
   FitMeasurementType.SLEEVE_LENGTH,
   FitMeasurementType.GARMENT_LENGTH,
+  FitMeasurementType.SKIRT_LENGTH,
+
 ]);
 
 function isEnumValue<T extends Record<string, string>>(

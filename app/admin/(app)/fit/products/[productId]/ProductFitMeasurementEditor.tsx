@@ -3,6 +3,7 @@
 import {
   FitGarmentComponent,
   FitMeasurementBasis,
+  FitMeasurementRangeType,
   FitMeasurementType,
   FitUnit,
   ProductType,
@@ -22,6 +23,7 @@ type InitialMeasurement = {
 type InitialSizeMeasurement = InitialMeasurement & {
   sizeId: string;
   measurementBasis: FitMeasurementBasis | null;
+  rangeType: FitMeasurementRangeType;
 };
 
 type ProductSize = {
@@ -51,6 +53,7 @@ type SizeRow = {
   type: FitMeasurementType;
   component: FitGarmentComponent;
   measurementBasis: FitMeasurementBasis | null;
+  rangeType: FitMeasurementRangeType;
   sourceUnit: FitUnit;
   values: Record<
     string,
@@ -387,6 +390,7 @@ const oneSizeProductRows =
   component: measurement.component,
   measurementBasis:
     measurement.measurementBasis,
+  rangeType: measurement.rangeType,
   sourceUnit: measurement.sourceUnit,
   values: {},
 };
@@ -425,6 +429,7 @@ const oneSizeProductRows =
   type: defaultType,
   component: defaultComponent,
   measurementBasis: null,
+  rangeType: FitMeasurementRangeType.UPPER_BOUND,
   sourceUnit: FitUnit.CM,
   values: Object.fromEntries(
           productSizes.map((size) => [
@@ -599,6 +604,7 @@ const productMeasurements =
     component: row.component,
     measurementBasis:
       row.measurementBasis,
+    rangeType: row.rangeType,
     sourceUnit: row.sourceUnit,
     sourceMinValue: value.min,
     sourceMaxValue: value.max,
@@ -1007,9 +1013,9 @@ const productMeasurements =
                 return (
                   <div
                     key={row.key}
-                    className="overflow-hidden rounded-2xl border border-black/10"
+                    className="overflow-hidden rounded-2xl <border> border-black/10"
                   >
-                    <div className="grid gap-3 border-b border-black/5 bg-neutral-50 p-4 md:grid-cols-4">
+                    <div className="grid gap-3 border-b border-black/5 bg-neutral-50 p-4 md:grid-cols-5">
                       <select
                         value={row.type}
                         onChange={(event) =>
@@ -1048,7 +1054,6 @@ const productMeasurements =
                           ))}
                         </optgroup>
                       </select>
-
 
                       <select
                         value={row.component}
@@ -1098,6 +1103,24 @@ const productMeasurements =
 
   <option value={FitMeasurementBasis.UNKNOWN}>
     Basis: Unknown
+  </option>
+</select>
+<select
+  value={row.rangeType}
+  onChange={(event) =>
+    updateSizeRow(row.key, {
+      rangeType:
+        event.target.value as FitMeasurementRangeType,
+    })
+  }
+  className={inputClass}
+>
+  <option value={FitMeasurementRangeType.RANGE}>
+    Value meaning: Range
+  </option>
+
+  <option value={FitMeasurementRangeType.UPPER_BOUND}>
+    Value meaning: Up to / maximum
   </option>
 </select>
 
@@ -1151,12 +1174,22 @@ const productMeasurements =
                             <th className="px-4 py-3 font-semibold">
                               Size
                             </th>
-                            <th className="px-4 py-3 font-semibold">
-                              Value
-                            </th>
-                            <th className="px-4 py-3 font-semibold">
-                              Range max
-                            </th>
+                           {row.rangeType ===
+FitMeasurementRangeType.UPPER_BOUND ? (
+  <th className="px-4 py-3 font-semibold">
+    Maximum
+  </th>
+) : (
+  <>
+    <th className="px-4 py-3 font-semibold">
+      Minimum
+    </th>
+
+    <th className="px-4 py-3 font-semibold">
+      Maximum
+    </th>
+  </>
+)}
                           </tr>
                         </thead>
 
@@ -1174,41 +1207,76 @@ const productMeasurements =
                                   {size.sizeName}
                                 </td>
 
-                                <td className="px-4 py-3">
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={value.min}
-                                    onChange={(event) =>
-                                      updateSizeValue(
-                                        row.key,
-                                        size.sizeId,
-                                        "min",
-                                        event.target.value
-                                      )
-                                    }
-                                    className={inputClass}
-                                  />
-                                </td>
+                                {row.rangeType ===
+FitMeasurementRangeType.UPPER_BOUND ? (
+  <td className="px-4 py-3">
+    <input
+      type="number"
+      min="0"
+      step="0.01"
+      value={value.max || value.min}
+      onChange={(event) => {
+        const nextValue = event.target.value;
 
-                                <td className="px-4 py-3">
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={value.max}
-                                    onChange={(event) =>
-                                      updateSizeValue(
-                                        row.key,
-                                        size.sizeId,
-                                        "max",
-                                        event.target.value
-                                      )
-                                    }
-                                    className={inputClass}
-                                  />
-                                </td>
+        updateSizeValue(
+          row.key,
+          size.sizeId,
+          "min",
+          nextValue
+        );
+
+        updateSizeValue(
+          row.key,
+          size.sizeId,
+          "max",
+          nextValue
+        );
+      }}
+      placeholder="Maximum"
+      className={inputClass}
+    />
+  </td>
+) : (
+  <>
+    <td className="px-4 py-3">
+      <input
+        type="number"
+        min="0"
+        step="0.01"
+        value={value.min}
+        onChange={(event) =>
+          updateSizeValue(
+            row.key,
+            size.sizeId,
+            "min",
+            event.target.value
+          )
+        }
+        placeholder="Minimum"
+        className={inputClass}
+      />
+    </td>
+
+    <td className="px-4 py-3">
+      <input
+        type="number"
+        min="0"
+        step="0.01"
+        value={value.max}
+        onChange={(event) =>
+          updateSizeValue(
+            row.key,
+            size.sizeId,
+            "max",
+            event.target.value
+          )
+        }
+        placeholder="Maximum"
+        className={inputClass}
+      />
+    </td>
+  </>
+)}
                               </tr>
                             );
                           })}

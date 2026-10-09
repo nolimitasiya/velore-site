@@ -57,6 +57,24 @@ export function deriveDesignedEase(
       evidence: null,
     };
   }
+    /*
+   * Designed ease requires complete numerical ranges.
+   *
+   * UPPER_BOUND BODY evidence has no established
+   * lower boundary, so it cannot establish a
+   * complete designed-ease range.
+   */
+  if (
+    !Number.isFinite(bodyEvidence.range.minValueCm) ||
+    !Number.isFinite(bodyEvidence.range.maxValueCm) ||
+    !Number.isFinite(garmentEvidence.range.minValueCm) ||
+    !Number.isFinite(garmentEvidence.range.maxValueCm)
+  ) {
+    return {
+      status: "INSUFFICIENT_EVIDENCE",
+      evidence: null,
+    };
+  }
 
   const minEaseCm =
     garmentEvidence.range.minValueCm -

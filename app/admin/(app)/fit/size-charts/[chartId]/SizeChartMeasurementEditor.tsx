@@ -2,6 +2,7 @@
 
 import {
   FitGarmentComponent,
+  FitMeasurementRangeType,
   FitMeasurementType,
   FitUnit,
   ProductType,
@@ -13,6 +14,7 @@ import { getDefaultGarmentComponent } from "@/lib/fit/defaultGarmentComponent";
 type InitialMeasurement = {
   type: FitMeasurementType;
   component: FitGarmentComponent;
+  rangeType: FitMeasurementRangeType;
   sourceMinValue: string;
   sourceMaxValue: string;
 };
@@ -28,6 +30,7 @@ type MeasurementRow = {
   label: string;
   type: FitMeasurementType;
   component: FitGarmentComponent;
+  rangeType: FitMeasurementRangeType;
   values: Record<
     string,
     {
@@ -96,6 +99,7 @@ function buildInitialRows(
     {
       type: FitMeasurementType;
       component: FitGarmentComponent;
+      rangeType: FitMeasurementRangeType;
     }
   >();
 
@@ -107,6 +111,7 @@ function buildInitialRows(
         definitions.set(key, {
           type: measurement.type,
           component: measurement.component,
+          rangeType: measurement.rangeType,
         });
       }
     }
@@ -136,6 +141,7 @@ function buildInitialRows(
       ),
       type: definition.type,
       component: definition.component,
+      rangeType: definition.rangeType,
       values,
     };
   });
@@ -265,6 +271,7 @@ export default function SizeChartMeasurementEditor({
         label: "Bust",
         type: FitMeasurementType.BUST,
         component: defaultComponent,
+        rangeType: FitMeasurementRangeType.RANGE,
         values,
       },
     ]);
@@ -285,7 +292,7 @@ export default function SizeChartMeasurementEditor({
     patch: Partial<
       Pick<
         MeasurementRow,
-        "label" | "type" | "component"
+        "label" | "type" | "component" | "rangeType"
       >
     >
   ) {
@@ -423,6 +430,7 @@ export default function SizeChartMeasurementEditor({
           return {
             type: row.type,
             component: row.component,
+            rangeType: row.rangeType,
             minValue: value.min.trim(),
 
             maxValue:
@@ -664,6 +672,37 @@ export default function SizeChartMeasurementEditor({
                           )}
                         </select>
 
+                        <div>
+  <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
+    Value meaning
+  </label>
+
+  <select
+    value={row.rangeType}
+    onChange={(event) =>
+      updateRow(row.id, {
+        rangeType:
+          event.target.value as FitMeasurementRangeType,
+      })
+    }
+    className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-xs text-neutral-600 outline-none focus:border-[#7B2D3E]/50"
+  >
+    <option value={FitMeasurementRangeType.RANGE}>
+      Range
+    </option>
+
+    <option value={FitMeasurementRangeType.UPPER_BOUND}>
+      Up to / maximum
+    </option>
+  </select>
+
+  <p className="mt-1 text-[11px] leading-4 text-neutral-400">
+    {row.rangeType === FitMeasurementRangeType.UPPER_BOUND
+      ? "The entered value is the largest body measurement this size accommodates."
+      : "The shopper should fall within the entered minimum and maximum."}
+  </p>
+</div>
+
                         <button
                           type="button"
                           onClick={() =>
@@ -691,56 +730,92 @@ export default function SizeChartMeasurementEditor({
                           className="border-r border-black/5 px-4 py-4 align-top"
                         >
                           <div className="space-y-2">
-                            <div>
-                              <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-                                Value
-                              </label>
+  {row.rangeType ===
+  FitMeasurementRangeType.UPPER_BOUND ? (
+    <div>
+      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
+        Maximum
+      </label>
 
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                inputMode="decimal"
-                                value={value.min}
-                                onChange={(event) =>
-                                  updateValue(
-                                    row.id,
-                                    sizeIndex,
-                                    "min",
-                                    event.target
-                                      .value
-                                  )
-                                }
-                                placeholder="—"
-                                className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black outline-none focus:border-[#7B2D3E]/50"
-                              />
-                            </div>
+      <input
+        type="number"
+        min="0"
+        step="0.01"
+        inputMode="decimal"
+        value={value.max || value.min}
+        onChange={(event) => {
+          const nextValue = event.target.value;
 
-                            <div>
-                              <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-                                Range max
-                              </label>
+          updateValue(
+            row.id,
+            sizeIndex,
+            "min",
+            nextValue
+          );
 
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                inputMode="decimal"
-                                value={value.max}
-                                onChange={(event) =>
-                                  updateValue(
-                                    row.id,
-                                    sizeIndex,
-                                    "max",
-                                    event.target
-                                      .value
-                                  )
-                                }
-                                placeholder="Same"
-                                className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black outline-none focus:border-[#7B2D3E]/50"
-                              />
-                            </div>
-                          </div>
+          updateValue(
+            row.id,
+            sizeIndex,
+            "max",
+            nextValue
+          );
+        }}
+        placeholder="—"
+        className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black outline-none focus:border-[#7B2D3E]/50"
+      />
+    </div>
+  ) : (
+    <>
+      <div>
+        <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
+          Minimum
+        </label>
+
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          inputMode="decimal"
+          value={value.min}
+          onChange={(event) =>
+            updateValue(
+              row.id,
+              sizeIndex,
+              "min",
+              event.target.value
+            )
+          }
+          placeholder="—"
+          className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black outline-none focus:border-[#7B2D3E]/50"
+        />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
+          Maximum
+        </label>
+
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          inputMode="decimal"
+          value={value.max}
+          onChange={(event) =>
+            updateValue(
+              row.id,
+              sizeIndex,
+              "max",
+              event.target.value
+            )
+          }
+          placeholder="Same"
+          className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black outline-none focus:border-[#7B2D3E]/50"
+        />
+      </div>
+    </>
+  )}
+</div>
                         </td>
                       );
                     })}

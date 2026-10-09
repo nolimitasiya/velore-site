@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   FitGarmentComponent,
   FitMeasurementBasis,
+  FitMeasurementRangeType,
   FitMeasurementType,
 } from "@prisma/client";
 
@@ -19,6 +20,9 @@ const baseMeasurement = {
     minValueCm: 88,
     maxValueCm: 92,
   },
+
+  rangeType:
+    FitMeasurementRangeType.RANGE,
 
   source: "BRAND_SIZE_CHART" as const,
 };
@@ -92,6 +96,74 @@ describe("Veilora Fit measurement comparison", () => {
     expect(minimum.status).toBe("MATCH");
     expect(maximum.status).toBe("MATCH");
   });
+
+  it("matches BODY UPPER_BOUND evidence when the shopper is below the maximum", () => {
+  const result =
+    compareShopperToSizeMeasurement(
+      {
+        ...baseMeasurement,
+        range: {
+          minValueCm: 102,
+          maxValueCm: 102,
+        },
+        rangeType:
+          FitMeasurementRangeType.UPPER_BOUND,
+        basis: FitMeasurementBasis.BODY,
+      },
+      94
+    );
+
+  expect(result.status).toBe("MATCH");
+  expect(result.reason).toBe(
+    "BODY_WITHIN_RANGE"
+  );
+});
+
+it("matches BODY UPPER_BOUND evidence at the maximum", () => {
+  const result =
+    compareShopperToSizeMeasurement(
+      {
+        ...baseMeasurement,
+        range: {
+          minValueCm: 102,
+          maxValueCm: 102,
+        },
+        rangeType:
+          FitMeasurementRangeType.UPPER_BOUND,
+        basis: FitMeasurementBasis.BODY,
+      },
+      102
+    );
+
+  expect(result.status).toBe("MATCH");
+  expect(result.reason).toBe(
+    "BODY_WITHIN_RANGE"
+  );
+});
+
+it("rejects BODY UPPER_BOUND evidence when the shopper exceeds the maximum", () => {
+  const result =
+    compareShopperToSizeMeasurement(
+      {
+        ...baseMeasurement,
+        range: {
+          minValueCm: 102,
+          maxValueCm: 102,
+        },
+        rangeType:
+          FitMeasurementRangeType.UPPER_BOUND,
+        basis: FitMeasurementBasis.BODY,
+      },
+      103
+    );
+
+  expect(result.status).toBe(
+    "ABOVE_RANGE"
+  );
+  expect(result.reason).toBe(
+    "BODY_ABOVE_RANGE"
+  );
+});
 
   it("requires ease interpretation for GARMENT evidence", () => {
     const result =

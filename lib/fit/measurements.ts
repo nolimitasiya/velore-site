@@ -1,6 +1,7 @@
 import {
   FitGarmentComponent,
   FitMeasurementBasis,
+  FitMeasurementRangeType,
   FitMeasurementType,
 } from "@prisma/client";
 
@@ -18,6 +19,7 @@ export type ResolvedSizeMeasurement = {
   component: FitGarmentComponent;
 
   range: FitMeasurementRange;
+  rangeType: FitMeasurementRangeType;
 
   basis: FitMeasurementBasis;
   source: ResolvedSizeMeasurementSource;
@@ -57,6 +59,7 @@ export type ProductSizeMeasurementInput = {
    *   → otherwise ProductFitProfile basis.
    */
   measurementBasis: FitMeasurementBasis;
+  rangeType: FitMeasurementRangeType;
 
   minValueCm: number;
   maxValueCm: number;
@@ -65,6 +68,7 @@ export type ProductSizeMeasurementInput = {
 export type BrandChartMeasurementInput = {
   type: FitMeasurementType;
   component: FitGarmentComponent;
+  rangeType: FitMeasurementRangeType;
 
   minValueCm: number;
   maxValueCm: number;
@@ -123,8 +127,24 @@ function matchesRequestedBasis(
 }
 function isValidRange(
   minValueCm: number,
-  maxValueCm: number
+  maxValueCm: number,
+  rangeType: FitMeasurementRangeType
 ): boolean {
+  if (rangeType === FitMeasurementRangeType.UPPER_BOUND) {
+    return (
+      Number.isFinite(maxValueCm) &&
+      maxValueCm >= 0 &&
+      (
+        Number.isNaN(minValueCm) ||
+        (
+          Number.isFinite(minValueCm) &&
+          minValueCm >= 0 &&
+          minValueCm <= maxValueCm
+        )
+      )
+    );
+  }
+
   return (
     Number.isFinite(minValueCm) &&
     Number.isFinite(maxValueCm) &&
@@ -161,9 +181,10 @@ export function resolveSizeMeasurement(
  if (productSizeMeasurement) {
   if (
     !isValidRange(
-      productSizeMeasurement.minValueCm,
-      productSizeMeasurement.maxValueCm
-    )
+  productSizeMeasurement.minValueCm,
+  productSizeMeasurement.maxValueCm,
+  productSizeMeasurement.rangeType
+)
   ) {
     return {
       status: "INVALID",
@@ -185,6 +206,9 @@ export function resolveSizeMeasurement(
         maxValueCm:
           productSizeMeasurement.maxValueCm,
       },
+
+      rangeType:
+         productSizeMeasurement.rangeType,
 
       basis:
         productSizeMeasurement.measurementBasis,
@@ -218,7 +242,8 @@ export function resolveSizeMeasurement(
   if (
     !isValidRange(
       chartMeasurement.minValueCm,
-      chartMeasurement.maxValueCm
+      chartMeasurement.maxValueCm,
+      chartMeasurement.rangeType
     )
   ) {
     return {
@@ -242,6 +267,8 @@ export function resolveSizeMeasurement(
           chartMeasurement.maxValueCm,
       },
 
+    rangeType:
+       chartMeasurement.rangeType,
       basis:
         input.mappedChart!
           .measurementBasis,

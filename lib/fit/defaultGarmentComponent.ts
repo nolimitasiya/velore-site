@@ -11,6 +11,7 @@ const COMPONENT_BY_PRODUCT_TYPE: Partial<
   SKIRT: FitGarmentComponent.SKIRT,
   TOP: FitGarmentComponent.TOP,
   T_SHIRT: FitGarmentComponent.TOP,
+  HOODIE_SWEATSHIRT: FitGarmentComponent.TOP,
   PANTS: FitGarmentComponent.TROUSER,
   BLAZER: FitGarmentComponent.JACKET,
   COATS_JACKETS: FitGarmentComponent.JACKET,

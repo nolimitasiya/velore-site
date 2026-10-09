@@ -1,6 +1,7 @@
 import {
   FitGarmentComponent,
   FitMeasurementBasis,
+  FitMeasurementRangeType,
   FitMeasurementType,
   FitUnit,
   ProductType,
@@ -570,6 +571,281 @@ it(
     expect(
       productFitMeasurementCreateManyMock
     ).toHaveBeenCalledTimes(1);
+  }
+);
+
+it(
+  "accepts and persists UPPER_BOUND for a size-specific measurement",
+  async () => {
+    productFindUniqueMock.mockResolvedValue({
+      id: "product-1",
+
+      productType: null,
+
+      productTypes: [
+        {
+          productType: ProductType.BLAZER,
+        },
+      ],
+
+      fitProfile: {
+        id: "fit-profile-1",
+        measurementBasis:
+          FitMeasurementBasis.BODY,
+      },
+
+      productSizes: [
+        {
+          sizeId: "size-m",
+        },
+      ],
+    });
+
+    const response = await PUT(
+      makeRequest({
+        productMeasurements: [],
+
+        sizeMeasurements: [
+          {
+            sizeId: "size-m",
+            type: FitMeasurementType.BUST,
+            component:
+              FitGarmentComponent.JACKET,
+            measurementBasis:
+              FitMeasurementBasis.BODY,
+            rangeType:
+              FitMeasurementRangeType.UPPER_BOUND,
+            sourceUnit: FitUnit.CM,
+            sourceMinValue: "94",
+            sourceMaxValue: "94",
+          },
+        ],
+      }),
+      makeContext()
+    );
+
+    expect(response.status).toBe(200);
+
+    expect(
+      productSizeFitMeasurementCreateManyMock
+    ).toHaveBeenCalledTimes(1);
+
+    const call =
+      productSizeFitMeasurementCreateManyMock
+        .mock.calls[0][0];
+
+    expect(call.data).toHaveLength(1);
+
+    expect(call.data[0]).toMatchObject({
+      fitProfileId: "fit-profile-1",
+      productId: "product-1",
+      sizeId: "size-m",
+      type: FitMeasurementType.BUST,
+      component: FitGarmentComponent.JACKET,
+      measurementBasis:
+        FitMeasurementBasis.BODY,
+      rangeType:
+        FitMeasurementRangeType.UPPER_BOUND,
+      sourceUnit: FitUnit.CM,
+      sourceMinValue: 94,
+      sourceMaxValue: 94,
+      minValueCm: 94,
+      maxValueCm: 94,
+    });
+  }
+);
+
+it(
+  "accepts and persists RANGE for a size-specific measurement",
+  async () => {
+    productFindUniqueMock.mockResolvedValue({
+      id: "product-1",
+
+      productType: null,
+
+      productTypes: [
+        {
+          productType: ProductType.BLAZER,
+        },
+      ],
+
+      fitProfile: {
+        id: "fit-profile-1",
+        measurementBasis:
+          FitMeasurementBasis.BODY,
+      },
+
+      productSizes: [
+        {
+          sizeId: "size-m",
+        },
+      ],
+    });
+
+    const response = await PUT(
+      makeRequest({
+        productMeasurements: [],
+
+        sizeMeasurements: [
+          {
+            sizeId: "size-m",
+            type: FitMeasurementType.BUST,
+            component:
+              FitGarmentComponent.JACKET,
+            measurementBasis:
+              FitMeasurementBasis.BODY,
+            rangeType:
+              FitMeasurementRangeType.RANGE,
+            sourceUnit: FitUnit.CM,
+            sourceMinValue: "90",
+            sourceMaxValue: "94",
+          },
+        ],
+      }),
+      makeContext()
+    );
+
+    expect(response.status).toBe(200);
+
+    const call =
+      productSizeFitMeasurementCreateManyMock
+        .mock.calls[0][0];
+
+    expect(call.data[0]).toMatchObject({
+      rangeType:
+        FitMeasurementRangeType.RANGE,
+      sourceMinValue: 90,
+      sourceMaxValue: 94,
+      minValueCm: 90,
+      maxValueCm: 94,
+    });
+  }
+);
+
+it(
+  "rejects an invalid size-specific measurement range type",
+  async () => {
+    productFindUniqueMock.mockResolvedValue({
+      id: "product-1",
+
+      productType: null,
+
+      productTypes: [
+        {
+          productType: ProductType.BLAZER,
+        },
+      ],
+
+      fitProfile: {
+        id: "fit-profile-1",
+        measurementBasis:
+          FitMeasurementBasis.BODY,
+      },
+
+      productSizes: [
+        {
+          sizeId: "size-m",
+        },
+      ],
+    });
+
+    const response = await PUT(
+      makeRequest({
+        productMeasurements: [],
+
+        sizeMeasurements: [
+          {
+            sizeId: "size-m",
+            type: FitMeasurementType.BUST,
+            component:
+              FitGarmentComponent.JACKET,
+            measurementBasis:
+              FitMeasurementBasis.BODY,
+            rangeType: "NOT_A_RANGE_TYPE",
+            sourceUnit: FitUnit.CM,
+            sourceMinValue: "94",
+            sourceMaxValue: "94",
+          },
+        ],
+      }),
+      makeContext()
+    );
+
+    expect(response.status).toBe(400);
+
+    await expect(
+      response.json()
+    ).resolves.toEqual({
+      error:
+        "Invalid size-specific measurement range type.",
+    });
+
+    expect(
+      transactionMock
+    ).not.toHaveBeenCalled();
+  }
+);
+
+it(
+  "rejects a missing size-specific measurement range type",
+  async () => {
+    productFindUniqueMock.mockResolvedValue({
+      id: "product-1",
+
+      productType: null,
+
+      productTypes: [
+        {
+          productType: ProductType.BLAZER,
+        },
+      ],
+
+      fitProfile: {
+        id: "fit-profile-1",
+        measurementBasis:
+          FitMeasurementBasis.BODY,
+      },
+
+      productSizes: [
+        {
+          sizeId: "size-m",
+        },
+      ],
+    });
+
+    const response = await PUT(
+      makeRequest({
+        productMeasurements: [],
+
+        sizeMeasurements: [
+          {
+            sizeId: "size-m",
+            type: FitMeasurementType.BUST,
+            component:
+              FitGarmentComponent.JACKET,
+            measurementBasis:
+              FitMeasurementBasis.BODY,
+            sourceUnit: FitUnit.CM,
+            sourceMinValue: "94",
+            sourceMaxValue: "94",
+          },
+        ],
+      }),
+      makeContext()
+    );
+
+    expect(response.status).toBe(400);
+
+    await expect(
+      response.json()
+    ).resolves.toEqual({
+      error:
+        "Invalid size-specific measurement range type.",
+    });
+
+    expect(
+      transactionMock
+    ).not.toHaveBeenCalled();
   }
 );
 

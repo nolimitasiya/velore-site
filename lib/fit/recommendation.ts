@@ -1,5 +1,7 @@
 import {
   FitGarmentComponent,
+  FitMeasurementBasis,
+  FitMeasurementRangeType,
   FitMeasurementType,
   ProductType,
   FabricStretch,
@@ -126,6 +128,11 @@ export type MappedSizeChartInput = {
 export type AssessSizeInput = {
   productType: ProductType;
 
+  fitComponents?: readonly FitGarmentComponent[];
+
+  explicitRequiredBodyFit?:
+    readonly MeasurementRequirement[];
+
   sizeId: string;
   sizeLabel: string;
   intendedFit: ProductIntendedFit | null;
@@ -169,24 +176,32 @@ export type ProductSizeRecommendationInput =
     | "mappedChart"
   > & {
     sizes: readonly {
-      sizeId: string;
-      sizeLabel: string;
+  sizeId: string;
+  sizeLabel: string;
 
-      productSizeMeasurements:
-        readonly ProductSizeMeasurementInput[];
+  chartSortOrder: number | null;
 
-      mappedChart: MappedSizeChartInput | null;
+  productSizeMeasurements:
+    readonly ProductSizeMeasurementInput[];
 
-      bodyMappedChart?: MappedSizeChartInput | null;
+  mappedChart: MappedSizeChartInput | null;
 
-      garmentMappedChart?: MappedSizeChartInput | null;
-    }[];
+  bodyMappedChart?: MappedSizeChartInput | null;
+
+  garmentMappedChart?: MappedSizeChartInput | null;
+}[];
   };
+
+export type RecommendationReason =
+  | "GARMENT_EASE_PREFERENCE"
+  | "BODY_CHART_FIRST_SUITABLE";
 
 export type ProductRecommendation = {
   productType: ProductType;
 
   status: ProductRecommendationStatus;
+
+  recommendationReason?: RecommendationReason;
 
   recommendedSize:
     | SizeAssessment
@@ -623,62 +638,49 @@ const garmentMeasurements =
         "RESOLVED"
   );
 
-  /*
-   * GARMENT authority transition:
+   /*
+   * Veilora Fit garment-evidence authority:
    *
-   * 1. Prefer complete evidence-derived suitability.
-   * 2. Fall back to the legacy calibrated ease-policy
-   *    path when evidence-derived fit is incomplete.
-   * 3. If neither path can establish fit, preserve
-   *    uncertainty.
+   * Veilora's catalogue recommendation standard requires
+   * BODY sizing evidence for every required fit measurement.
+   *
+   * 1. BODY evidence is direct recommendation authority.
+   *
+   * 2. When corresponding BODY + GARMENT evidence both
+   *    exist, Veilora can additionally derive the designed
+   *    ease and interpret how the garment is intended to fit.
+   *
+   * 3. GARMENT measurements alone do not satisfy Veilora's
+   *    recommendation-data standard and must not be treated
+   *    as sufficient recommendation evidence.
+   *
+   * 4. If authoritative BODY evidence is unavailable,
+   *    preserve uncertainty rather than guessing fit.
    */
-  for (const assessment of garmentMeasurements) {
-    const evidenceDerived =
-      assessment.evidenceDerivedSuitability;
+for (const assessment of garmentMeasurements) {
+  const evidenceDerived =
+    assessment.evidenceDerivedSuitability;
 
-    if (evidenceDerived.status === "SUITABLE") {
-      continue;
-    }
-
-    /*
-     * An ambiguous evidence-derived relationship is
-     * deliberately not overridden by the legacy path.
-     *
-     * We have complete evidence, but that evidence does
-     * not support a sufficiently clear relationship.
-     */
-    if (
-      evidenceDerived.reason ===
-      "AMBIGUOUS_FIT_RELATIONSHIP"
-    ) {
-      return "INSUFFICIENT_EVIDENCE";
-    }
-
-    /*
-     * The evidence-derived path is incomplete.
-     * Preserve the existing calibrated policy path as
-     * a fallback during the migration.
-     */
-    const hasLegacyAssessment =
-      assessment.easeInterpretation?.status ===
-        "INTERPRETABLE" &&
-      assessment.easePolicy?.status === "FOUND" &&
-      assessment.garmentEase !== null;
-
-    if (!hasLegacyAssessment) {
-      return "INSUFFICIENT_EVIDENCE";
-    }
-
-    if (
-      assessment.garmentEase?.status ===
-        "TOO_LITTLE_EASE" ||
-      assessment.garmentEase?.status ===
-        "TOO_MUCH_EASE"
-    ) {
-      return "UNSUITABLE";
-    }
-  }
   /*
+   * Corresponding BODY + GARMENT evidence may produce
+   * an authoritative evidence-derived suitability result.
+   */
+  if (evidenceDerived.status === "SUITABLE") {
+    continue;
+  }
+
+  /*
+   * GARMENT evidence alone cannot establish recommendation
+   * authority, even when a calibrated ease policy can
+   * interpret the garment measurement.
+   *
+   * Ease-policy output may remain available on the assessment
+   * for diagnostics/calibration, but it cannot replace the
+   * required BODY sizing evidence.
+   */
+  return "INSUFFICIENT_EVIDENCE";
+}
+/*
  * Every required measurement must have an
  * authoritative compatibility path before the size
  * can be declared suitable.
@@ -687,10 +689,12 @@ const garmentMeasurements =
  *
  * - verified BODY evidence directly matches the
  *   shopper, or
- * - complete evidence-derived BODY + GARMENT
- *   evidence establishes suitability, or
- * - the legacy calibrated GARMENT fallback has
- *   established acceptable ease.
+ * - corresponding BODY + GARMENT evidence establishes
+ *   suitability through the evidence-derived path.
+ *
+ * A calibrated GARMENT-only policy may still be
+ * calculated for diagnostics/internal calibration,
+ * but it is not recommendation authority.
  *
  * Unresolved/UNKNOWN evidence must never become
  * suitable merely by falling through this function.
@@ -714,28 +718,21 @@ const everyRequiredMeasurementEstablished =
       return true;
     }
 
-    const hasSuitableLegacyGarmentAssessment =
-      assessment.easeInterpretation?.status ===
-        "INTERPRETABLE" &&
-      assessment.easePolicy?.status === "FOUND" &&
-      assessment.garmentEase?.status === "MATCH";
-
-    return hasSuitableLegacyGarmentAssessment;
+    return false;
   });
 
 if (!everyRequiredMeasurementEstablished) {
   return "INSUFFICIENT_EVIDENCE";
 }
 
- /*
+/*
  * At this point every required measurement has been
- * established through either:
+ * established through authoritative BODY evidence,
+ * optionally enriched by corresponding GARMENT
+ * evidence through the evidence-derived fit path.
  *
- * - complete evidence-derived fit evidence, or
- * - the legacy calibrated ease-policy fallback.
- *
- * No required measurement has established
- * incompatibility or unresolved ambiguity.
+ * GARMENT-only calibrated policy output is not
+ * recommendation authority.
  */
 return "SUITABLE";
 }
@@ -745,21 +742,40 @@ export function assessSize(
 ): SizeAssessment {
   const rules =
     getProductMeasurementRules(
-      input.productType
+      input.productType,
+      input.fitComponents
     );
 
-  const requiredMeasurements =
-    rules.requiredBodyFit.map(
+ const requiredBodyFit =
+  input.explicitRequiredBodyFit ??
+  rules.requiredBodyFit;
+
+const requiredMeasurements =
+  requiredBodyFit.map(
+    (requirement) =>
+      assessRequirement({
+        requirement,
+        required: true,
+        input,
+      })
+  );
+
+ const explicitRequiredKeys = new Set(
+  requiredBodyFit.map(
+    (requirement) =>
+      `${requirement.component ?? FitGarmentComponent.WHOLE_GARMENT}:${requirement.type}`
+  )
+);
+
+const optionalMeasurements =
+  rules.optionalBodyFit
+    .filter(
       (requirement) =>
-        assessRequirement({
-          requirement,
-          required: true,
-          input,
-        })
-    );
-
-  const optionalMeasurements =
-    rules.optionalBodyFit.map(
+        !explicitRequiredKeys.has(
+          `${requirement.component ?? FitGarmentComponent.WHOLE_GARMENT}:${requirement.type}`
+        )
+    )
+    .map(
       (requirement) =>
         assessRequirement({
           requirement,
@@ -792,7 +808,8 @@ export function assessProductSizes(
 ): ProductRecommendation {
   const rules =
     getProductMeasurementRules(
-      input.productType
+      input.productType,
+      input.fitComponents
     );
 
   /*
@@ -831,9 +848,15 @@ export function assessProductSizes(
     input.sizes.map((size) =>
       assessSize({
         productType:
-          input.productType,
+  input.productType,
 
-        sizeId: size.sizeId,
+fitComponents:
+  input.fitComponents,
+
+explicitRequiredBodyFit:
+  input.explicitRequiredBodyFit,
+
+sizeId: size.sizeId,
         sizeLabel: size.sizeLabel,
 
         intendedFit:
@@ -989,6 +1012,9 @@ dimensions.push({
 
         status: "RECOMMENDED",
 
+        recommendationReason: "GARMENT_EASE_PREFERENCE",
+
+
         recommendedSize: preferredSize,
 
         /*
@@ -1000,7 +1026,129 @@ dimensions.push({
       };
     }
   }
+/*
+ * Ordered UPPER_BOUND BODY-chart fallback.
+ *
+ * A BODY chart containing upper limits tells us the
+ * smallest size that accommodates the shopper.
+ *
+ * It does not tell us actual garment ease.
+ *
+ * Only use this fallback when:
+ * - Every size has a unique, non-negative chart order.
+ * - Every required measurement resolves to BODY evidence.
+ * - Every required measurement is UPPER_BOUND.
+ * - Every required measurement comes from the brand chart.
+ * - Maximums increase consistently with chart order.
+ *
+ * Existing evidence-backed garment preference ranking
+ * always takes precedence.
+ */
+const orderedSizes = [...input.sizes].sort(
+  (a, b) =>
+    (a.chartSortOrder ?? -1) -
+    (b.chartSortOrder ?? -1)
+);
 
+const validOrdering =
+  orderedSizes.every(
+    (size) =>
+      size.chartSortOrder !== null &&
+      Number.isInteger(size.chartSortOrder) &&
+      size.chartSortOrder >= 0
+  ) &&
+  new Set(
+    orderedSizes.map((size) => size.chartSortOrder)
+  ).size === orderedSizes.length;
+
+if (validOrdering) {
+  const orderedAssessments = orderedSizes.map(
+    (size) =>
+      assessments.find(
+        (assessment) =>
+          assessment.sizeId === size.sizeId
+      )
+  );
+
+  const chartEvidenceValid =
+    orderedAssessments.every(
+      (assessment) =>
+        assessment !== undefined &&
+        assessment.requiredMeasurements.length > 0 &&
+        assessment.requiredMeasurements.every(
+          (measurement) =>
+            measurement.evidence.body.status === "RESOLVED" &&
+            measurement.evidence.body.measurement.basis ===
+              FitMeasurementBasis.BODY &&
+            measurement.evidence.body.measurement.rangeType ===
+              FitMeasurementRangeType.UPPER_BOUND &&
+            measurement.evidence.body.measurement.source ===
+              "BRAND_SIZE_CHART"
+        )
+    );
+
+  if (chartEvidenceValid) {
+    const firstSuitable = orderedAssessments.find(
+      (assessment) =>
+        assessment?.status === "SUITABLE"
+    );
+
+    if (firstSuitable) {
+      const maximumsAreOrdered =
+        orderedAssessments.every(
+          (assessment, index) => {
+            if (!assessment || index === 0) {
+              return true;
+            }
+
+            const previous =
+              orderedAssessments[index - 1];
+
+            if (!previous) {
+              return false;
+            }
+
+            return assessment.requiredMeasurements.every(
+              (measurement) => {
+                const previousMeasurement =
+                  previous.requiredMeasurements.find(
+                    (candidate) =>
+                      candidate.requirement.type ===
+                        measurement.requirement.type &&
+                      candidate.requirement.component ===
+                        measurement.requirement.component
+                  );
+
+                const currentBody =
+                  measurement.evidence.body;
+
+                const previousBody =
+                  previousMeasurement?.evidence.body;
+
+                return (
+                  currentBody.status === "RESOLVED" &&
+                  previousBody?.status === "RESOLVED" &&
+                  currentBody.measurement.range.maxValueCm >=
+                    previousBody.measurement.range.maxValueCm
+                );
+              }
+            );
+          }
+        );
+
+      if (maximumsAreOrdered) {
+  return {
+    productType: input.productType,
+    status: "RECOMMENDED",
+    recommendationReason: "BODY_CHART_FIRST_SUITABLE",
+    recommendedSize: firstSuitable,
+    suitableSizes,
+    assessments,
+  };
+}
+    }
+  }
+}
   /*
    * No unique evidence-backed preference winner.
    *

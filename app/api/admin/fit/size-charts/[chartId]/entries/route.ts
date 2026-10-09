@@ -1,5 +1,6 @@
 import {
   FitGarmentComponent,
+  FitMeasurementRangeType,
   FitMeasurementType,
   FitUnit,
   Prisma,
@@ -15,6 +16,7 @@ export const dynamic = "force-dynamic";
 type RawMeasurement = {
   type?: unknown;
   component?: unknown;
+  rangeType?: unknown;
   minValue?: unknown;
   maxValue?: unknown;
 };
@@ -137,13 +139,14 @@ export async function PUT(
     sizeLabel: string;
     sortOrder: number;
     measurements: Array<{
-      type: FitMeasurementType;
-      component: FitGarmentComponent;
-      sourceMinValue: number;
-      sourceMaxValue: number;
-      minValueCm: number;
-      maxValueCm: number;
-    }>;
+  type: FitMeasurementType;
+  component: FitGarmentComponent;
+  rangeType: FitMeasurementRangeType;
+  sourceMinValue: number;
+  sourceMaxValue: number;
+  minValueCm: number;
+  maxValueCm: number;
+}>;
   }> = [];
 
   const seenSizeLabels = new Set<string>();
@@ -212,13 +215,14 @@ const sizeLabel =
         : [];
 
     const preparedMeasurements: Array<{
-      type: FitMeasurementType;
-      component: FitGarmentComponent;
-      sourceMinValue: number;
-      sourceMaxValue: number;
-      minValueCm: number;
-      maxValueCm: number;
-    }> = [];
+  type: FitMeasurementType;
+  component: FitGarmentComponent;
+  rangeType: FitMeasurementRangeType;
+  sourceMinValue: number;
+  sourceMaxValue: number;
+  minValueCm: number;
+  maxValueCm: number;
+}> = [];
 
     const seenMeasurements = new Set<string>();
 
@@ -259,6 +263,21 @@ const sizeLabel =
           { status: 400 }
         );
       }
+
+      if (
+  !isEnumValue(
+    FitMeasurementRangeType,
+    rawMeasurement.rangeType
+  )
+) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: `Invalid measurement range type for ${rawMeasurement.type} in size ${sizeLabel}.`,
+    },
+    { status: 400 }
+  );
+}
 
       const sourceMinValue = parseDecimal(
         rawMeasurement.minValue
@@ -307,10 +326,11 @@ const sizeLabel =
       seenMeasurements.add(measurementKey);
 
       preparedMeasurements.push({
-        type: rawMeasurement.type,
-        component: rawMeasurement.component,
-        sourceMinValue,
-        sourceMaxValue,
+  type: rawMeasurement.type,
+  component: rawMeasurement.component,
+  rangeType: rawMeasurement.rangeType,
+  sourceMinValue,
+  sourceMaxValue,
 
         minValueCm: toCentimetres(
           sourceMinValue,
@@ -465,6 +485,7 @@ try {
 
               type: measurement.type,
               component: measurement.component,
+              rangeType: measurement.rangeType,
 
               minValueCm: decimal(
                 measurement.minValueCm
@@ -505,6 +526,7 @@ try {
             (measurement) => ({
               type: measurement.type,
               component: measurement.component,
+              rangeType: measurement.rangeType,
 
               minValueCm: decimal(
                 measurement.minValueCm

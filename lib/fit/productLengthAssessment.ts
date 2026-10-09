@@ -18,7 +18,10 @@ import type {
   NormalizedProductLengthInput,
 } from "@/lib/fit/loadRecommendationInput";
 
-import { resolveProductSizeGarmentLength } from "@/lib/fit/resolveProductSizeGarmentLength";
+import {
+  resolveProductSizeGarmentLength,
+  resolveProductSizeLengthMeasurement,
+} from "@/lib/fit/resolveProductSizeGarmentLength";
 
 export type ProductSizeLengthAssessment = {
   sizeId: string;
@@ -37,12 +40,14 @@ export type IndependentProductLengthAssessmentResult =
   | {
       status: "ASSESSED";
       structure: "INDEPENDENT";
+      measurementType: FitMeasurementType;
       assessments:
         IndependentLengthOptionAssessment[];
     }
   | {
       status: "INSUFFICIENT_EVIDENCE";
       structure: "INDEPENDENT";
+      measurementType: FitMeasurementType;
       assessments: [];
       reason:
         | "MISSING_SHOPPER_PREFERENCE"
@@ -59,6 +64,7 @@ export type ProductLengthAssessmentResult =
       structure:
         | "SIZE_DEPENDENT"
         | "LENGTH_BASED_SIZE";
+      measurementType: FitMeasurementType;
       assessments:
         ProductSizeLengthAssessment[];
     }
@@ -67,6 +73,7 @@ export type ProductLengthAssessmentResult =
       structure:
         | "SIZE_DEPENDENT"
         | "LENGTH_BASED_SIZE";
+      measurementType: FitMeasurementType;
       assessments: [];
       reason:
         | "MISSING_SHOPPER_PREFERENCE"
@@ -84,14 +91,147 @@ const MAXI_LENGTH_PRODUCT_TYPES =
     ProductType.JILBAB,
   ]);
 
-function findShopperMaxiLength(
-  input: ProductSizeRecommendationInput
+  type SizeAttachedLengthSemantic = {
+  shopperMeasurementType: FitMeasurementType;
+  garmentMeasurementType: FitMeasurementType;
+  garmentComponent?: FitGarmentComponent;
+};
+
+function getSizeAttachedLengthSemantic(
+  productType: ProductType,
+  fitComponents: readonly FitGarmentComponent[] = []
+): SizeAttachedLengthSemantic | null {
+  if (MAXI_LENGTH_PRODUCT_TYPES.has(productType)) {
+    return {
+      shopperMeasurementType:
+        FitMeasurementType.GARMENT_LENGTH,
+
+      garmentMeasurementType:
+        FitMeasurementType.GARMENT_LENGTH,
+    };
+  }
+
+
+
+  if (productType === ProductType.SKIRT) {
+  return {
+    shopperMeasurementType:
+      FitMeasurementType.SKIRT_LENGTH,
+
+    garmentMeasurementType:
+      FitMeasurementType.SKIRT_LENGTH,
+
+    garmentComponent:
+      FitGarmentComponent.SKIRT,
+  };
+}
+
+
+  if (productType === ProductType.PANTS) {
+    return {
+      shopperMeasurementType:
+        FitMeasurementType.INSEAM,
+
+      garmentMeasurementType:
+        FitMeasurementType.INSEAM,
+
+      garmentComponent:
+        FitGarmentComponent.TROUSER,
+    };
+  }
+
+    if (productType === ProductType.ACTIVEWEAR) {
+    const uniqueComponents =
+      new Set(fitComponents);
+
+    const isTrouserOnly =
+      uniqueComponents.size === 1 &&
+      uniqueComponents.has(
+        FitGarmentComponent.TROUSER
+      );
+
+    const isTopTrouser =
+      uniqueComponents.size === 2 &&
+      uniqueComponents.has(
+        FitGarmentComponent.TOP
+      ) &&
+      uniqueComponents.has(
+        FitGarmentComponent.TROUSER
+      );
+
+    if (isTrouserOnly || isTopTrouser) {
+      return {
+        shopperMeasurementType:
+          FitMeasurementType.INSEAM,
+
+        garmentMeasurementType:
+          FitMeasurementType.INSEAM,
+
+        garmentComponent:
+          FitGarmentComponent.TROUSER,
+      };
+    }
+
+    /*
+     * TOP-only activewear deliberately has no
+     * personalised length semantic.
+     *
+     * Missing or unsupported activewear
+     * composition also fails closed here.
+     */
+    return null;
+  }
+  if (productType === ProductType.SETS) {
+    const uniqueComponents =
+      new Set(fitComponents);
+
+    const isTopTrouserSet =
+      uniqueComponents.size === 2 &&
+      uniqueComponents.has(
+        FitGarmentComponent.TOP
+      ) &&
+      uniqueComponents.has(
+        FitGarmentComponent.TROUSER
+      );
+
+    if (isTopTrouserSet) {
+      return {
+        shopperMeasurementType:
+          FitMeasurementType.INSEAM,
+
+        garmentMeasurementType:
+          FitMeasurementType.INSEAM,
+
+        garmentComponent:
+          FitGarmentComponent.TROUSER,
+      };
+    }
+
+   /*
+ * TOP + SKIRT sets deliberately have no
+ * personalised length semantic yet.
+ *
+ * Veilora supports preferred skirt length for
+ * standalone SKIRT products, but set-skirt length
+ * remains intentionally unsupported for now.
+ *
+ * Never reinterpret preferred maxi length as a
+ * skirt-length preference.
+ */
+return null;
+  }
+
+  return null;
+}
+
+function findShopperLengthReference(
+  input: ProductSizeRecommendationInput,
+  measurementType: FitMeasurementType
 ): LengthReferenceRange | null {
   const measurement =
     input.shopperMeasurements.find(
       (candidate) =>
-        candidate.type ===
-        FitMeasurementType.GARMENT_LENGTH
+        candidate.type === measurementType
     );
 
   if (!measurement) {
@@ -104,6 +244,7 @@ function findShopperMaxiLength(
   };
 }
 
+
 export function assessProductLengths(
   args: {
     input: ProductSizeRecommendationInput;
@@ -112,29 +253,37 @@ export function assessProductLengths(
       | "LENGTH_BASED_SIZE";
   }
 ): ProductLengthAssessmentResult {
-  const { input, structure } = args;
-  if (
-    !MAXI_LENGTH_PRODUCT_TYPES.has(
-      input.productType
-    )
-  ) {
-    return {
-      status: "NOT_APPLICABLE",
-      assessments: [],
-    };
-  }
+const { input, structure } = args;
 
-  const shopperReference =
-    findShopperMaxiLength(input);
+const semantic =
+  getSizeAttachedLengthSemantic(
+    input.productType,
+    input.fitComponents
+  );
 
-  if (!shopperReference) {
-    return {
-  status: "INSUFFICIENT_EVIDENCE",
-  structure,
-  assessments: [],
-  reason: "MISSING_SHOPPER_PREFERENCE",
-};
-  }
+if (!semantic) {
+  return {
+    status: "NOT_APPLICABLE",
+    assessments: [],
+  };
+}
+
+const shopperReference =
+  findShopperLengthReference(
+    input,
+    semantic.shopperMeasurementType
+  );
+
+if (!shopperReference) {
+  return {
+    status: "INSUFFICIENT_EVIDENCE",
+    structure,
+    measurementType:
+  semantic.garmentMeasurementType,
+    assessments: [],
+    reason: "MISSING_SHOPPER_PREFERENCE",
+  };
+}
 
   const assessments:
     ProductSizeLengthAssessment[] = [];
@@ -159,7 +308,19 @@ export function assessProductLengths(
  * 3. No usable evidence
  */
 const garmentRange =
-  resolveProductSizeGarmentLength(size);
+  semantic.garmentMeasurementType ===
+  FitMeasurementType.GARMENT_LENGTH
+    ? resolveProductSizeGarmentLength(size)
+    : resolveProductSizeLengthMeasurement(
+        size,
+        {
+          measurementType:
+            semantic.garmentMeasurementType,
+
+          component:
+            semantic.garmentComponent,
+        }
+      );
 
     if (!garmentRange) {
   /*
@@ -180,6 +341,7 @@ const garmentRange =
     return {
       status: "INSUFFICIENT_EVIDENCE",
       structure,
+      measurementType: semantic.garmentMeasurementType,
       assessments: [],
       reason: "MISSING_GARMENT_LENGTH",
     };
@@ -193,12 +355,12 @@ const garmentRange =
       sizeLabel: size.sizeLabel,
 
       assessment: assessLength({
-        productType: input.productType,
-        measurementType:
-          FitMeasurementType.GARMENT_LENGTH,
-        garmentRange,
-        shopperReference,
-      }),
+  productType: input.productType,
+  measurementType:
+    semantic.garmentMeasurementType,
+  garmentRange,
+  shopperReference,
+}),
     });
   }
 
@@ -206,6 +368,8 @@ const garmentRange =
     return {
   status: "INSUFFICIENT_EVIDENCE",
   structure,
+  measurementType:
+  semantic.garmentMeasurementType,
   assessments: [],
   reason: "MISSING_GARMENT_LENGTH",
 };
@@ -214,6 +378,8 @@ const garmentRange =
   return {
     status: "ASSESSED",
     structure,
+    measurementType:
+      semantic.garmentMeasurementType,
     assessments,
   };
 }
@@ -254,6 +420,7 @@ export function assessIndependentProductLengths(
     return {
       status: "INSUFFICIENT_EVIDENCE",
       structure: "INDEPENDENT",
+      measurementType: FitMeasurementType.GARMENT_LENGTH,
       assessments: [],
       reason: "MISSING_SHOPPER_PREFERENCE",
     };
@@ -302,6 +469,7 @@ export function assessIndependentProductLengths(
     return {
       status: "INSUFFICIENT_EVIDENCE",
       structure: "INDEPENDENT",
+      measurementType: FitMeasurementType.GARMENT_LENGTH,
       assessments: [],
       reason: "MISSING_GARMENT_LENGTH",
     };
@@ -310,6 +478,7 @@ export function assessIndependentProductLengths(
   return {
     status: "ASSESSED",
     structure: "INDEPENDENT",
+    measurementType: FitMeasurementType.GARMENT_LENGTH,
     assessments,
   };
 }

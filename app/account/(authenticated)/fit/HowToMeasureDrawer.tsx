@@ -32,12 +32,24 @@ const MEASUREMENT_GUIDE = [
     description:
       "Measure around the fullest part of your hips, keeping the tape level.",
   },
-  {
-    number: "05",
-    title: "Preferred maxi length",
-    description:
-      "Measure from the highest point of your shoulder down to where you prefer a full-length dress, abaya or jilbab to finish.",
-  },
+ {
+  number: "05",
+  title: "Preferred maxi length",
+  description:
+    "Measure from the highest point of your shoulder down to where you prefer a full-length dress, abaya or jilbab to finish.",
+},
+{
+  number: "06",
+  title: "Inseam",
+  description:
+    "Stand straight and measure from the top of your inner thigh down the inside of your leg to where you want your trousers to finish.",
+},
+{
+  number: "07",
+  title: "Preferred skirt length",
+  description:
+    "Measure from your natural waist down to where you prefer your skirt to finish.",
+},
 ] as const;
 
 export default function HowToMeasureDrawer({

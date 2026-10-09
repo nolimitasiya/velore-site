@@ -1,6 +1,7 @@
 import {
   FitGarmentComponent,
   FitMeasurementBasis,
+  FitMeasurementRangeType,
   FitMeasurementType,
   FitUnit,
   ProductType,
@@ -99,6 +100,7 @@ type ParsedSizeMeasurement =
   ParsedMeasurement & {
     sizeId: string;
     measurementBasis: FitMeasurementBasis | null;
+    rangeType: FitMeasurementRangeType;
   };
 
 export async function PUT(
@@ -518,6 +520,20 @@ if (
   );
 }
 
+if (
+  !isEnumValue(
+    FitMeasurementRangeType,
+    measurement.rangeType
+  )
+) {
+  return NextResponse.json(
+    {
+      error:
+        "Invalid size-specific measurement range type.",
+    },
+    { status: 400 }
+  );
+}
 
     const sourceMinValue = parseNumber(
       measurement.sourceMinValue
@@ -579,6 +595,7 @@ if (
     measurement.measurementBasis === undefined
       ? null
       : measurement.measurementBasis,
+  rangeType: measurement.rangeType,
   sourceUnit: measurement.sourceUnit,
       sourceMinValue:
         decimalValue(sourceMinValue),
@@ -662,6 +679,8 @@ if (
             component: measurement.component,
             measurementBasis:
               measurement.measurementBasis,
+            rangeType:
+               measurement.rangeType,
             minValueCm:
               measurement.minValueCm,
             maxValueCm:

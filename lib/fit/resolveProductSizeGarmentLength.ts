@@ -17,13 +17,41 @@ type LengthMeasurement = {
   maxValueCm: number;
 };
 
-function findGarmentLength(
-  measurements: readonly LengthMeasurement[]
+type ResolveProductSizeLengthMeasurementArgs = {
+  measurementType: FitMeasurementType;
+  component?: FitGarmentComponent;
+};
+
+function matchesRequestedMeasurement(
+  measurement: LengthMeasurement,
+  args: ResolveProductSizeLengthMeasurementArgs
+): boolean {
+  if (
+    measurement.type !== args.measurementType
+  ) {
+    return false;
+  }
+
+  if (
+    args.component !== undefined &&
+    measurement.component !== args.component
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function findChartGarmentMeasurement(
+  measurements: readonly LengthMeasurement[],
+  args: ResolveProductSizeLengthMeasurementArgs
 ): LengthReferenceRange | null {
   const measurement = measurements.find(
     (candidate) =>
-      candidate.type ===
-      FitMeasurementType.GARMENT_LENGTH
+      matchesRequestedMeasurement(
+        candidate,
+        args
+      )
   );
 
   if (!measurement) {
@@ -36,13 +64,16 @@ function findGarmentLength(
   };
 }
 
-function findProductSpecificGarmentLength(
-  measurements: ProductSizeInput["productSizeMeasurements"]
+function findProductSpecificGarmentMeasurement(
+  measurements: ProductSizeInput["productSizeMeasurements"],
+  args: ResolveProductSizeLengthMeasurementArgs
 ): LengthReferenceRange | null {
   const measurement = measurements.find(
     (candidate) =>
-      candidate.type ===
-        FitMeasurementType.GARMENT_LENGTH &&
+      matchesRequestedMeasurement(
+        candidate,
+        args
+      ) &&
       candidate.measurementBasis ===
         FitMeasurementBasis.GARMENT
   );
@@ -57,23 +88,45 @@ function findProductSpecificGarmentLength(
   };
 }
 
-export function resolveProductSizeGarmentLength(
-  size: ProductSizeInput
+export function resolveProductSizeLengthMeasurement(
+  size: ProductSizeInput,
+  args: ResolveProductSizeLengthMeasurementArgs
 ): LengthReferenceRange | null {
-  const productSpecificLength =
-    findProductSpecificGarmentLength(
-      size.productSizeMeasurements
+  const productSpecificMeasurement =
+    findProductSpecificGarmentMeasurement(
+      size.productSizeMeasurements,
+      args
     );
 
-  if (productSpecificLength) {
-    return productSpecificLength;
+  if (productSpecificMeasurement) {
+    return productSpecificMeasurement;
   }
 
   if (!size.garmentMappedChart) {
     return null;
   }
 
-  return findGarmentLength(
-    size.garmentMappedChart.measurements
+  return findChartGarmentMeasurement(
+    size.garmentMappedChart.measurements,
+    args
+  );
+}
+
+/*
+ * Backwards-compatible semantic wrapper for the
+ * existing maxi-length path.
+ *
+ * Dress, abaya and jilbab length assessment continues
+ * to request GARMENT_LENGTH exactly as before.
+ */
+export function resolveProductSizeGarmentLength(
+  size: ProductSizeInput
+): LengthReferenceRange | null {
+  return resolveProductSizeLengthMeasurement(
+    size,
+    {
+      measurementType:
+        FitMeasurementType.GARMENT_LENGTH,
+    }
   );
 }

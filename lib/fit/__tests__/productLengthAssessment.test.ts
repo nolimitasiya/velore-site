@@ -7,6 +7,7 @@ import {
   FabricStretch,
   FitGarmentComponent,
   FitMeasurementBasis,
+  FitMeasurementRangeType,
   FitMeasurementType,
   ProductLengthStructure,
   ProductType,
@@ -65,7 +66,28 @@ function garmentLengthMeasurement(
       FitGarmentComponent.WHOLE_GARMENT,
 
     measurementBasis,
+    rangeType: FitMeasurementRangeType.RANGE,
 
+    minValueCm,
+    maxValueCm,
+  };
+}
+
+function trouserInseamMeasurement(
+  minValueCm: number,
+  maxValueCm = minValueCm,
+  measurementBasis:
+    FitMeasurementBasis =
+      FitMeasurementBasis.GARMENT,
+  component:
+    FitGarmentComponent =
+      FitGarmentComponent.TROUSER
+) {
+  return {
+    type: FitMeasurementType.INSEAM,
+    component,
+    measurementBasis,
+    rangeType: FitMeasurementRangeType.RANGE,
     minValueCm,
     maxValueCm,
   };
@@ -78,6 +100,7 @@ describe("assessProductLengths", () => {
         {
           sizeId: "m",
           sizeLabel: "M",
+          chartSortOrder: null,
 
           productSizeMeasurements: [
             garmentLengthMeasurement(147.32),
@@ -117,6 +140,7 @@ describe("assessProductLengths", () => {
         {
           sizeId: "m",
           sizeLabel: "M",
+          chartSortOrder: null,
 
           productSizeMeasurements: [
             garmentLengthMeasurement(142),
@@ -154,6 +178,7 @@ describe("assessProductLengths", () => {
         {
           sizeId: "m",
           sizeLabel: "M",
+          chartSortOrder: null,
 
           productSizeMeasurements: [
             garmentLengthMeasurement(152),
@@ -194,6 +219,7 @@ describe("assessProductLengths", () => {
       sizes: inches.map((length) => ({
         sizeId: `abaya-${length}`,
         sizeLabel: String(length),
+        chartSortOrder: null,
 
         productSizeMeasurements: [
           garmentLengthMeasurement(
@@ -254,6 +280,7 @@ describe("assessProductLengths", () => {
         {
           sizeId: "m",
           sizeLabel: "M",
+          chartSortOrder: null,
 
           productSizeMeasurements: [
             garmentLengthMeasurement(147.32),
@@ -324,6 +351,7 @@ describe("assessProductLengths", () => {
         {
           sizeId: "m",
           sizeLabel: "M",
+          chartSortOrder: null,
 
           productSizeMeasurements: [],
 
@@ -343,6 +371,8 @@ describe("assessProductLengths", () => {
     expect(result).toEqual({
       status: "INSUFFICIENT_EVIDENCE",
       structure: "SIZE_DEPENDENT",
+      measurementType:
+        FitMeasurementType.GARMENT_LENGTH,
       assessments: [],
       reason: "MISSING_GARMENT_LENGTH",
     });
@@ -357,6 +387,7 @@ describe("assessProductLengths", () => {
         {
           sizeId: "m",
           sizeLabel: "M",
+          chartSortOrder: null,
 
           productSizeMeasurements: [
             garmentLengthMeasurement(
@@ -382,6 +413,7 @@ describe("assessProductLengths", () => {
     expect(result).toEqual({
       status: "INSUFFICIENT_EVIDENCE",
       structure: "SIZE_DEPENDENT",
+      measurementType: FitMeasurementType.GARMENT_LENGTH,
       assessments: [],
       reason: "MISSING_GARMENT_LENGTH",
     });
@@ -396,6 +428,7 @@ describe("assessProductLengths", () => {
       {
         sizeId: "m",
         sizeLabel: "M",
+        chartSortOrder: null,
 
         productSizeMeasurements: [
           garmentLengthMeasurement(
@@ -421,6 +454,8 @@ describe("assessProductLengths", () => {
   expect(result).toEqual({
     status: "INSUFFICIENT_EVIDENCE",
     structure: "SIZE_DEPENDENT",
+    measurementType:
+        FitMeasurementType.GARMENT_LENGTH,
     assessments: [],
     reason: "MISSING_GARMENT_LENGTH",
   });
@@ -435,6 +470,7 @@ it("accepts an explicit GARMENT size-measurement basis even when the product bas
       {
         sizeId: "m",
         sizeLabel: "M",
+        chartSortOrder: null,
 
         productSizeMeasurements: [
           garmentLengthMeasurement(
@@ -485,6 +521,7 @@ it("accepts an explicit GARMENT size-measurement basis even when the product bas
         {
           sizeId: "m",
           sizeLabel: "M",
+          chartSortOrder: null,
 
           productSizeMeasurements: [
             garmentLengthMeasurement(147.32),
@@ -506,6 +543,8 @@ it("accepts an explicit GARMENT size-measurement basis even when the product bas
     expect(result).toEqual({
       status: "INSUFFICIENT_EVIDENCE",
       structure: "SIZE_DEPENDENT",
+      measurementType:
+        FitMeasurementType.GARMENT_LENGTH,
       assessments: [],
       reason:
         "MISSING_SHOPPER_PREFERENCE",
@@ -518,6 +557,7 @@ it("accepts an explicit GARMENT size-measurement basis even when the product bas
         {
           sizeId: "m",
           sizeLabel: "M",
+          chartSortOrder: null,
 
           productSizeMeasurements: [],
 
@@ -537,6 +577,8 @@ it("accepts an explicit GARMENT size-measurement basis even when the product bas
     expect(result).toEqual({
       status: "INSUFFICIENT_EVIDENCE",
       structure: "SIZE_DEPENDENT",
+      measurementType:
+        FitMeasurementType.GARMENT_LENGTH,
       assessments: [],
       reason: "MISSING_GARMENT_LENGTH",
     });
@@ -570,6 +612,7 @@ it("accepts an explicit GARMENT size-measurement basis even when the product bas
         {
           sizeId: "abaya-58",
           sizeLabel: "58",
+          chartSortOrder: null,
 
           productSizeMeasurements: [],
 
@@ -589,6 +632,8 @@ it("accepts an explicit GARMENT size-measurement basis even when the product bas
     expect(result).toEqual({
       status: "INSUFFICIENT_EVIDENCE",
       structure: "SIZE_DEPENDENT",
+      measurementType:
+        FitMeasurementType.GARMENT_LENGTH,
       assessments: [],
       reason: "MISSING_GARMENT_LENGTH",
     });
@@ -601,6 +646,7 @@ it("accepts an explicit GARMENT size-measurement basis even when the product bas
     sizes: [54, 56, 58, 60].map((length) => ({
       sizeId: `length-size-${length}`,
       sizeLabel: String(length),
+      chartSortOrder: null,
 
       productSizeMeasurements: [
         garmentLengthMeasurement(length * 2.54),
@@ -633,27 +679,32 @@ it("accepts an explicit GARMENT size-measurement basis even when the product bas
     result.assessments.map((item) => ({
       sizeId: item.sizeId,
       sizeLabel: item.sizeLabel,
+      chartSortOrder: null,
       status: item.assessment.status,
     }))
   ).toEqual([
     {
       sizeId: "length-size-54",
       sizeLabel: "54",
+      chartSortOrder: null,
       status: "SHORTER_THAN_PREFERENCE",
     },
     {
       sizeId: "length-size-56",
       sizeLabel: "56",
+      chartSortOrder: null,
       status: "SHORTER_THAN_PREFERENCE",
     },
     {
       sizeId: "length-size-58",
       sizeLabel: "58",
+      chartSortOrder: null,
       status: "MATCH",
     },
     {
       sizeId: "length-size-60",
       sizeLabel: "60",
+      chartSortOrder: null,
       status: "LONGER_THAN_PREFERENCE",
     },
   ]);
@@ -667,6 +718,7 @@ it("fails closed when a length-based catalogue size is missing explicit garment-
       {
         sizeId: "length-size-54",
         sizeLabel: "54",
+        chartSortOrder: null,
         productSizeMeasurements: [
           garmentLengthMeasurement(54 * 2.54),
         ],
@@ -677,6 +729,7 @@ it("fails closed when a length-based catalogue size is missing explicit garment-
       {
         sizeId: "length-size-56",
         sizeLabel: "56",
+        chartSortOrder: null,
         productSizeMeasurements: [
           garmentLengthMeasurement(56 * 2.54),
         ],
@@ -687,6 +740,7 @@ it("fails closed when a length-based catalogue size is missing explicit garment-
       {
         sizeId: "length-size-58",
         sizeLabel: "58",
+        chartSortOrder: null,
         productSizeMeasurements: [
           garmentLengthMeasurement(58 * 2.54),
         ],
@@ -697,6 +751,7 @@ it("fails closed when a length-based catalogue size is missing explicit garment-
       {
         sizeId: "length-size-60",
         sizeLabel: "60",
+        chartSortOrder: null,
 
         // Deliberately missing.
         // The engine must never infer 60" from this label.
@@ -717,6 +772,8 @@ it("fails closed when a length-based catalogue size is missing explicit garment-
   expect(result).toEqual({
     status: "INSUFFICIENT_EVIDENCE",
     structure: "LENGTH_BASED_SIZE",
+    measurementType:
+        FitMeasurementType.GARMENT_LENGTH,
     assessments: [],
     reason: "MISSING_GARMENT_LENGTH",
   });
@@ -731,6 +788,7 @@ it("fails closed for length-based sizes when the shopper has no preferred maxi l
     sizes: [54, 56, 58, 60].map((length) => ({
       sizeId: `length-size-${length}`,
       sizeLabel: String(length),
+      chartSortOrder: null,
 
       productSizeMeasurements: [
         garmentLengthMeasurement(length * 2.54),
@@ -750,6 +808,8 @@ it("fails closed for length-based sizes when the shopper has no preferred maxi l
   expect(result).toEqual({
     status: "INSUFFICIENT_EVIDENCE",
     structure: "LENGTH_BASED_SIZE",
+    measurementType:
+        FitMeasurementType.GARMENT_LENGTH,
     assessments: [],
     reason: "MISSING_SHOPPER_PREFERENCE",
   });
@@ -762,6 +822,7 @@ it("fails closed when one length-based size has BODY evidence instead of GARMENT
       {
         sizeId: "length-size-54",
         sizeLabel: "54",
+        chartSortOrder: null,
 
         productSizeMeasurements: [
           garmentLengthMeasurement(
@@ -779,6 +840,7 @@ it("fails closed when one length-based size has BODY evidence instead of GARMENT
       {
         sizeId: "length-size-56",
         sizeLabel: "56",
+        chartSortOrder: null,
 
         productSizeMeasurements: [
           garmentLengthMeasurement(
@@ -796,6 +858,7 @@ it("fails closed when one length-based size has BODY evidence instead of GARMENT
       {
         sizeId: "length-size-58",
         sizeLabel: "58",
+        chartSortOrder: null,
 
         /*
          * Deliberately wrong basis.
@@ -820,6 +883,7 @@ it("fails closed when one length-based size has BODY evidence instead of GARMENT
       {
         sizeId: "length-size-60",
         sizeLabel: "60",
+        chartSortOrder: null,
 
         productSizeMeasurements: [
           garmentLengthMeasurement(
@@ -844,6 +908,8 @@ it("fails closed when one length-based size has BODY evidence instead of GARMENT
   expect(result).toEqual({
     status: "INSUFFICIENT_EVIDENCE",
     structure: "LENGTH_BASED_SIZE",
+    measurementType:
+        FitMeasurementType.GARMENT_LENGTH,
     assessments: [],
     reason: "MISSING_GARMENT_LENGTH",
   });
@@ -868,6 +934,7 @@ it("uses mapped GARMENT chart evidence as a valid fallback for length-based size
       return {
         sizeId: `length-size-${length}`,
         sizeLabel: String(length),
+        chartSortOrder: null,
 
         // Deliberately no product-specific
         // garment-length measurement.
@@ -900,23 +967,28 @@ it("uses mapped GARMENT chart evidence as a valid fallback for length-based size
   expect(
     result.assessments.map((item) => ({
       sizeLabel: item.sizeLabel,
+      chartSortOrder: null,
       status: item.assessment.status,
     }))
   ).toEqual([
     {
       sizeLabel: "54",
+      chartSortOrder: null,
       status: "SHORTER_THAN_PREFERENCE",
     },
     {
       sizeLabel: "56",
+      chartSortOrder: null,
       status: "SHORTER_THAN_PREFERENCE",
     },
     {
       sizeLabel: "58",
+      chartSortOrder: null,
       status: "MATCH",
     },
     {
       sizeLabel: "60",
+      chartSortOrder: null,
       status: "LONGER_THAN_PREFERENCE",
     },
   ]);
@@ -941,6 +1013,7 @@ it("does not use mapped BODY chart evidence as garment-length evidence for lengt
       return {
         sizeId: `length-size-${length}`,
         sizeLabel: String(length),
+        chartSortOrder: null,
 
         productSizeMeasurements: [],
 
@@ -963,8 +1036,593 @@ it("does not use mapped BODY chart evidence as garment-length evidence for lengt
   expect(result).toEqual({
     status: "INSUFFICIENT_EVIDENCE",
     structure: "LENGTH_BASED_SIZE",
+    measurementType:
+        FitMeasurementType.GARMENT_LENGTH,
     assessments: [],
     reason: "MISSING_GARMENT_LENGTH",
+  });
+});
+
+describe("assessProductLengths — skirt length", () => {
+  it("assesses a standalone skirt against the shopper's preferred skirt length", () => {
+    const input = createInput({
+      productType: ProductType.SKIRT,
+
+      shopperMeasurements: [
+        {
+          type: FitMeasurementType.SKIRT_LENGTH,
+          valueCm: 90,
+        },
+      ],
+
+    sizes: [
+  {
+    sizeId: "size-m",
+    sizeLabel: "M",
+    chartSortOrder: null,
+
+    productSizeMeasurements: [
+  {
+    type: FitMeasurementType.SKIRT_LENGTH,
+    component: FitGarmentComponent.SKIRT,
+    measurementBasis: FitMeasurementBasis.GARMENT,
+    rangeType: FitMeasurementRangeType.RANGE,
+    minValueCm: 90,
+    maxValueCm: 90,
+  },
+],
+
+    mappedChart: null,
+  },
+],
+    });
+
+    const result = assessProductLengths({
+      input,
+      structure: "SIZE_DEPENDENT",
+    });
+
+    expect(result.status).toBe("ASSESSED");
+
+    if (result.status !== "ASSESSED") {
+      throw new Error(
+        "Expected skirt length to be assessed."
+      );
+    }
+
+    expect(result.measurementType).toBe(
+      FitMeasurementType.SKIRT_LENGTH
+    );
+
+    expect(result.assessments).toHaveLength(1);
+
+    expect(
+      result.assessments[0].assessment.status
+    ).toBe("MATCH");
+  });
+
+  it("does not substitute preferred maxi length for preferred skirt length", () => {
+    const input = createInput({
+      productType: ProductType.SKIRT,
+
+      shopperMeasurements: [
+        {
+          type: FitMeasurementType.GARMENT_LENGTH,
+          valueCm: 90,
+        },
+      ],
+
+      sizes: [
+  {
+    sizeId: "size-m",
+    sizeLabel: "M",
+    chartSortOrder: null,
+
+    productSizeMeasurements: [
+  {
+    type: FitMeasurementType.SKIRT_LENGTH,
+    component: FitGarmentComponent.SKIRT,
+    measurementBasis: FitMeasurementBasis.GARMENT,
+    rangeType: FitMeasurementRangeType.RANGE,
+    minValueCm: 90,
+    maxValueCm: 90,
+  },
+],
+
+    mappedChart: null,
+  },
+],
+    });
+
+    const result = assessProductLengths({
+      input,
+      structure: "SIZE_DEPENDENT",
+    });
+
+    expect(result).toEqual({
+      status: "INSUFFICIENT_EVIDENCE",
+      structure: "SIZE_DEPENDENT",
+      measurementType:
+        FitMeasurementType.SKIRT_LENGTH,
+      assessments: [],
+      reason: "MISSING_SHOPPER_PREFERENCE",
+    });
+  });
+});
+
+describe("assessProductLengths — pants inseam", () => {
+  function createPantsInput(
+    overrides: Partial<ProductSizeRecommendationInput> = {}
+  ): ProductSizeRecommendationInput {
+    return createInput({
+      productType: ProductType.PANTS,
+
+      shopperMeasurements: [
+        {
+          type: FitMeasurementType.INSEAM,
+          valueCm: 76.2,
+        },
+      ],
+
+      ...overrides,
+    });
+  }
+
+  it("matches trouser inseam to the shopper's inseam", () => {
+    const input = createPantsInput({
+      sizes: [
+        {
+          sizeId: "m",
+          sizeLabel: "M",
+          chartSortOrder: null,
+
+          productSizeMeasurements: [
+            trouserInseamMeasurement(76.2),
+          ],
+
+          mappedChart: null,
+          bodyMappedChart: null,
+          garmentMappedChart: null,
+        },
+      ],
+    });
+
+    const result = assessProductLengths({
+      input,
+      structure: "SIZE_DEPENDENT",
+    });
+
+    expect(result.status).toBe("ASSESSED");
+
+    if (result.status !== "ASSESSED") {
+      throw new Error(
+        "Expected pants inseam to be assessed."
+      );
+    }
+
+    expect(result.assessments).toHaveLength(1);
+
+    expect(
+      result.assessments[0].assessment.status
+    ).toBe("MATCH");
+  });
+
+  it("reports a trouser inseam as shorter than the shopper's inseam", () => {
+    const input = createPantsInput({
+      sizes: [
+        {
+          sizeId: "m",
+          sizeLabel: "M",
+          chartSortOrder: null,
+
+          productSizeMeasurements: [
+            trouserInseamMeasurement(71.12),
+          ],
+
+          mappedChart: null,
+          bodyMappedChart: null,
+          garmentMappedChart: null,
+        },
+      ],
+    });
+
+    const result = assessProductLengths({
+      input,
+      structure: "SIZE_DEPENDENT",
+    });
+
+    expect(result.status).toBe("ASSESSED");
+
+    if (result.status !== "ASSESSED") {
+      throw new Error(
+        "Expected pants inseam to be assessed."
+      );
+    }
+
+    expect(
+      result.assessments[0].assessment.status
+    ).toBe("SHORTER_THAN_PREFERENCE");
+  });
+
+  it("reports a trouser inseam as longer than the shopper's inseam", () => {
+    const input = createPantsInput({
+      sizes: [
+        {
+          sizeId: "m",
+          sizeLabel: "M",
+          chartSortOrder: null,
+
+          productSizeMeasurements: [
+            trouserInseamMeasurement(81.28),
+          ],
+
+          mappedChart: null,
+          bodyMappedChart: null,
+          garmentMappedChart: null,
+        },
+      ],
+    });
+
+    const result = assessProductLengths({
+      input,
+      structure: "SIZE_DEPENDENT",
+    });
+
+    expect(result.status).toBe("ASSESSED");
+
+    if (result.status !== "ASSESSED") {
+      throw new Error(
+        "Expected pants inseam to be assessed."
+      );
+    }
+
+    expect(
+      result.assessments[0].assessment.status
+    ).toBe("LONGER_THAN_PREFERENCE");
+  });
+
+  it("fails closed when the shopper has no inseam", () => {
+    const input = createPantsInput({
+      shopperMeasurements: [],
+
+      sizes: [
+        {
+          sizeId: "m",
+          sizeLabel: "M",
+          chartSortOrder: null,
+
+          productSizeMeasurements: [
+            trouserInseamMeasurement(76.2),
+          ],
+
+          mappedChart: null,
+          bodyMappedChart: null,
+          garmentMappedChart: null,
+        },
+      ],
+    });
+
+    expect(
+      assessProductLengths({
+        input,
+        structure: "SIZE_DEPENDENT",
+      })
+    ).toEqual({
+      status: "INSUFFICIENT_EVIDENCE",
+      structure: "SIZE_DEPENDENT",
+      measurementType:
+        FitMeasurementType.INSEAM,
+      assessments: [],
+      reason: "MISSING_SHOPPER_PREFERENCE",
+    });
+  });
+
+  it("fails closed when the product has no garment inseam", () => {
+    const input = createPantsInput({
+      sizes: [
+        {
+          sizeId: "m",
+          sizeLabel: "M",
+          chartSortOrder: null,
+
+          productSizeMeasurements: [],
+
+          mappedChart: null,
+          bodyMappedChart: null,
+          garmentMappedChart: null,
+        },
+      ],
+    });
+
+    expect(
+      assessProductLengths({
+        input,
+        structure: "SIZE_DEPENDENT",
+      })
+    ).toEqual({
+      status: "INSUFFICIENT_EVIDENCE",
+      structure: "SIZE_DEPENDENT",
+      measurementType:
+        FitMeasurementType.INSEAM,
+      assessments: [],
+      reason: "MISSING_GARMENT_LENGTH",
+    });
+  });
+
+  it("does not substitute TROUSER_LENGTH for INSEAM", () => {
+    const input = createPantsInput({
+      sizes: [
+        {
+          sizeId: "m",
+          sizeLabel: "M",
+          chartSortOrder: null,
+
+          productSizeMeasurements: [
+            {
+              type:
+                FitMeasurementType.TROUSER_LENGTH,
+              component:
+                FitGarmentComponent.TROUSER,
+              measurementBasis:
+                FitMeasurementBasis.GARMENT,
+                rangeType: FitMeasurementRangeType.RANGE,
+              minValueCm: 100,
+              maxValueCm: 100,
+            },
+          ],
+
+          mappedChart: null,
+          bodyMappedChart: null,
+          garmentMappedChart: null,
+        },
+      ],
+    });
+
+    expect(
+      assessProductLengths({
+        input,
+        structure: "SIZE_DEPENDENT",
+      })
+    ).toEqual({
+      status: "INSUFFICIENT_EVIDENCE",
+      structure: "SIZE_DEPENDENT",
+      measurementType:
+        FitMeasurementType.INSEAM,
+      assessments: [],
+      reason: "MISSING_GARMENT_LENGTH",
+    });
+  });
+
+  it("does not substitute another component's inseam", () => {
+    const input = createPantsInput({
+      sizes: [
+        {
+          sizeId: "m",
+          sizeLabel: "M",
+          chartSortOrder: null,
+
+          productSizeMeasurements: [
+            trouserInseamMeasurement(
+              76.2,
+              76.2,
+              FitMeasurementBasis.GARMENT,
+              FitGarmentComponent.BOTTOM
+            ),
+          ],
+
+          mappedChart: null,
+          bodyMappedChart: null,
+          garmentMappedChart: null,
+        },
+      ],
+    });
+
+    expect(
+      assessProductLengths({
+        input,
+        structure: "SIZE_DEPENDENT",
+      })
+    ).toEqual({
+      status: "INSUFFICIENT_EVIDENCE",
+      structure: "SIZE_DEPENDENT",
+      measurementType:
+        FitMeasurementType.INSEAM,
+      assessments: [],
+      reason: "MISSING_GARMENT_LENGTH",
+    });
+  });
+
+  it("uses mapped GARMENT chart inseam as fallback", () => {
+    const garmentChart = {
+      measurementBasis:
+        FitMeasurementBasis.GARMENT,
+
+      measurements: [
+        trouserInseamMeasurement(76.2),
+      ],
+    };
+
+    const input = createPantsInput({
+      sizes: [
+        {
+          sizeId: "m",
+          sizeLabel: "M",
+          chartSortOrder: null,
+
+          productSizeMeasurements: [],
+
+          mappedChart: garmentChart,
+          bodyMappedChart: null,
+          garmentMappedChart: garmentChart,
+        },
+      ],
+    });
+
+    const result = assessProductLengths({
+      input,
+      structure: "SIZE_DEPENDENT",
+    });
+
+    expect(result.status).toBe("ASSESSED");
+
+    if (result.status !== "ASSESSED") {
+      throw new Error(
+        "Expected mapped garment inseam to be assessed."
+      );
+    }
+
+    expect(
+      result.assessments[0].assessment.status
+    ).toBe("MATCH");
+  });
+});
+
+
+describe("assessProductLengths — set composition", () => {
+  it("assesses the TROUSER inseam for a TOP + TROUSER set", () => {
+    const input = createInput({
+      productType: ProductType.SETS,
+
+      fitComponents: [
+        FitGarmentComponent.TOP,
+        FitGarmentComponent.TROUSER,
+      ],
+
+      shopperMeasurements: [
+        {
+          type: FitMeasurementType.INSEAM,
+          valueCm: 76.2,
+        },
+      ],
+
+      sizes: [
+        {
+          sizeId: "m",
+          sizeLabel: "M",
+          chartSortOrder: null,
+
+          productSizeMeasurements: [
+            trouserInseamMeasurement(71.12),
+          ],
+
+          mappedChart: null,
+          bodyMappedChart: null,
+          garmentMappedChart: null,
+        },
+
+        {
+          sizeId: "l",
+          sizeLabel: "L",
+          chartSortOrder: null,
+
+          productSizeMeasurements: [
+            trouserInseamMeasurement(76.2),
+          ],
+
+          mappedChart: null,
+          bodyMappedChart: null,
+          garmentMappedChart: null,
+        },
+      ],
+    });
+
+    const result =
+      assessProductLengths({
+        input,
+        structure: "SIZE_DEPENDENT",
+      });
+
+    expect(result.status).toBe("ASSESSED");
+
+    if (result.status !== "ASSESSED") {
+      throw new Error(
+        "Expected TOP + TROUSER set inseams to be assessed."
+      );
+    }
+
+    expect(result.measurementType).toBe(
+      FitMeasurementType.INSEAM
+    );
+
+    expect(
+      result.assessments.map((item) => ({
+        sizeId: item.sizeId,
+        status: item.assessment.status,
+      }))
+    ).toEqual([
+      {
+        sizeId: "m",
+        status: "SHORTER_THAN_PREFERENCE",
+      },
+      {
+        sizeId: "l",
+        status: "MATCH",
+      },
+    ]);
+  });
+
+  it("keeps TOP + SKIRT set length intentionally unsupported even when the shopper has a skirt-length preference", () => {
+    const input = createInput({
+      productType: ProductType.SETS,
+
+      fitComponents: [
+        FitGarmentComponent.TOP,
+        FitGarmentComponent.SKIRT,
+      ],
+
+      shopperMeasurements: [
+        {
+          type:
+            FitMeasurementType.GARMENT_LENGTH,
+          valueCm: 147.32,
+        },
+        {
+          type:
+          FitMeasurementType.SKIRT_LENGTH,
+          valueCm: 90,
+        },
+      ],
+
+      sizes: [
+        {
+          sizeId: "m",
+          sizeLabel: "M",
+          chartSortOrder: null,
+
+          productSizeMeasurements: [
+            {
+              type:
+                FitMeasurementType.SKIRT_LENGTH,
+
+              component:
+                FitGarmentComponent.SKIRT,
+
+              measurementBasis:
+                FitMeasurementBasis.GARMENT,
+
+              rangeType: FitMeasurementRangeType.RANGE,
+
+              minValueCm: 101.6,
+              maxValueCm: 101.6,
+            },
+          ],
+
+          mappedChart: null,
+          bodyMappedChart: null,
+          garmentMappedChart: null,
+        },
+      ],
+    });
+
+    expect(
+      assessProductLengths({
+        input,
+        structure: "SIZE_DEPENDENT",
+      })
+    ).toEqual({
+      status: "NOT_APPLICABLE",
+      assessments: [],
+    });
   });
 });
 
@@ -1143,6 +1801,8 @@ it("does not use mapped BODY chart evidence as garment-length evidence for lengt
     expect(result).toEqual({
       status: "INSUFFICIENT_EVIDENCE",
       structure: "INDEPENDENT",
+      measurementType:
+        FitMeasurementType.GARMENT_LENGTH,
       assessments: [],
       reason: "MISSING_GARMENT_LENGTH",
     });
@@ -1155,6 +1815,7 @@ it("does not use mapped BODY chart evidence as garment-length evidence for lengt
     sizes: [54, 56, 60].map((length) => ({
       sizeId: `length-size-${length}`,
       sizeLabel: String(length),
+      chartSortOrder: null,
 
       productSizeMeasurements: [
         garmentLengthMeasurement(length * 2.54),
@@ -1186,19 +1847,23 @@ it("does not use mapped BODY chart evidence as garment-length evidence for lengt
   expect(
     result.assessments.map((item) => ({
       sizeLabel: item.sizeLabel,
+      chartSortOrder: null,
       status: item.assessment.status,
     }))
   ).toEqual([
     {
       sizeLabel: "54",
+      chartSortOrder: null,
       status: "SHORTER_THAN_PREFERENCE",
     },
     {
       sizeLabel: "56",
+      chartSortOrder: null,
       status: "SHORTER_THAN_PREFERENCE",
     },
     {
       sizeLabel: "60",
+      chartSortOrder: null,
       status: "LONGER_THAN_PREFERENCE",
     },
   ]);
@@ -1242,6 +1907,8 @@ it("does not use mapped BODY chart evidence as garment-length evidence for lengt
     expect(result).toEqual({
       status: "INSUFFICIENT_EVIDENCE",
       structure: "INDEPENDENT",
+      measurementType:
+        FitMeasurementType.GARMENT_LENGTH,
       assessments: [],
       reason: "MISSING_SHOPPER_PREFERENCE",
     });
@@ -1282,6 +1949,257 @@ it("does not use mapped BODY chart evidence as garment-length evidence for lengt
       });
 
     expect(result).toEqual({
+      status: "NOT_APPLICABLE",
+      assessments: [],
+    });
+  });
+});
+
+describe("assessProductLengths — activewear composition", () => {
+  it("assesses the TROUSER inseam for activewear trousers", () => {
+    const input = createInput({
+      productType: ProductType.ACTIVEWEAR,
+
+      fitComponents: [
+        FitGarmentComponent.TROUSER,
+      ],
+
+      shopperMeasurements: [
+        {
+          type: FitMeasurementType.INSEAM,
+          valueCm: 76.2,
+        },
+      ],
+
+      sizes: [
+        {
+          sizeId: "m",
+          sizeLabel: "M",
+          chartSortOrder: null,
+
+          productSizeMeasurements: [
+            trouserInseamMeasurement(71.12),
+          ],
+
+          mappedChart: null,
+          bodyMappedChart: null,
+          garmentMappedChart: null,
+        },
+
+        {
+          sizeId: "l",
+          sizeLabel: "L",
+          chartSortOrder: null,
+
+          productSizeMeasurements: [
+            trouserInseamMeasurement(76.2),
+          ],
+
+          mappedChart: null,
+          bodyMappedChart: null,
+          garmentMappedChart: null,
+        },
+      ],
+    });
+
+    const result =
+      assessProductLengths({
+        input,
+        structure: "SIZE_DEPENDENT",
+      });
+
+    expect(result.status).toBe("ASSESSED");
+
+    if (result.status !== "ASSESSED") {
+      throw new Error(
+        "Expected activewear trouser inseams to be assessed."
+      );
+    }
+
+    expect(result.measurementType).toBe(
+      FitMeasurementType.INSEAM
+    );
+
+    expect(
+      result.assessments.map((item) => ({
+        sizeId: item.sizeId,
+        status: item.assessment.status,
+      }))
+    ).toEqual([
+      {
+        sizeId: "m",
+        status: "SHORTER_THAN_PREFERENCE",
+      },
+      {
+        sizeId: "l",
+        status: "MATCH",
+      },
+    ]);
+  });
+
+  it("assesses the TROUSER inseam for activewear TOP + TROUSER", () => {
+    const input = createInput({
+      productType: ProductType.ACTIVEWEAR,
+
+      fitComponents: [
+        FitGarmentComponent.TOP,
+        FitGarmentComponent.TROUSER,
+      ],
+
+      shopperMeasurements: [
+        {
+          type: FitMeasurementType.INSEAM,
+          valueCm: 76.2,
+        },
+      ],
+
+      sizes: [
+        {
+          sizeId: "m",
+          sizeLabel: "M",
+          chartSortOrder: null,
+
+          productSizeMeasurements: [
+            trouserInseamMeasurement(71.12),
+          ],
+
+          mappedChart: null,
+          bodyMappedChart: null,
+          garmentMappedChart: null,
+        },
+
+        {
+          sizeId: "l",
+          sizeLabel: "L",
+          chartSortOrder: null,
+
+          productSizeMeasurements: [
+            trouserInseamMeasurement(76.2),
+          ],
+
+          mappedChart: null,
+          bodyMappedChart: null,
+          garmentMappedChart: null,
+        },
+      ],
+    });
+
+    const result =
+      assessProductLengths({
+        input,
+        structure: "SIZE_DEPENDENT",
+      });
+
+    expect(result.status).toBe("ASSESSED");
+
+    if (result.status !== "ASSESSED") {
+      throw new Error(
+        "Expected activewear TOP + TROUSER inseams to be assessed."
+      );
+    }
+
+    expect(result.measurementType).toBe(
+      FitMeasurementType.INSEAM
+    );
+
+    expect(
+      result.assessments.map((item) => ({
+        sizeId: item.sizeId,
+        status: item.assessment.status,
+      }))
+    ).toEqual([
+      {
+        sizeId: "m",
+        status: "SHORTER_THAN_PREFERENCE",
+      },
+      {
+        sizeId: "l",
+        status: "MATCH",
+      },
+    ]);
+  });
+
+  it("keeps TOP-only activewear personalised length intentionally unsupported", () => {
+    const input = createInput({
+      productType: ProductType.ACTIVEWEAR,
+
+      fitComponents: [
+        FitGarmentComponent.TOP,
+      ],
+
+      shopperMeasurements: [
+        {
+          type: FitMeasurementType.INSEAM,
+          valueCm: 76.2,
+        },
+      ],
+
+      sizes: [],
+    });
+
+    expect(
+      assessProductLengths({
+        input,
+        structure: "SIZE_DEPENDENT",
+      })
+    ).toEqual({
+      status: "NOT_APPLICABLE",
+      assessments: [],
+    });
+  });
+
+  it("fails closed when activewear composition is missing", () => {
+    const input = createInput({
+      productType: ProductType.ACTIVEWEAR,
+
+      fitComponents: [],
+
+      shopperMeasurements: [
+        {
+          type: FitMeasurementType.INSEAM,
+          valueCm: 76.2,
+        },
+      ],
+
+      sizes: [],
+    });
+
+    expect(
+      assessProductLengths({
+        input,
+        structure: "SIZE_DEPENDENT",
+      })
+    ).toEqual({
+      status: "NOT_APPLICABLE",
+      assessments: [],
+    });
+  });
+
+  it("fails closed for unsupported activewear length composition", () => {
+    const input = createInput({
+      productType: ProductType.ACTIVEWEAR,
+
+      fitComponents: [
+        FitGarmentComponent.TOP,
+        FitGarmentComponent.SKIRT,
+      ],
+
+      shopperMeasurements: [
+        {
+          type: FitMeasurementType.INSEAM,
+          valueCm: 76.2,
+        },
+      ],
+
+      sizes: [],
+    });
+
+    expect(
+      assessProductLengths({
+        input,
+        structure: "SIZE_DEPENDENT",
+      })
+    ).toEqual({
       status: "NOT_APPLICABLE",
       assessments: [],
     });

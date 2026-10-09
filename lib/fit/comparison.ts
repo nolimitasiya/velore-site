@@ -1,5 +1,6 @@
 import {
   FitMeasurementBasis,
+  FitMeasurementRangeType,
   FitMeasurementType,
 } from "@prisma/client";
 
@@ -82,24 +83,23 @@ export function compareShopperToSizeMeasurement(
    * These ranges can therefore be compared
    * directly with the shopper's body measurement.
    */
+ if (
+  measurement.basis ===
+  FitMeasurementBasis.BODY
+) {
+  /*
+   * UPPER_BOUND means the brand is expressing
+   * the largest body measurement this size is
+   * intended to accommodate.
+   *
+   * There is therefore no lower-bound rejection:
+   * any shopper measurement at or below the
+   * maximum is compatible with the size.
+   */
   if (
-    measurement.basis ===
-    FitMeasurementBasis.BODY
+    measurement.rangeType ===
+    FitMeasurementRangeType.UPPER_BOUND
   ) {
-    if (
-      shopperValueCm <
-      measurement.range.minValueCm
-    ) {
-      return {
-        type: measurement.type,
-        shopperValueCm,
-        measurementRange: measurement.range,
-        basis: measurement.basis,
-        status: "BELOW_RANGE",
-        reason: "BODY_BELOW_RANGE",
-      };
-    }
-
     if (
       shopperValueCm >
       measurement.range.maxValueCm
@@ -123,6 +123,49 @@ export function compareShopperToSizeMeasurement(
       reason: "BODY_WITHIN_RANGE",
     };
   }
+
+  /*
+   * RANGE preserves the existing BODY-chart
+   * semantics: the shopper must fall between
+   * the stated minimum and maximum.
+   */
+  if (
+    shopperValueCm <
+    measurement.range.minValueCm
+  ) {
+    return {
+      type: measurement.type,
+      shopperValueCm,
+      measurementRange: measurement.range,
+      basis: measurement.basis,
+      status: "BELOW_RANGE",
+      reason: "BODY_BELOW_RANGE",
+    };
+  }
+
+  if (
+    shopperValueCm >
+    measurement.range.maxValueCm
+  ) {
+    return {
+      type: measurement.type,
+      shopperValueCm,
+      measurementRange: measurement.range,
+      basis: measurement.basis,
+      status: "ABOVE_RANGE",
+      reason: "BODY_ABOVE_RANGE",
+    };
+  }
+
+  return {
+    type: measurement.type,
+    shopperValueCm,
+    measurementRange: measurement.range,
+    basis: measurement.basis,
+    status: "MATCH",
+    reason: "BODY_WITHIN_RANGE",
+  };
+}
 
   /*
    * GARMENT measurements describe the garment,
