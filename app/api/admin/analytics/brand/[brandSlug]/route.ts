@@ -9,6 +9,8 @@ import {
 } from "next/server";
 
 import { prisma } from "@/lib/prisma";
+import { withAdminAuth } from "@/lib/auth/withAdminAuth";
+
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -695,7 +697,8 @@ function buildBrandSignalRows(
       );
     });
 }
-export async function GET(
+export const GET = withAdminAuth(async function GET (
+
   req: NextRequest,
   {
     params,
@@ -1693,4 +1696,4 @@ const marketSignals = {
       }
     );
   }
-}
+});

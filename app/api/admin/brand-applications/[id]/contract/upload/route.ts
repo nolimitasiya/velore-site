@@ -1,6 +1,7 @@
 // C:\Users\Asiya\projects\dalra\app\api\admin\brand-applications\[id]\contract\upload\route.ts
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { withAdminAuth } from "@/lib/auth/withAdminAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,7 +12,10 @@ function safeKind(v: string | null) {
   return null;
 }
 
-export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
+export const POST = withAdminAuth(async function POST(
+  req: Request,
+  ctx: { params: Promise<{ id: string }> }
+) {
   try {
     const { id } = await ctx.params;
 
@@ -53,4 +57,4 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message ?? "Upload failed" }, { status: 500 });
   }
-}
+});

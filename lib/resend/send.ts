@@ -9,19 +9,12 @@ type SendEmailArgs = {
 };
 
 export async function sendEmail(args: SendEmailArgs) {
-  console.log("📧 sendEmail called:", {
-    hasResend: Boolean(resend),
-    subject: args.subject,
-    to: args.to,
-    from: args.from,
-  });
-
   if (!resend) {
-    console.warn("❌ Resend is NULL — API key not loaded. Email skipped.");
-    return { ok: false as const, skipped: true as const };
+    console.error("[Resend] Email not sent: RESEND_API_KEY is missing.");
+    throw new Error("Email service is not configured.");
   }
 
-  const result = await resend.emails.send({
+  const { data, error } = await resend.emails.send({
     from: args.from,
     to: args.to,
     subject: args.subject,
@@ -29,6 +22,22 @@ export async function sendEmail(args: SendEmailArgs) {
     replyTo: args.replyTo,
   });
 
-  console.log("✅ Resend response:", result);
-  return { ok: true as const };
+  if (error) {
+    console.error("[Resend] Email rejected:", {
+      name: error.name,
+      message: error.message,
+    });
+
+    throw new Error(`Resend email failed: ${error.message}`);
+  }
+
+  if (!data?.id) {
+    console.error("[Resend] Email response missing an ID.");
+    throw new Error("Resend did not confirm email acceptance.");
+  }
+
+  return {
+    ok: true as const,
+    id: data.id,
+  };
 }

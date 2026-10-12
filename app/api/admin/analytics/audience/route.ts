@@ -14,6 +14,8 @@ import {
   getAgeBand,
 } from "@/lib/analytics/ageBands";
 
+import { withAdminAuth } from "@/lib/auth/withAdminAuth";
+
 export const runtime =
   "nodejs";
 
@@ -191,7 +193,7 @@ const to =
   };
 }
 
-export async function GET(
+export const GET = withAdminAuth(async function GET(
   req: NextRequest
 ) {
   try {
@@ -724,4 +726,4 @@ const knownCountrySessions =
       }
     );
   }
-}
+});

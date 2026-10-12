@@ -9,6 +9,7 @@ import {
 } from "next/server";
 
 import { prisma } from "@/lib/prisma";
+import { withAdminAuth } from "@/lib/auth/withAdminAuth";
 
 
 
@@ -513,14 +514,14 @@ function buildRows(
 
 
 
-export async function GET(
+export const GET = withAdminAuth(async function GET(
   req: NextRequest,
   {
     params,
   }: {
     params: Promise<{
-  countryCode: string;
-}>;
+      countryCode: string;
+    }>;
   }
 ) {
   try {
@@ -1488,4 +1489,4 @@ const audienceShare =
     }
   );
 }
-}
+});

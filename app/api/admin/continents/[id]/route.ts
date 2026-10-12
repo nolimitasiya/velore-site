@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withAdminAuth } from "@/lib/auth/withAdminAuth";
 
-export async function PATCH(
+export const PATCH = withAdminAuth(async function PATCH(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
@@ -59,4 +60,4 @@ export async function PATCH(
       { status: 500 }
     );
   }
-}
+});

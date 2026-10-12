@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 import {  syncBrandProfileToKlaviyo,  sendBrandLifecycleEventToKlaviyo,} from "@/lib/klaviyo/brandLifecycle";
+import { withAdminAuth } from "@/lib/auth/withAdminAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,7 +25,10 @@ const safe = (x: unknown) => String(x ?? "").trim();
 
 
 
-export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
+export const PATCH = withAdminAuth(async function PATCH(
+  req: Request,
+  ctx: { params: Promise<{ id: string }> }
+) {
   const { id } = await ctx.params;
   if (!id) return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
 
@@ -276,4 +280,4 @@ if (status === "rejected") {
 
 
   return NextResponse.json({ ok: true, application: updated });
-}
+});

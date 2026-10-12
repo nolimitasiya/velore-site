@@ -9,6 +9,8 @@ import {
 } from "next/server";
 
 import { prisma } from "@/lib/prisma";
+import { withAdminAuth } from "@/lib/auth/withAdminAuth";
+
 
 import {
   calculateAge,
@@ -595,7 +597,7 @@ function shopperMatchesAgeBand(
   return true;
 }
 
-export async function GET(
+export const GET = withAdminAuth(async function GET (
   req: NextRequest,
   {
     params,
@@ -1507,4 +1509,4 @@ const filteredActiveSessionIds =
       }
     );
   }
-}
+});

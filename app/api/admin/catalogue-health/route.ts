@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { runCatalogueHealthBatch } from "@/lib/catalogue-health/runBatch";
+import { withAdminAuth } from "@/lib/auth/withAdminAuth";
 
 export const dynamic = "force-dynamic";
 
-export async function POST() {
+export const POST = withAdminAuth(async function POST() {
   if (process.env.NODE_ENV === "production") {
     return NextResponse.json(
       {
@@ -42,4 +43,4 @@ export async function POST() {
       }
     );
   }
-}
+});

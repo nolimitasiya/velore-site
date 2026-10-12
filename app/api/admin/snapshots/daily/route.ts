@@ -6,10 +6,19 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-  const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const cronSecret = process.env.CRON_SECRET;
+const authHeader = req.headers.get("authorization");
+
+if (
+  !cronSecret ||
+  cronSecret.length < 32 ||
+  authHeader !== `Bearer ${cronSecret}`
+) {
+  return NextResponse.json(
+    { error: "Unauthorized" },
+    { status: 401 }
+  );
+}
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);

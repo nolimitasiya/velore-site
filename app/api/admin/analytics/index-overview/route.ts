@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {  AnalyticsEventType,  Prisma,} from "@prisma/client";
+import { withAdminAuth } from "@/lib/auth/withAdminAuth";
+
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -959,7 +961,7 @@ if (productId && productTitle) {
 
 
 
-export async function GET(
+export const GET = withAdminAuth(async function GET (
   req: NextRequest
 ) {
   try {
@@ -3095,4 +3097,4 @@ marketSignals: {
       }
     );
   }
-}
+});

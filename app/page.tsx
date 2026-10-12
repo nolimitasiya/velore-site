@@ -7,6 +7,8 @@ import Gate from "@/app/(gate)/Gate";
 import LiveHome from "@/components/LiveHome";
 import { getShopperPreferences } from "@/lib/shopperPreferences";
 import SiteShell from "@/components/SiteShell";
+import { requireBrandSession } from "@/lib/auth/BrandSession";
+import { requireAdminSession } from "@/lib/auth/AdminSession";
 
 
 export default async function Page({
@@ -25,13 +27,32 @@ export default async function Page({
   const country =
     typeof sp.country === "string" ? sp.country : shopperPrefs.country;
 
-  const launchMode = process.env.LAUNCH_MODE === "true";
-  const cookieStore = await cookies();
+const launchMode = process.env.LAUNCH_MODE === "true";
+const cookieStore = await cookies();
 
-  const adminAuthed = Boolean(cookieStore.get("admin_authed")?.value);
-  const brandAuthed = Boolean(cookieStore.get("brand_authed")?.value);
+let brandAuthed = false;
 
-  const isAuthed = adminAuthed || brandAuthed;
+if (launchMode) {
+  try {
+    await requireBrandSession();
+    brandAuthed = true;
+  } catch {
+    brandAuthed = false;
+  }
+}
+
+let adminAuthed = false;
+
+if (launchMode) {
+  try {
+    await requireAdminSession();
+    adminAuthed = true;
+  } catch {
+    adminAuthed = false;
+  }
+}
+
+const isAuthed = adminAuthed || brandAuthed;
 
   if (launchMode && !isAuthed) {
     return <Gate />;

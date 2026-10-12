@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withAdminAuth } from "@/lib/auth/withAdminAuth";
 
-export async function GET() {
+export const GET = withAdminAuth(async function GET() {
   const jobs = await prisma.importJob.findMany({
     where: { type: "products" },
     orderBy: { createdAt: "desc" },
@@ -9,4 +10,4 @@ export async function GET() {
   });
 
   return NextResponse.json({ ok: true, jobs });
-}
+});

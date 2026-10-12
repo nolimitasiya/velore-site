@@ -1,38 +1,59 @@
 import "server-only";
+
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { getBrandSession } from "@/lib/auth/brandDbSession";
 
 export async function requireBrandSession(): Promise<{ userId: string }> {
   const jar = await cookies();
-  const userId = jar.get("brand_authed")?.value ?? null;
+  const token = jar.get("brand_authed")?.value;
 
-  if (!userId) throw new Error("UNAUTHENTICATED");
+  if (!token) {
+    throw new Error("UNAUTHENTICATED");
+  }
 
-  const ok = await prisma.user.findUnique({
-    where: { id: userId },
+  const session = await getBrandSession(token);
+
+  if (!session) {
+    throw new Error("UNAUTHENTICATED");
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
     select: { id: true },
   });
 
-  if (!ok) throw new Error("UNAUTHENTICATED");
+  if (!user) {
+    throw new Error("UNAUTHENTICATED");
+  }
 
-  return { userId };
+  return { userId: user.id };
 }
 
-export async function requireBrandContext(): Promise<{ userId: string; brandId: string }> {
+export async function requireBrandContext(): Promise<{
+  userId: string;
+  brandId: string;
+}> {
+  const { userId } = await requireBrandSession();
+
   const jar = await cookies();
+  const brandId = jar.get("brand_id")?.value;
 
-  const userId = jar.get("brand_authed")?.value ?? null;
-  const brandId = jar.get("brand_id")?.value ?? null;
+  if (!brandId) {
+    throw new Error("UNAUTHENTICATED");
+  }
 
-  if (!userId || !brandId) throw new Error("UNAUTHENTICATED");
-
-  // Optional hard check (prevents cookie tampering)
-  const ok = await prisma.brandMembership.findFirst({
-    where: { userId, brandId },
+  const membership = await prisma.brandMembership.findFirst({
+    where: {
+      userId,
+      brandId,
+    },
     select: { id: true },
   });
 
-  if (!ok) throw new Error("FORBIDDEN");
+  if (!membership) {
+    throw new Error("FORBIDDEN");
+  }
 
   return { userId, brandId };
 }

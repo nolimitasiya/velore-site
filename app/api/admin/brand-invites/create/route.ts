@@ -3,9 +3,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { Role } from "@prisma/client";
-import { sendBrandInviteEmail } from "@/lib/resend/templates/onboarding/brandInvite";
+import { sendBrandInvitationToKlaviyo } from "@/lib/klaviyo/brandInvitations";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
 import { regionFromCountry } from "@/lib/geo";
+import { getBrandOnboardingUrl } from "@/lib/brandInvites/onboardingUrl";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,6 +35,14 @@ function slugifyBrand(name: string) {
 export async function POST(req: Request) {
   try {
     await requireAdminSession();
+  } catch {
+    return NextResponse.json(
+      { ok: false, error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
+  try {
     const body = await req.json().catch(() => ({}));
 
     const email = String(body.email || "").trim().toLowerCase();
@@ -99,32 +108,47 @@ export async function POST(req: Request) {
       select: { id: true },
     });
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-    const onboardingUrl = `${siteUrl}/brand/onboarding?token=${rawToken}`;
+   const onboardingUrl = getBrandOnboardingUrl(rawToken);
+try {
+  await sendBrandInvitationToKlaviyo({
+    inviteId: invite.id,
+    email,
+    brandName: brand.name,
+    onboardingUrl,
+    expiresAt,
+  });
+} catch (error) {
+  console.error("[admin-brand-invite-create] Klaviyo event failed", error);
 
-    await sendBrandInviteEmail({
-      to: email,
-      brandName: brand.name,
-      inviteLink: onboardingUrl,
-      senderName: "Asiya",
-    });
-
-    return NextResponse.json({
-      ok: true,
+  return NextResponse.json(
+    {
+      ok: false,
+      inviteCreated: true,
       inviteId: invite.id,
-      brand,
+      error:
+        "Invitation was created, but Klaviyo did not accept the invitation event.",
       onboardingUrl,
       expiresAt,
-      sent: true,
-    });
-  } catch (e: any) {
-    console.error("[admin-brand-invite-create] error:", e);
+    },
+    { status: 502 }
+  );
+}
+
+return NextResponse.json({
+  ok: true,
+  inviteId: invite.id,
+  brand,
+  onboardingUrl,
+  expiresAt,
+  eventAccepted: true,
+});
+    } catch (error) {
+    console.error("[admin-brand-invite-create] error:", error);
+
     return NextResponse.json(
       {
         ok: false,
-        error: e?.message ?? "Failed to create invite",
-        code: e?.code,
-        meta: e?.meta,
+        error: "Failed to create invitation.",
       },
       { status: 500 }
     );

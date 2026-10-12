@@ -218,40 +218,58 @@ export default function AdminBrandInvitesPage() {
     await loadInvites();
   }
 
-  async function resendInvite(row: InviteRow) {
-    setBusy(true);
-    setError(null);
-    setOnboardingUrl(null);
-    setExpiresAt(null);
+async function resendInvite(row: InviteRow) {
+  if (busy) return;
 
-    const r = await fetch("/api/admin/brand-invites/create", {
+  setBusy(true);
+  setError(null);
+  setOnboardingUrl(null);
+  setExpiresAt(null);
+
+  try {
+    const response = await fetch("/api/admin/brand-invites/resend", {
       method: "POST",
       headers: {
-        "content-type": "application/json",
-       
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        companyName: row.brand.name,
-        companySlug: row.brand.slug,
-        email: row.email,
-        role,
-        countryCode: String(countryCode || "").toUpperCase(),
-        city: resolvedCity || null,
+        inviteId: row.id,
       }),
     });
 
-    const j = await r.json().catch(() => ({}));
-    setBusy(false);
+    const result = await response.json().catch(() => ({}));
 
-    if (!r.ok) {
-      setError(j?.error ?? `Failed (${r.status})`);
+    // A replacement invitation may have been created even if
+    // Klaviyo rejected the event.
+    if (result.onboardingUrl) {
+      setOnboardingUrl(result.onboardingUrl);
+    }
+
+    if (result.expiresAt) {
+      setExpiresAt(result.expiresAt);
+    }
+
+    if (!response.ok) {
+      setError(result.error ?? `Failed (${response.status})`);
+
+      if (result.inviteCreated) {
+        await loadInvites();
+      }
+
       return;
     }
 
-    setOnboardingUrl(j.onboardingUrl);
-    setExpiresAt(j.expiresAt);
     await loadInvites();
+  } catch (error) {
+    console.error("[brand-invites] Resend request failed", error);
+
+    setError(
+      "Unable to complete the resend request. Please refresh the invitation list before trying again."
+    );
+  } finally {
+    setBusy(false);
   }
+}
 
   async function copy(text: string) {
     await navigator.clipboard.writeText(text);
@@ -502,7 +520,16 @@ export default function AdminBrandInvitesPage() {
                           <button
                             className="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition hover:bg-black/[0.03] disabled:cursor-not-allowed disabled:opacity-50"
                             disabled={busy}
-                            onClick={() => resendInvite(row)}
+                            onClick={() => {
+  const confirmed = window.confirm(
+    `Create and submit a new invitation for ${row.email}?\n\n` +
+      "The previous invitation will remain valid until it expires or is revoked."
+  );
+
+  if (confirmed) {
+    void resendInvite(row);
+  }
+}}
                           >
                             Resend
                           </button>

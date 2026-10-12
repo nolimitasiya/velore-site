@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendNewsletterConfirmEmail } from "@/lib/resend/templates/marketing/newsletterConfirm";
+import { withAdminAuth } from "@/lib/auth/withAdminAuth";
 
 export const runtime = "nodejs";
 
-export async function POST() {
+export const POST = withAdminAuth(async function POST() {
   // pull all pending (you can cap if you want)
   const pending = await prisma.newsletterSubscriber.findMany({
     where: { status: "pending" },
@@ -32,4 +33,4 @@ export async function POST() {
   }
 
   return NextResponse.json({ ok: true, sent, failed, total: pending.length });
-}
+});

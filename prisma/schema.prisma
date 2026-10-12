@@ -9,14 +9,36 @@ datasource db {
 }
 
 model AdminUser {
-  id                       String            @id @default(uuid())
-  email                    String            @unique
+  id                       String             @id @default(uuid())
+  email                    String             @unique
   password                 String
   name                     String?
-  createdAt                DateTime          @default(now())
-  reviewedTaxonomyRequests TaxonomyRequest[] @relation("TaxonomyReviewedBy")
+  createdAt                DateTime           @default(now())
+  reviewedTaxonomyRequests TaxonomyRequest[]  @relation("TaxonomyReviewedBy")
   lastSeenWaitlistAt       DateTime?
   lastSeenApplicationsAt   DateTime?
+  authSessions             AdminAuthSession[]
+}
+
+model AdminAuthSession {
+  id String @id @default(cuid())
+
+  adminId   String
+  tokenHash String @unique
+
+  expiresAt  DateTime
+  lastSeenAt DateTime @default(now())
+
+  revokedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  admin AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([adminId, revokedAt])
+  @@index([expiresAt])
 }
 
 model User {
@@ -30,6 +52,28 @@ model User {
   brandMemberships BrandMembership[]
   importJobs       ImportJob[]
   taxonomyRequests TaxonomyRequest[]
+  authSessions     BrandAuthSession[]
+}
+
+model BrandAuthSession {
+  id String @id @default(cuid())
+
+  userId    String @db.Uuid
+  tokenHash String @unique
+
+  expiresAt  DateTime
+  lastSeenAt DateTime @default(now())
+
+  revokedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
 }
 
 model BrandMembership {
@@ -1194,6 +1238,7 @@ model AdminNotification {
   productId              String?               @db.Uuid
   catalogueHealthIssueId String?
   platformIncidentId     String?
+  securityEventId String? @unique
 
   createdAt DateTime  @default(now())
   readAt    DateTime?
@@ -1202,6 +1247,7 @@ model AdminNotification {
   product              Product?              @relation(fields: [productId], references: [id], onDelete: Cascade)
   catalogueHealthIssue CatalogueHealthIssue? @relation(fields: [catalogueHealthIssueId], references: [id], onDelete: SetNull)
   platformIncident     PlatformIncident?     @relation(fields: [platformIncidentId], references: [id], onDelete: SetNull)
+  securityEvent        SecurityEvent?        @relation(fields: [securityEventId], references: [id], onDelete: SetNull)
 
   @@index([type, createdAt])
   @@index([readAt])
@@ -1218,6 +1264,7 @@ enum AdminNotificationType {
   PLATFORM_INCIDENT_OPENED
   PLATFORM_INCIDENT_ESCALATED
   PLATFORM_INCIDENT_RECOVERED
+  SECURITY_ADMIN_LOGIN_RATE_LIMITED
 }
 
 enum Region {
@@ -2470,4 +2517,46 @@ model ProductLengthOption {
 
   @@unique([productId, label])
   @@index([productId, sortOrder])
+}
+
+enum SecurityEventType {
+  ADMIN_LOGIN_FAILED
+  ADMIN_LOGIN_RATE_LIMITED
+  ADMIN_LOGIN_SUCCEEDED
+
+  BRAND_LOGIN_FAILED
+  BRAND_LOGIN_RATE_LIMITED
+  BRAND_LOGIN_SUCCEEDED
+
+  PASSWORD_RESET_COMPLETED
+  SESSION_REVOKED
+}
+
+enum SecurityEventSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+model SecurityEvent {
+  id String @id @default(cuid())
+
+  type     SecurityEventType
+  severity SecurityEventSeverity @default(INFO)
+
+  // HMAC of the normalized attempted email.
+  subjectHash String?
+
+  // Internal identifiers, never session tokens.
+  adminId            String?
+  userId             String?             @db.Uuid
+  deduplicationKey   String?             @unique
+  createdAt          DateTime            @default(now())
+  adminNotifications AdminNotification[]
+
+  @@index([type, createdAt])
+  @@index([subjectHash, createdAt])
+  @@index([severity, createdAt])
+  @@index([adminId, createdAt])
+  @@index([userId, createdAt])
 }

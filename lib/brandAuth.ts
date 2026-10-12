@@ -1,12 +1,14 @@
-import { cookies } from "next/headers";
+import "server-only";
 
-export async function requireBrandSession() {
-  const jar = await cookies();
+import { requireBrandContext } from "@/lib/auth/BrandSession";
 
-  const userId = jar.get("brand_authed")?.value ?? null;
-  const brandId = jar.get("brand_id")?.value ?? null;
-
-  if (!userId || !brandId) throw new Error("UNAUTHENTICATED");
-
-  return { userId, brandId };
+/**
+ * Compatibility wrapper for existing imports.
+ * Authentication and brand membership are validated centrally.
+ */
+export async function requireBrandSession(): Promise<{
+  userId: string;
+  brandId: string;
+}> {
+  return requireBrandContext();
 }

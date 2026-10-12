@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-
+import { withAdminAuth } from "@/lib/auth/withAdminAuth";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export const GET = withAdminAuth(async function GET() {
   try {
     const brands = await prisma.brand.findMany({
       select: {
@@ -174,4 +174,4 @@ export async function GET() {
       }
     );
   }
-}
+});
