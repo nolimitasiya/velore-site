@@ -285,6 +285,8 @@ export default async function AccessoriesPage({
             selectedAccessoryCategory
               ? "ACCESSORY_TYPE"
               : "ACCESSORIES",
+            clickOrigin: "PRODUCT_CARD",
+
         }
       ),
 

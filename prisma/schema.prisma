@@ -91,19 +91,22 @@ model BrandMembership {
 }
 
 model BrandInvite {
-  id        String    @id @default(cuid())
-  email     String
-  tokenHash String    @unique
-  brandId   String    @db.Uuid
-  role      Role      @default(owner)
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime  @default(now())
+  id            String    @id @default(cuid())
+  email         String
+  tokenHash     String    @unique
+  brandId       String    @db.Uuid
+  applicationId String?
+  role          Role      @default(owner)
+  expiresAt     DateTime
+  usedAt        DateTime?
+  createdAt     DateTime  @default(now())
 
-  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  brand       Brand             @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  application BrandApplication? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
 
   @@index([email])
   @@index([brandId])
+  @@index([applicationId])
 }
 
 /// *
@@ -386,6 +389,7 @@ model BrandApplication {
   contractSignedPath String?
 
   internalNotes     BrandApplicationNote[]
+  brandInvites      BrandInvite[]
   applicationSource BrandApplicationSource @default(ORGANIC)
 
   // Acquisition attribution captured at application
@@ -481,6 +485,7 @@ enum ClickSourcePage {
   NEW_IN
   SALE
   OTHER
+  WISHLIST
 }
 
 enum AnalyticsEventType {
@@ -516,6 +521,7 @@ enum AnalyticsSourcePage {
   NEW_IN
   SALE
   OTHER
+  WISHLIST
 }
 
 enum CatalogueHealthTargetType {
@@ -1253,6 +1259,7 @@ model AdminNotification {
   @@index([readAt])
   @@index([catalogueHealthIssueId])
   @@index([platformIncidentId])
+
 }
 
 enum AdminNotificationType {
@@ -1265,6 +1272,7 @@ enum AdminNotificationType {
   PLATFORM_INCIDENT_ESCALATED
   PLATFORM_INCIDENT_RECOVERED
   SECURITY_ADMIN_LOGIN_RATE_LIMITED
+  SECURITY_AUDIT_INGESTION_SUPPRESSED
 }
 
 enum Region {
@@ -2530,6 +2538,8 @@ enum SecurityEventType {
 
   PASSWORD_RESET_COMPLETED
   SESSION_REVOKED
+
+  AUDIT_INGESTION_SUPPRESSED
 }
 
 enum SecurityEventSeverity {
@@ -2553,10 +2563,17 @@ model SecurityEvent {
   deduplicationKey   String?             @unique
   createdAt          DateTime            @default(now())
   adminNotifications AdminNotification[]
+  auditCategory SecurityAuditCategory?
 
   @@index([type, createdAt])
   @@index([subjectHash, createdAt])
   @@index([severity, createdAt])
   @@index([adminId, createdAt])
   @@index([userId, createdAt])
+  @@index([auditCategory, createdAt])
+
+}
+enum SecurityAuditCategory {
+  ADMIN
+  BRAND
 }

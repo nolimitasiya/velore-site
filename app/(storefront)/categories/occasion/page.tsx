@@ -265,6 +265,7 @@ export default async function OccasionPage({
           position: index + 1,
           pageNumber: currentPage,
           contextType: "OCCASION",
+          clickOrigin: "PRODUCT_CARD",
         }
       ),
 

@@ -57,6 +57,7 @@ function mapProduct(
       position: index + 1,
       pageNumber: 1,
       contextType,
+      clickOrigin: "PRODUCT_CARD",
     }
   ),
     badges: product.badges ?? [],

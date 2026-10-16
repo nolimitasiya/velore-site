@@ -2,14 +2,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SecurityEventSeverity, SecurityEventType } from "@prisma/client";
 
-const { recordSecurityEventMock, allowAuditMock } = vi.hoisted(() => ({
+const {
+  recordSecurityEventMock,
+  checkAuditMock,
+  reportSuppressionMock,
+} = vi.hoisted(() => ({
   recordSecurityEventMock: vi.fn(),
-  allowAuditMock: vi.fn(),
+  checkAuditMock: vi.fn(),
+  reportSuppressionMock: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/security/auditIngestion", () => ({
-  allowUnauthenticatedLoginAudit: allowAuditMock,
+  checkUnauthenticatedLoginAudit: checkAuditMock,
+}));
+
+vi.mock("@/lib/security/auditSuppressionReporter", () => ({
+  reportAuditSuppression: reportSuppressionMock,
 }));
 
 vi.mock("@/lib/security/securityEvents", () => ({
@@ -24,7 +33,13 @@ describe("login security audit", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     delete process.env.SECURITY_AUDIT_ENABLED;
-    allowAuditMock.mockResolvedValue(true);
+    checkAuditMock.mockImplementation(async (category: string) => ({
+      allowed: true,
+      category,
+      resetAt: new Date("2026-10-14T06:00:00.000Z"),
+    }));
+
+reportSuppressionMock.mockResolvedValue(undefined);
 
     recordSecurityEventMock.mockResolvedValue({
       id: "test-security-event",
@@ -207,24 +222,38 @@ describe("login security audit", () => {
     expect(loggedOutput).not.toContain("private@example.com");
     expect(loggedOutput).not.toContain("Sensitive database details");
   });
-  it("skips unauthenticated events when the global ingestion cap is reached", async () => {
-    process.env.SECURITY_AUDIT_ENABLED = "true";
+  it("reports suppression without recording the blocked login event", async () => {
+  process.env.SECURITY_AUDIT_ENABLED = "true";
 
-    allowAuditMock.mockResolvedValue(false);
+  const resetAt = new Date("2026-10-14T06:00:00.000Z");
 
-    await recordLoginAudit({
-      type: "ADMIN_LOGIN_FAILED",
-      email: "admin@example.com",
-    });
-
-    expect(allowAuditMock).toHaveBeenCalledOnce();
-    expect(recordSecurityEventMock).not.toHaveBeenCalled();
+  checkAuditMock.mockResolvedValue({
+    allowed: false,
+    category: "admin",
+    resetAt,
   });
+
+  await recordLoginAudit({
+    type: "ADMIN_LOGIN_FAILED",
+    email: "admin@example.com",
+  });
+
+  expect(reportSuppressionMock).toHaveBeenCalledExactlyOnceWith(
+    "admin",
+    resetAt,
+  );
+
+  expect(recordSecurityEventMock).not.toHaveBeenCalled();
+});
 
   it("does not block successful logins when the ingestion cap is exhausted", async () => {
     process.env.SECURITY_AUDIT_ENABLED = "true";
 
-    allowAuditMock.mockResolvedValue(false);
+    checkAuditMock.mockResolvedValue({
+  allowed: false,
+  category: "brand",
+  resetAt: new Date("2026-10-14T06:00:00.000Z"),
+});
 
     await recordLoginAudit({
       type: "BRAND_LOGIN_SUCCEEDED",
@@ -232,7 +261,8 @@ describe("login security audit", () => {
       userId: "test-user-id",
     });
 
-    expect(allowAuditMock).not.toHaveBeenCalled();
+    expect(checkAuditMock).not.toHaveBeenCalled();
+    expect(reportSuppressionMock).not.toHaveBeenCalled();
 
     expect(recordSecurityEventMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -241,4 +271,75 @@ describe("login security audit", () => {
       }),
     );
   });
+  it("reports brand suppression separately", async () => {
+  process.env.SECURITY_AUDIT_ENABLED = "true";
+
+  const resetAt = new Date("2026-10-14T06:01:00.000Z");
+
+  checkAuditMock.mockResolvedValue({
+    allowed: false,
+    category: "brand",
+    resetAt,
+  });
+
+  await recordLoginAudit({
+    type: "BRAND_LOGIN_FAILED",
+    email: "brand@example.com",
+  });
+
+  expect(reportSuppressionMock).toHaveBeenCalledExactlyOnceWith(
+    "brand",
+    resetAt,
+  );
+
+  expect(recordSecurityEventMock).not.toHaveBeenCalled();
+});
+
+it("does not interrupt authentication when suppression reporting fails", async () => {
+  process.env.SECURITY_AUDIT_ENABLED = "true";
+
+  checkAuditMock.mockResolvedValue({
+    allowed: false,
+    category: "admin",
+    resetAt: new Date("2026-10-14T06:02:00.000Z"),
+  });
+
+  reportSuppressionMock.mockRejectedValue(
+    new Error("Simulated notification failure"),
+  );
+
+  const consoleSpy = vi
+    .spyOn(console, "error")
+    .mockImplementation(() => {});
+
+  await expect(
+    recordLoginAudit({
+      type: "ADMIN_LOGIN_RATE_LIMITED",
+      email: "private@example.com",
+    }),
+  ).resolves.toBeUndefined();
+
+  expect(recordSecurityEventMock).not.toHaveBeenCalled();
+
+  expect(consoleSpy).toHaveBeenCalledWith(
+    "[security-audit] Failed to record login event",
+  );
+
+  expect(JSON.stringify(consoleSpy.mock.calls)).not.toContain(
+    "private@example.com",
+  );
+});
+
+it("does not report suppression when auditing is disabled", async () => {
+  process.env.SECURITY_AUDIT_ENABLED = "false";
+
+  await recordLoginAudit({
+    type: "BRAND_LOGIN_FAILED",
+    email: "brand@example.com",
+  });
+
+  expect(checkAuditMock).not.toHaveBeenCalled();
+  expect(reportSuppressionMock).not.toHaveBeenCalled();
+  expect(recordSecurityEventMock).not.toHaveBeenCalled();
+});
 });

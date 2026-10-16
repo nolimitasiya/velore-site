@@ -246,6 +246,7 @@ export default async function ContinentPage({
           currentPage >= 2
             ? "GRID_AFTER_BALANCED"
             : "CONTINENT_GRID",
+            clickOrigin: "PRODUCT_CARD",
       }
     ),
 

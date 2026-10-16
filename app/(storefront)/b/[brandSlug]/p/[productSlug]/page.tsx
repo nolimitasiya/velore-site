@@ -115,6 +115,43 @@ const discoverySource =
     rawDiscoverySource
   );
 
+const rawEntrySource = Array.isArray(sp.entry_src)
+  ? sp.entry_src[0] ?? null
+  : sp.entry_src ?? null;
+
+const entrySource =
+  normalizeDiscoverySource(rawEntrySource);
+
+const entrySectionKey = Array.isArray(sp.entry_skey)
+  ? sp.entry_skey[0] ?? null
+  : sp.entry_skey ?? null;
+
+const entryContextType = Array.isArray(sp.entry_ctx)
+  ? sp.entry_ctx[0] ?? null
+  : sp.entry_ctx ?? null;
+
+const rawEntryPosition = Array.isArray(sp.entry_pos)
+  ? sp.entry_pos[0] ?? null
+  : sp.entry_pos ?? null;
+
+const entryPosition =
+  rawEntryPosition &&
+  Number.isFinite(Number(rawEntryPosition)) &&
+  Number(rawEntryPosition) >= 1
+    ? Math.floor(Number(rawEntryPosition))
+    : null;
+
+const rawEntryPage = Array.isArray(sp.entry_page)
+  ? sp.entry_page[0] ?? null
+  : sp.entry_page ?? null;
+
+const entryPageNumber =
+  rawEntryPage &&
+  Number.isFinite(Number(rawEntryPage)) &&
+  Number(rawEntryPage) >= 1
+    ? Math.floor(Number(rawEntryPage))
+    : null;
+
 const discoveryQuery = Array.isArray(sp.q)
   ? sp.q[0] ?? null
   : sp.q ?? null;
@@ -349,6 +386,14 @@ const outUrl =
 
       searchQuery:
         discoveryQuery,
+      clickOrigin:
+        "PRODUCT_DETAIL",
+      entrySource,
+      entrySectionKey,
+      entryPosition,
+      entryPageNumber,
+      entryContextType,
+
     }
   );
 

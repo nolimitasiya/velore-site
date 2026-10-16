@@ -15,8 +15,8 @@ export default function OnboardButton({
     if (busy) return;
 
     const ok = window.confirm(
-      "This will generate a brand invite, email the onboarding link, and mark the application as ONBOARDED.\n\nContinue?"
-    );
+       "This will generate an onboarding invitation for the brand.\n\nThe application will remain CONTRACT SIGNED until the brand creates its account.\n\nContinue?"
+      );
     if (!ok) return;
 
     setBusy(true);
@@ -40,7 +40,7 @@ export default function OnboardButton({
 
       router.refresh();
     } catch (e: any) {
-      alert(e?.message ?? "Failed to onboard.");
+      alert(e?.message ?? "Failed to send onboarding invitation.");
       console.error(e);
     } finally {
       setBusy(false);
@@ -54,7 +54,7 @@ export default function OnboardButton({
       disabled={busy}
       className="inline-flex h-10 items-center rounded-2xl border border-black bg-black px-4 text-xs font-semibold uppercase tracking-[0.14em] text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
     >
-      {busy ? "Onboarding…" : "Onboard"}
+      {busy ? "Sending invite…" : "Send onboarding invite"}
     </button>
   );
 }

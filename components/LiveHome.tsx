@@ -43,10 +43,11 @@ function toStorefrontProducts(
     price: p.price ? p.price.toString() : null,
     currency: p.currency,
     buyUrl: buildTrackedOutboundUrl(
-  p.id,
-  {
-    sourcePage: "HOME",
-    position: index + 1,
+     p.id,
+     {
+      sourcePage: "HOME",
+      position: index + 1,
+      clickOrigin: "PRODUCT_CARD",
   }
 ),
 
@@ -261,6 +262,8 @@ badges:
             finalSection.key,
           position:
             index + 1,
+          contextType: "SHOP_TRENDY",
+          clickOrigin: "PRODUCT_CARD",
         }
       ),
 

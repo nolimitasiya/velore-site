@@ -164,7 +164,7 @@ export default function WishlistPage() {
                       (item, index) =>
                         setTimeout(() => {
                           window.open(
-                            `/out/${item.productId}?src=SEARCH&skey=wishlist&ctx=WISHLIST`,
+                            `/out/${item.productId}?src=WISHLIST&skey=wishlist&ctx=WISHLIST&origin=PRODUCT_CARD`,
                             "_blank"
                           );
                         }, index * 300)
@@ -245,7 +245,7 @@ export default function WishlistPage() {
                       />
 
                       <a
-                        href={`/out/${item.productId}?src=SEARCH&skey=wishlist&ctx=WISHLIST`}
+                        href={`/out/${item.productId}?src=WISHLIST&skey=wishlist&ctx=WISHLIST&origin=PRODUCT_CARD`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="shrink-0 rounded-full bg-black px-3 py-1.5 text-[11px] font-medium text-white transition hover:opacity-80"
@@ -283,7 +283,7 @@ export default function WishlistPage() {
                       (item, index) =>
                         setTimeout(() => {
                           window.open(
-                            `/out/${item.productId}?src=SEARCH&skey=wishlist&ctx=WISHLIST`,
+                            `/out/${item.productId}?src=WISHLIST&skey=wishlist&ctx=WISHLIST&origin=PRODUCT_CARD`,
                             "_blank"
                           );
                         }, index * 300)

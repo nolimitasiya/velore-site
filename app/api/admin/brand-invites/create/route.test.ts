@@ -2,14 +2,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   requireAdminSessionMock,
-  brandUpsertMock,
+  brandFindUniqueMock,
+  brandCreateMock,
   inviteCreateMock,
   sendKlaviyoMock,
+  transactionMock,
 } = vi.hoisted(() => ({
   requireAdminSessionMock: vi.fn(),
-  brandUpsertMock: vi.fn(),
+  brandFindUniqueMock: vi.fn(),
+  brandCreateMock: vi.fn(),
   inviteCreateMock: vi.fn(),
   sendKlaviyoMock: vi.fn(),
+  transactionMock: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/AdminSession", () => ({
@@ -19,11 +23,13 @@ vi.mock("@/lib/auth/AdminSession", () => ({
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     brand: {
-      upsert: brandUpsertMock,
+      findUnique: brandFindUniqueMock,
+       create: brandCreateMock,
     },
     brandInvite: {
       create: inviteCreateMock,
     },
+    $transaction: transactionMock,
   },
 }));
 
@@ -59,9 +65,21 @@ describe("admin brand invitation creation", () => {
     vi.clearAllMocks();
 
     requireAdminSessionMock.mockResolvedValue({ id: "admin-1" });
-    brandUpsertMock.mockResolvedValue(brand);
+    brandFindUniqueMock.mockResolvedValue(null);
+    brandCreateMock.mockResolvedValue(brand);
     inviteCreateMock.mockResolvedValue({ id: "invite-1" });
     sendKlaviyoMock.mockResolvedValue(undefined);
+    transactionMock.mockImplementation(async (callback) =>
+    callback({
+     brand: {
+      findUnique: brandFindUniqueMock,
+      create: brandCreateMock,
+    },
+    brandInvite: {
+      create: inviteCreateMock,
+    },
+  })
+);
   });
 
   it("rejects unauthenticated requests", async () => {
@@ -70,7 +88,7 @@ describe("admin brand invitation creation", () => {
     const response = await POST(makeRequest(validBody));
 
     expect(response.status).toBe(401);
-    expect(brandUpsertMock).not.toHaveBeenCalled();
+    expect(brandCreateMock).not.toHaveBeenCalled();
     expect(inviteCreateMock).not.toHaveBeenCalled();
     expect(sendKlaviyoMock).not.toHaveBeenCalled();
   });
@@ -134,7 +152,7 @@ describe("admin brand invitation creation", () => {
   });
 
   it("does not expose internal database errors", async () => {
-    brandUpsertMock.mockRejectedValue(new Error("PRIVATE_DATABASE_DETAILS"));
+    brandCreateMock.mockRejectedValue(new Error("PRIVATE_DATABASE_DETAILS"));
 
     const response = await POST(makeRequest(validBody));
     const result = await response.json();
@@ -142,4 +160,54 @@ describe("admin brand invitation creation", () => {
     expect(response.status).toBe(500);
     expect(result.error).not.toContain("PRIVATE_DATABASE_DETAILS");
   });
+  it("rejects an existing brand slug without creating an invitation", async () => {
+  brandFindUniqueMock.mockResolvedValue({ id: brand.id });
+
+  const response = await POST(makeRequest(validBody));
+  const result = await response.json();
+
+  expect(response.status).toBe(409);
+  expect(result.ok).toBe(false);
+
+  expect(brandCreateMock).not.toHaveBeenCalled();
+  expect(inviteCreateMock).not.toHaveBeenCalled();
+  expect(sendKlaviyoMock).not.toHaveBeenCalled();
+});
+
+it("handles concurrent brand slug collisions safely", async () => {
+  brandCreateMock.mockRejectedValue({ code: "P2002" });
+
+  const response = await POST(makeRequest(validBody));
+  const result = await response.json();
+
+  expect(response.status).toBe(409);
+  expect(result.ok).toBe(false);
+
+  expect(inviteCreateMock).not.toHaveBeenCalled();
+  expect(sendKlaviyoMock).not.toHaveBeenCalled();
+});
+it("does not send an invitation when the transaction fails", async () => {
+  // Simulate invitation creation failing inside the transaction.
+  inviteCreateMock.mockRejectedValue(
+    new Error("SIMULATED_INVITATION_INSERT_FAILURE")
+  );
+
+  const response = await POST(makeRequest(validBody));
+  const result = await response.json();
+
+  expect(response.status).toBe(500);
+  expect(result.ok).toBe(false);
+
+  // Brand creation was attempted before invitation creation failed.
+  expect(brandCreateMock).toHaveBeenCalledTimes(1);
+  expect(inviteCreateMock).toHaveBeenCalledTimes(1);
+
+  // A failed transaction must never trigger the invitation event.
+  expect(sendKlaviyoMock).not.toHaveBeenCalled();
+
+  // Internal error details must not be exposed to the client.
+  expect(JSON.stringify(result)).not.toContain(
+    "SIMULATED_INVITATION_INSERT_FAILURE"
+  );
+});
 });

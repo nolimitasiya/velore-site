@@ -1,6 +1,7 @@
 import "server-only";
 
 import {
+  SecurityAuditCategory,
   SecurityEventSeverity,
   SecurityEventType,
   type Prisma,
@@ -14,12 +15,18 @@ import { createSecurityNotification } from "./createSecurityNotification";
 type RateLimitIncidentInput = {
   type:
     | typeof SecurityEventType.ADMIN_LOGIN_RATE_LIMITED
-    | typeof SecurityEventType.BRAND_LOGIN_RATE_LIMITED;
+    | typeof SecurityEventType.BRAND_LOGIN_RATE_LIMITED
+    | typeof SecurityEventType.AUDIT_INGESTION_SUPPRESSED;
+
   severity: SecurityEventSeverity;
-  subjectHash: string;
+
+  // Suppression incidents concern a category, not an account.
+  subjectHash: string | null;
+
   adminId: string | null;
   userId: string | null;
-  deduplicationKey: string;
+    deduplicationKey: string;
+    auditCategory?: SecurityAuditCategory | null;
 };
 
 type InsertedEvent = {
@@ -41,6 +48,7 @@ async function insertIncident(
       "adminId",
       "userId",
       "deduplicationKey",
+      "auditCategory",
       "createdAt"
     )
     VALUES (
@@ -51,6 +59,7 @@ async function insertIncident(
       ${input.adminId},
       ${input.userId}::uuid,
       ${input.deduplicationKey},
+      ${input.auditCategory ?? null}::"SecurityAuditCategory",
       NOW()
     )
     ON CONFLICT ("deduplicationKey") DO NOTHING

@@ -394,6 +394,7 @@ currency:
           pageNumber:
             currentPage,
           contextType: "SALE",
+          clickOrigin: "PRODUCT_CARD",
         }
       ),
 

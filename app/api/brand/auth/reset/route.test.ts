@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   updateUser: vi.fn(),
   revokeSessions: vi.fn(),
   hashPassword: vi.fn(),
+  findMembership: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -19,6 +20,9 @@ vi.mock("@/lib/prisma", () => ({
       findFirst: mocks.findFirst,
     },
     $transaction: mocks.transaction,
+    brandMembership: {
+      findFirst: mocks.findMembership,
+    },
   },
 }));
 
@@ -79,20 +83,24 @@ describe("brand password reset", () => {
     mocks.claimToken.mockResolvedValue({ count: 1 });
     mocks.updateUser.mockResolvedValue({ id: "brand-user-123" });
     mocks.revokeSessions.mockResolvedValue({ count: 2 });
+    mocks.findMembership.mockResolvedValue({brandId: "test-brand-id",});
 
-    mocks.transaction.mockImplementation(async (callback) =>
-      callback({
-        passwordResetToken: {
-          updateMany: mocks.claimToken,
-        },
-        user: {
-          update: mocks.updateUser,
-        },
-        brandAuthSession: {
-          updateMany: mocks.revokeSessions,
-        },
-      })
-    );
+mocks.transaction.mockImplementation(async (callback) =>
+   callback({
+    passwordResetToken: {
+      updateMany: mocks.claimToken,
+    },
+    brandMembership: {
+      findFirst: mocks.findMembership,
+    },
+    user: {
+      update: mocks.updateUser,
+    },
+    brandAuthSession: {
+      updateMany: mocks.revokeSessions,
+    },
+  })
+);
   });
 
   it("rejects weak passwords", async () => {
@@ -195,4 +203,53 @@ describe("brand password reset", () => {
       consoleSpy.mockRestore();
     }
   });
+  it("rejects existing Brand reset tokens belonging to shoppers without Brand membership", async () => {
+  mocks.findFirst.mockResolvedValue({
+    id: "shopper-user-123",
+  });
+
+  mocks.findMembership.mockResolvedValue(null);
+
+  const response = await POST(makeRequest());
+
+  expect(response.status).toBe(400);
+  expect(await response.json()).toEqual({
+    ok: false,
+    error: "INVALID_OR_EXPIRED",
+  });
+
+  expect(mocks.findMembership).toHaveBeenCalledWith({
+    where: {
+      userId: "shopper-user-123",
+    },
+    select: {
+      brandId: true,
+    },
+  });
+
+  expect(mocks.hashPassword).not.toHaveBeenCalled();
+  expect(mocks.transaction).not.toHaveBeenCalled();
+  expect(mocks.claimToken).not.toHaveBeenCalled();
+  expect(mocks.updateUser).not.toHaveBeenCalled();
+  expect(mocks.revokeSessions).not.toHaveBeenCalled();
+});
+it("rejects a reset if Brand membership disappears before the password update", async () => {
+  mocks.findMembership
+    .mockResolvedValueOnce({ brandId: "test-brand-id" })
+    .mockResolvedValueOnce(null);
+
+  const response = await POST(makeRequest());
+
+  expect(response.status).toBe(400);
+  expect(await response.json()).toEqual({
+    ok: false,
+    error: "INVALID_OR_EXPIRED",
+  });
+
+  expect(mocks.findMembership).toHaveBeenCalledTimes(2);
+  expect(mocks.claimToken).toHaveBeenCalled();
+
+  expect(mocks.updateUser).not.toHaveBeenCalled();
+  expect(mocks.revokeSessions).not.toHaveBeenCalled();
+});
 });

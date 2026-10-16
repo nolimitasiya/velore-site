@@ -303,13 +303,18 @@ export default async function BrandsPage({
                   {/* Brand cards */}
                   <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 md:gap-x-5 lg:grid-cols-4">
                     {groupedBrands[letter].map((brand) => (
-                      <BrandProfileTrackingLink
-                        key={brand.id}
-                        href={`/brands/${brand.slug}`}
-                        brandName={brand.name}
-                        brandId={brand.id}
-                        className="group block"
-                      >
+                     <BrandProfileTrackingLink
+                       key={brand.id}
+                      href={
+                     `/brands/${brand.slug}` +
+                      `?src=BRAND` +
+                       `&skey=brands_directory` +
+                        `&ctx=BRANDS_DIRECTORY`
+                       }
+                       brandName={brand.name}
+                       brandId={brand.id}
+                       className="group block"
+>
                         <article>
                           <div className="relative aspect-[4/3] overflow-hidden rounded-[8px] bg-[#e7e1d9]">
                             {brand.coverImageUrl ? (

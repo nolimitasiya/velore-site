@@ -9,36 +9,14 @@ import {
   attachAnalyticsSessionCookie,
   getOrCreateAnalyticsSession,
 } from "@/lib/analytics/session";
-
-import { checkRateLimit } from "@/lib/security/rateLimit";
-
+import { checkAnalyticsRateLimit } from "@/lib/security/analyticsRateLimit";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const BOT_PATTERN =
   /bot|crawler|spider|crawling|facebookexternalhit|linkedinbot|twitterbot|whatsapp|slack|discord|telegram|preview|prefetch/i;
 
-function getClientIp(req: NextRequest) {
-  const forwardedFor = req.headers.get("x-forwarded-for");
-
-  if (forwardedFor) {
-    const firstIp = forwardedFor
-      .split(",")[0]
-      ?.trim();
-
-    if (firstIp) {
-      return firstIp;
-    }
-  }
-
-  return (
-    req.headers.get("x-real-ip") ??
-    req.headers.get("x-vercel-forwarded-for") ??
-    "unknown"
-  );
-}
-
-function normalizeText(value: string) {
+  function normalizeText(value: string) {
   return value
     .toLowerCase()
     .replaceAll("_", " ")
@@ -80,15 +58,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const clientIp = getClientIp(req);
+    const analyticsLimit = await checkAnalyticsRateLimit(
+      req,
+      "search",
+    );
 
-    const rateLimit = await checkRateLimit({
-      key: `analytics:search:${clientIp}`,
-      limit: 30,
-      windowMs: 60_000,
-    });
-
-    if (!rateLimit.allowed) {
+    if (analyticsLimit.status === "BLOCKED") {
       return NextResponse.json(
         {
           ok: false,
@@ -101,14 +76,13 @@ export async function POST(req: NextRequest) {
               Math.max(
                 1,
                 Math.ceil(
-                  (rateLimit.resetAt.getTime() -
-                    Date.now()) /
-                    1000
-                )
-              )
+                  (analyticsLimit.resetAt.getTime() - Date.now()) /
+                    1000,
+                ),
+              ),
             ),
           },
-        }
+        },
       );
     }
 

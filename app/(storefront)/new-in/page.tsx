@@ -298,6 +298,7 @@ if (shouldUseMerch) {
           position: index + 1,
           pageNumber: 1,
           contextType: "NEW_IN",
+          clickOrigin: "PRODUCT_CARD",
         }
       ),
 

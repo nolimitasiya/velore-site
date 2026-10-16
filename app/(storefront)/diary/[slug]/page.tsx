@@ -210,6 +210,8 @@ const analyticsContext = {
   position,
   pageNumber: 1,
   contextType: "DIARY_RELATED_PRODUCT",
+  clickOrigin: "PRODUCT_CARD" as const,
+
 };
 
 const trackingParams = new URLSearchParams({

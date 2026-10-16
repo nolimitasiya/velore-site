@@ -2,23 +2,46 @@ import "server-only";
 
 import { rateLimit } from "@/lib/rateLimit";
 
+export type AuditCategory = "admin" | "brand";
+
 const AUDIT_INGESTION_LIMIT = 300;
 const AUDIT_INGESTION_WINDOW_MS = 60_000;
 
+export type AuditIngestionDecision = {
+  allowed: boolean;
+  category: AuditCategory;
+  resetAt: Date;
+};
+
 /**
- * Shared PostgreSQL-backed ingestion allowance.
+ * Returns an audit-ingestion decision.
  *
- * This protects SecurityEvent storage from excessive
- * unauthenticated login audit writes.
- *
- * It does not rate-limit authentication requests.
+ * This controls audit recording only.
+ * It does not control authentication.
  */
-export async function allowUnauthenticatedLoginAudit(): Promise<boolean> {
+export async function checkUnauthenticatedLoginAudit(
+  category: AuditCategory,
+): Promise<AuditIngestionDecision> {
   const result = await rateLimit({
-    key: "security_audit:unauthenticated_login:global",
+    key: `security_audit:unauthenticated_login:${category}`,
     limit: AUDIT_INGESTION_LIMIT,
     windowMs: AUDIT_INGESTION_WINDOW_MS,
   });
 
-  return result.ok;
+  return {
+    allowed: result.ok,
+    category,
+    resetAt: result.resetAt,
+  };
+}
+
+/**
+ * Compatibility helper for existing callers.
+ */
+export async function allowUnauthenticatedLoginAudit(
+  category: AuditCategory,
+): Promise<boolean> {
+  const decision = await checkUnauthenticatedLoginAudit(category);
+
+  return decision.allowed;
 }

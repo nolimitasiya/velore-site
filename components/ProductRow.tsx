@@ -29,6 +29,7 @@ export type StorefrontProduct = {
     searchQuery?: string | null;
 
     entrySectionKey?: string | null;
+    entrySource?: string | null;
     entryPosition?: number | null;
     entryPageNumber?: number | null;
     entryContextType?: string | null;
@@ -82,6 +83,10 @@ if (p.analytics?.searchQuery) {
     "q",
     p.analytics.searchQuery
   );
+}
+
+if (p.analytics?.entrySource) {
+  params.set("entry_src", p.analytics.entrySource);
 }
 
 if (p.analytics?.entrySectionKey) {
@@ -148,9 +153,12 @@ const detailHref =
     searchQuery={
       p.analytics?.searchQuery
     }
-    entrySectionKey={
-  p.analytics?.entrySectionKey
-}
+    entrySource={
+       p.analytics?.entrySource
+      }
+  entrySectionKey={
+      p.analytics?.entrySectionKey
+    }
 entryPosition={
   p.analytics?.entryPosition
 }

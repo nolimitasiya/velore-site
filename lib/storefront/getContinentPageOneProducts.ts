@@ -72,6 +72,7 @@ function mapToGridProduct(
           pageNumber:
             1,
           contextType,
+          clickOrigin: "PRODUCT_CARD",
         }
       ),
 

@@ -3,6 +3,11 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { createBrandSession } from "@/lib/auth/brandDbSession";
+import { validatePassword } from "@/lib/auth/passwordStrength";
+import {
+  sendBrandLifecycleEventToKlaviyo,
+  syncBrandProfileToKlaviyo,
+} from "@/lib/klaviyo/brandLifecycle";
 
 function sha256(s: string) {
   return crypto.createHash("sha256").update(s).digest("hex");
@@ -70,13 +75,26 @@ export async function POST(req: Request) {
   const email = String(body.email || "").trim().toLowerCase();
 
   if (!token || !password) {
-    return NextResponse.json(
-      { ok: false, error: "Missing token/password" },
-      { status: 400 }
-    );
-  }
+  return NextResponse.json(
+    { ok: false, error: "Missing token/password" },
+    { status: 400 },
+  );
+}
 
-  const tokenHash = sha256(token);
+const passwordValidation = validatePassword(password);
+
+if (!passwordValidation.ok) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "WEAK_PASSWORD",
+      details: passwordValidation.errors,
+    },
+    { status: 400 },
+  );
+}
+
+const tokenHash = sha256(token);
 
   const invite = await prisma.brandInvite.findUnique({
     where: { tokenHash },
@@ -87,6 +105,7 @@ export async function POST(req: Request) {
       role: true,
       expiresAt: true,
       usedAt: true,
+      applicationId: true,
     },
   });
 
@@ -192,9 +211,40 @@ await tx.brandMembership.create({
 // and membership creation are rolled back.
 const token = await createBrandSession(createdUser.id, tx);
 
+// Application-based invitations complete the application lifecycle.
+// Generic invitations have no applicationId and skip this step.
+if (invite.applicationId) {
+  const updated = await tx.brandApplication.updateMany({
+    where: {
+      id: invite.applicationId,
+      status: "contract_signed",
+    },
+    data: {
+      status: "onboarded",
+    },
+  });
+
+  if (updated.count !== 1) {
+    throw new Error("APPLICATION_NOT_ELIGIBLE_FOR_ONBOARDING");
+  }
+}
+
 return token;
     });
   } catch (error) {
+    if (
+  error instanceof Error &&
+  error.message === "APPLICATION_NOT_ELIGIBLE_FOR_ONBOARDING"
+) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error:
+        "This application is no longer eligible for onboarding. Please contact support.",
+    },
+    { status: 409 }
+  );
+}
     // A failed transaction rolls back the invitation claim,
     // user creation and membership creation together.
     if (
@@ -238,8 +288,69 @@ return token;
     );
   }
 
- // The invitation, account, membership and session have all
-// been committed successfully before setting cookies.
+// Notify Klaviyo only after the onboarding transaction commits.
+// A Klaviyo failure must not undo successful account creation.
+if (invite.applicationId) {
+  try {
+    const application = await prisma.brandApplication.findUnique({
+      where: { id: invite.applicationId },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        companyName: true,
+        phone: true,
+        website: true,
+        socialMedia: true,
+        countryCode: true,
+        city: true,
+      },
+    });
+
+    if (application) {
+      const lifecycleDetails = {
+        applicationId: application.id,
+        firstName: application.firstName,
+        lastName: application.lastName,
+        email: application.email,
+        companyName: application.companyName,
+        phone: application.phone,
+        website: application.website,
+        socialMedia: application.socialMedia,
+        countryCode: application.countryCode,
+        city: application.city,
+        stage: "onboarded" as const,
+      };
+
+      try {
+        await syncBrandProfileToKlaviyo(lifecycleDetails);
+      } catch (error) {
+        console.error(
+          "[Brand onboarding] Klaviyo profile sync failed",
+          error
+        );
+      }
+
+      try {
+        await sendBrandLifecycleEventToKlaviyo({
+          ...lifecycleDetails,
+          eventName: "Brand Onboarded",
+        });
+      } catch (error) {
+        console.error(
+          "[Brand onboarding] Klaviyo lifecycle event failed",
+          error
+        );
+      }
+    }
+  } catch (error) {
+    console.error(
+      "[Brand onboarding] Unable to load application lifecycle details",
+      error
+    );
+  }
+}
 
 const res = NextResponse.json({ ok: true });
 

@@ -55,14 +55,32 @@ export async function POST(req: Request) {
     select: { id: true },
   });
 
-  if (!user) {
-    return NextResponse.json(
-      { ok: false, error: "INVALID_OR_EXPIRED" },
-      { status: 400 },
-    );
-  }
+ if (!user) {
+  return NextResponse.json(
+    { ok: false, error: "INVALID_OR_EXPIRED" },
+    { status: 400 },
+  );
+}
 
-  const hash = await bcrypt.hash(newPassword, 12);
+// A Brand reset token is only valid for a user
+// who currently has Brand membership.
+const membership = await prisma.brandMembership.findFirst({
+  where: {
+    userId: user.id,
+  },
+  select: {
+    brandId: true,
+  },
+});
+
+if (!membership) {
+  return NextResponse.json(
+    { ok: false, error: "INVALID_OR_EXPIRED" },
+    { status: 400 },
+  );
+}
+
+const hash = await bcrypt.hash(newPassword, 12);
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -84,14 +102,28 @@ export async function POST(req: Request) {
       });
 
       if (claimed.count !== 1) {
-        throw new Error("RESET_TOKEN_ALREADY_USED");
-      }
+  throw new Error("RESET_TOKEN_ALREADY_USED");
+}
 
-      // Update the password.
-      await tx.user.update({
-        where: { id: user.id },
-        data: { password: hash },
-      });
+// Recheck Brand membership inside the transaction.
+const currentMembership = await tx.brandMembership.findFirst({
+  where: {
+    userId: user.id,
+  },
+  select: {
+    brandId: true,
+  },
+});
+
+if (!currentMembership) {
+  throw new Error("BRAND_MEMBERSHIP_REQUIRED");
+}
+
+// Update the password.
+await tx.user.update({
+  where: { id: user.id },
+  data: { password: hash },
+});
 
       // Revoke all existing brand sessions.
       await tx.brandAuthSession.updateMany({
@@ -108,14 +140,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   } catch (error) {
     if (
-      error instanceof Error &&
-      error.message === "RESET_TOKEN_ALREADY_USED"
-    ) {
-      return NextResponse.json(
-        { ok: false, error: "INVALID_OR_EXPIRED" },
-        { status: 400 },
-      );
-    }
+  error instanceof Error &&
+  (
+    error.message === "RESET_TOKEN_ALREADY_USED" ||
+    error.message === "BRAND_MEMBERSHIP_REQUIRED"
+  )
+) {
+  return NextResponse.json(
+    { ok: false, error: "INVALID_OR_EXPIRED" },
+    { status: 400 },
+  );
+}
 
     console.error("Brand password reset transaction failed");
 

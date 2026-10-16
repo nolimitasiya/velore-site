@@ -49,15 +49,16 @@ function normalizeSectionKey(value: string | null) {
   return normalized || null;
 }
 
-function normalizePosition(value: string | null) {
-  const number = Number(value);
-
-  if (!Number.isFinite(number)) {
+function normalizePosition(value: string | null): number | null {
+  if (!value || !/^[1-9]\d*$/.test(value)) {
     return null;
   }
 
-  const integer = Math.floor(number);
-  return integer > 0 ? integer : null;
+  const number = Number(value);
+
+  return Number.isSafeInteger(number) && number <= 2147483647
+    ? number
+    : null;
 }
 
 function normalizeSourcePage(
@@ -104,15 +105,16 @@ function normalizeSourcePage(
   }
 }
 
-function normalizePageNumber(value: string | null) {
-  const number = Number(value);
-
-  if (!Number.isFinite(number)) {
+function normalizePageNumber(value: string | null): number | null {
+  if (!value || !/^[1-9]\d*$/.test(value)) {
     return null;
   }
 
-  const integer = Math.floor(number);
-  return integer > 0 ? integer : null;
+  const number = Number(value);
+
+  return Number.isSafeInteger(number) && number <= 2147483647
+    ? number
+    : null;
 }
 
 function normalizeBooleanFlag(value: string | null) {
@@ -125,6 +127,19 @@ function normalizeBooleanFlag(value: string | null) {
 function normalizeContextType(value: string | null) {
   const normalized = (value ?? "").trim().toUpperCase();
   return normalized || null;
+}
+function normalizeShopClickOrigin(
+  value: string | null
+): "PRODUCT_CARD" | "PRODUCT_DETAIL" | null {
+  if (value === "PRODUCT_CARD") {
+    return "PRODUCT_CARD";
+  }
+
+  if (value === "PRODUCT_DETAIL") {
+    return "PRODUCT_DETAIL";
+  }
+
+  return null;
 }
 
 const BOT_PATTERN =
@@ -223,12 +238,19 @@ export async function POST(
   );
 
   const { searchParams } = new URL(req.url);
+  const clickOrigin = normalizeShopClickOrigin(
+  searchParams.get("origin")
+);
 
   const sourcePage = normalizeSourcePage(searchParams.get("src"));
 
-  const discoverySource =
+ const discoverySource =
   normalizeDiscoverySource(
     searchParams.get("src")
+  );
+const entrySource =
+  normalizeDiscoverySource(
+    searchParams.get("entry_src")
   );
 
   const diaryPostId = normalizeUuidLike(
@@ -289,17 +311,24 @@ let analyticsShopperCurrencyCode:
  * creating analytics/session records.
  */
 if (!isSyntheticInternal) {
-  const analyticsSession =
-    await getOrCreateAnalyticsSession(req);
+  try {
+    const analyticsSession =
+      await getOrCreateAnalyticsSession(req);
 
-  sessionId =
-    analyticsSession.sessionId;
+    sessionId =
+      analyticsSession.sessionId;
 
-  analyticsShopperCountryCode =
-    analyticsSession.shopperCountryCode;
+    analyticsShopperCountryCode =
+      analyticsSession.shopperCountryCode;
 
-  analyticsShopperCurrencyCode =
-    analyticsSession.shopperCurrencyCode;
+    analyticsShopperCurrencyCode =
+      analyticsSession.shopperCurrencyCode;
+  } catch (error) {
+    console.error(
+      "Outbound analytics session initialization failed",
+      error,
+    );
+  }
 
   try {
     await prisma.affiliateClick.create({
@@ -336,73 +365,75 @@ if (!isSyntheticInternal) {
     );
   }
 
-  try {
-    await prisma.analyticsEvent.create({
-      data: {
-        sessionId,
+  if (sessionId) {
+    try {
+      await prisma.analyticsEvent.create({
+        data: {
+          sessionId,
 
-        eventType:
-          AnalyticsEventType.SHOP_CLICK,
+          eventType:
+            AnalyticsEventType.SHOP_CLICK,
 
-        productId:
-          product.id,
+          productId:
+            product.id,
 
-        brandId:
-          product.brandId,
+          brandId:
+            product.brandId,
 
-        sourcePage:
-          AnalyticsSourcePage.PRODUCT,
+          sourcePage:
+            AnalyticsSourcePage.PRODUCT,
 
-        sourcePath:
-          `/b/product`,
+          sourcePath:
+            `/b/product`,
 
-        position,
-        sectionKey,
-        pageNumber,
-        contextType,
-
-        shopperCountryCode:
-          analyticsShopperCountryCode,
-
-        shopperCurrencyCode:
-          analyticsShopperCurrencyCode,
-
-        metadata: {
-          discoverySource,
-          searchQuery,
-          searchPosition:
-            position,
+          position,
           sectionKey,
           pageNumber,
           contextType,
-          entrySectionKey,
-          entryPosition,
-          entryPageNumber,
-          entryContextType,
+
+          shopperCountryCode:
+            analyticsShopperCountryCode,
+
+          shopperCurrencyCode:
+            analyticsShopperCurrencyCode,
+
+          metadata: {
+            clickOrigin,
+            discoverySource,
+            entrySource,
+            searchQuery,
+            searchPosition:
+              position,
+            sectionKey,
+            pageNumber,
+            contextType,
+            entrySectionKey,
+            entryPosition,
+            entryPageNumber,
+            entryContextType,
+          },
         },
-      },
-    });
-  } catch (error) {
-    console.error(
-      "SHOP_CLICK analytics failed",
-      error
-    );
+      });
+    } catch (error) {
+      console.error(
+        "SHOP_CLICK analytics failed",
+        error,
+      );
+    }
   }
 }
 
-  const response =
-  NextResponse.json({
+   const response = NextResponse.json({
     destinationUrl,
-    brandName:
-      product.brand.name,
+    brandName: product.brand.name,
   });
 
-if (sessionId) {
-  attachAnalyticsSessionCookie(
-    response,
-    sessionId
-  );
-}
+  if (sessionId) {
+    attachAnalyticsSessionCookie(
+      response,
+      sessionId,
+    );
+  }
 
-return response;
+  return response;
 }

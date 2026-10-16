@@ -1,32 +1,57 @@
+import { hashRateLimitIp } from "@/lib/security/hashRateLimitIp";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { makeResetToken, hashToken, minutesFromNow } from "@/lib/auth/passwordReset";
 import { sendResetEmail } from "@/lib/email/sendResetEmail";
 import { rateLimit } from "@/lib/rateLimit";
+import crypto from "node:crypto";
+import { classifyClientIp } from "@/lib/security/clientIpClassification";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  // ---- rate limit (by IP) ----
-  const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    req.headers.get("x-real-ip") ||
-    "unknown";
+   // Do not create a shared "unknown" IP bucket.
+  // Account-based limits remain active in all environments.
+  const clientIp = classifyClientIp(req);
 
-  const rl = await rateLimit({
-    key: `brand_forgot:${ip}`,
-    limit: 5,
-    windowMs: 15 * 60 * 1000, // 15 minutes
-  });
+  if (clientIp.status === "TRUSTED") {
+    const ipLimit = await rateLimit({
+      key: `brand_forgot:${hashRateLimitIp(clientIp.candidate)}`,
+      limit: 5,
+      windowMs: 15 * 60 * 1000,
+    });
 
-  if (!rl.ok) return NextResponse.json({ ok: true });
+    if (!ipLimit.ok) {
+      return NextResponse.json({ ok: true });
+    }
+  }
 
   // ---- request body ----
-  const body = await req.json().catch(() => ({}));
-  const email = String(body.email || "").trim().toLowerCase();
+const body = await req.json().catch(() => ({}));
+const email = String(body.email || "").trim().toLowerCase();
 
-  if (!email) return NextResponse.json({ ok: true });
+if (!email) {
+  return NextResponse.json({ ok: true });
+}
+
+// Hash the normalised email before using it as a rate-limit key.
+const emailKey = crypto
+  .createHash("sha256")
+  .update(email)
+  .digest("hex");
+
+// Limit reset requests for the same account,
+// even when requests originate from different IP addresses.
+const accountLimit = await rateLimit({
+  key: `brand_forgot:account:${emailKey}`,
+  limit: 3,
+  windowMs: 60 * 60 * 1000,
+});
+
+if (!accountLimit.ok) {
+  return NextResponse.json({ ok: true });
+}
 
 const user = await prisma.user.findFirst({
   where: {
@@ -36,12 +61,27 @@ const user = await prisma.user.findFirst({
     },
   },
   select: {
+    id: true,
     email: true,
     name: true,
   },
 });
 
 if (!user) {
+  return NextResponse.json({ ok: true });
+}
+
+// Only existing Brand members are eligible for Brand password resets.
+const membership = await prisma.brandMembership.findFirst({
+  where: {
+    userId: user.id,
+  },
+  select: {
+    brandId: true,
+  },
+});
+
+if (!membership) {
   return NextResponse.json({ ok: true });
 }
 

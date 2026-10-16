@@ -682,10 +682,15 @@ const where = q
   ? p.originalPrice.toString()
   : null,
 currency: String(p.currency),
-  buyUrl: buildTrackedOutboundUrl(p.id, {
-    sourcePage: "SEARCH",
-    position: index + 1,
-  }),
+buyUrl: buildTrackedOutboundUrl(p.id, {
+  sourcePage: "SEARCH",
+  sectionKey: "search_results",
+  position: index + 1,
+  pageNumber: 1,
+  contextType: "SEARCH_RESULTS",
+  searchQuery: q,
+  clickOrigin: "PRODUCT_CARD",
+}),
   brandSlug: p.brand?.slug ?? null, // ← ADD
   productSlug: p.slug ?? null,       // ← ADD
   badges: (p.badges ?? []) as any,

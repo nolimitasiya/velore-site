@@ -25,6 +25,14 @@ const items = [
     href: "/admin/analytics/brands",
   },
   {
+    label: "Placements",
+    href: "/admin/analytics/placements",
+  },
+  {
+    label: "Journeys",
+    href: "/admin/analytics/journeys",
+  },
+  {
   label: "Acquisition",
   href: "/admin/analytics/acquisition",
 },

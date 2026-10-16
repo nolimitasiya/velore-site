@@ -316,6 +316,7 @@ if (
       position: index + 1,
       pageNumber: currentPage,
       contextType: "OCCASION_TYPE",
+      clickOrigin: "PRODUCT_CARD",
     }
   ),
 

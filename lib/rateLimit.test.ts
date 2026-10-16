@@ -102,29 +102,31 @@ describe("rateLimit", () => {
     });
   });
 
-  it("rejects requests exceeding the limit", async () => {
-    const resetAt = new Date(Date.now() + 60_000);
+  it("rejects requests at the limit without incrementing the counter", async () => {
+   const resetAt = new Date(Date.now() + 60_000);
 
-    findUniqueMock.mockResolvedValue({
-      count: 5,
-      resetAt,
-    });
-
-    updateMock.mockResolvedValue({
-      count: 6,
-      resetAt,
-    });
-
-    const result = await rateLimit({
-      key: "test:blocked",
-      limit: 5,
-      windowMs: 60_000,
-    });
-
-    expect(result.ok).toBe(false);
-    expect(result.remaining).toBe(0);
-    expect(result.resetAt).toEqual(resetAt);
+  findUniqueMock.mockResolvedValue({
+    count: 5,
+    resetAt,
   });
+
+  const result = await rateLimit({
+    key: "test:blocked",
+    limit: 5,
+    windowMs: 60_000,
+  });
+
+  expect(result).toEqual({
+    ok: false,
+    remaining: 0,
+    resetAt,
+  });
+
+  expect(updateMock).not.toHaveBeenCalled();
+  expect(createMock).not.toHaveBeenCalled();
+
+  expect(queryRawMock).toHaveBeenCalledTimes(1);
+});
 
   it("resets an expired window", async () => {
     findUniqueMock.mockResolvedValue({

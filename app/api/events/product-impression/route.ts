@@ -8,7 +8,7 @@ import {
   attachAnalyticsSessionCookie,
   getOrCreateAnalyticsSession,
 } from "@/lib/analytics/session";
-import { checkRateLimit } from "@/lib/security/rateLimit";
+import { checkAnalyticsRateLimit } from "@/lib/security/analyticsRateLimit";
 import {  normalizeDiscoverySource,} from "@/lib/analytics/discoverySource";
 
 export const runtime = "nodejs";
@@ -16,26 +16,6 @@ export const dynamic = "force-dynamic";
 
 const BOT_PATTERN =
   /bot|crawler|spider|crawling|facebookexternalhit|linkedinbot|twitterbot|whatsapp|slack|discord|telegram|preview|prefetch/i;
-
-function getClientIp(req: NextRequest) {
-  const forwardedFor =
-    req.headers.get("x-forwarded-for");
-
-  if (forwardedFor) {
-    const firstIp =
-      forwardedFor.split(",")[0]?.trim();
-
-    if (firstIp) {
-      return firstIp;
-    }
-  }
-
-  return (
-    req.headers.get("x-real-ip") ??
-    req.headers.get("x-vercel-forwarded-for") ??
-    "unknown"
-  );
-}
 
 type ImpressionBody = {
   productId?: string;
@@ -48,7 +28,7 @@ type ImpressionBody = {
   contextType?: string | null;
 
   searchQuery?: string | null;
-
+  entrySource?: string | null;
   entrySectionKey?: string | null;
   entryPosition?: number | null;
   entryPageNumber?: number | null;
@@ -124,19 +104,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const clientIp = getClientIp(req);
+   const analyticsLimit = await checkAnalyticsRateLimit(
+      req,
+      "product-impression",
+    );
 
-    /*
-     * Impressions naturally happen much more frequently
-     * than searches or product views.
-     */
-    const rateLimit = await checkRateLimit({
-      key: `analytics:product-impression:${clientIp}`,
-      limit: 600,
-      windowMs: 60_000,
-    });
-
-    if (!rateLimit.allowed) {
+    if (analyticsLimit.status === "BLOCKED") {
       return NextResponse.json(
         {
           ok: false,
@@ -144,7 +117,7 @@ export async function POST(req: NextRequest) {
         },
         {
           status: 429,
-        }
+        },
       );
     }
 
@@ -210,10 +183,12 @@ export async function POST(req: NextRequest) {
     const sourcePage =
       normalizeSourcePage(body.sourcePage);
 
-      const discoverySource =
+const discoverySource =
   normalizeDiscoverySource(
     body.sourcePage
   );
+const entrySource =
+  normalizeDiscoverySource(body.entrySource);
 
     const position =
       typeof body.position === "number" &&
@@ -283,27 +258,34 @@ const entryContextType =
     const duplicateWindowStart =
       new Date(Date.now() - 30_000);
 
-    const recentDuplicate =
-      await prisma.analyticsEvent.findFirst({
-        where: {
-          sessionId,
+const recentDuplicate =
+  await prisma.analyticsEvent.findFirst({
+    where: {
+      sessionId,
 
-          eventType:
-            AnalyticsEventType.PRODUCT_IMPRESSION,
+      eventType:
+        AnalyticsEventType.PRODUCT_IMPRESSION,
 
-          productId: product.id,
+      productId: product.id,
 
-          sourcePage,
+      sourcePage,
+      sourcePath:
+        String(body.sourcePath ?? "").trim() || null,
 
-          createdAt: {
-            gte: duplicateWindowStart,
-          },
-        },
+      sectionKey,
+      position,
+      pageNumber,
+      contextType,
 
-        select: {
-          id: true,
-        },
-      });
+      createdAt: {
+        gte: duplicateWindowStart,
+      },
+    },
+
+    select: {
+      id: true,
+    },
+  });
 
     if (!recentDuplicate) {
       await prisma.analyticsEvent.create({
@@ -331,9 +313,9 @@ const entryContextType =
           shopperCurrencyCode,       
           metadata: {
               discoverySource,
+              entrySource,
               searchQuery,
               sectionKey,
-
                entrySectionKey,
                entryPosition,
                entryPageNumber,

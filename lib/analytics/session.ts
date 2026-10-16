@@ -4,6 +4,8 @@ import {
 } from "next/server";
 
 import { prisma } from "@/lib/prisma";
+import { checkAnalyticsSessionCreationLimit } from "@/lib/security/analyticsSessionCreationLimit";
+import { AnalyticsSessionCreationBlockedError } from "@/lib/security/AnalyticsSessionCreationBlockedError";
 import {
   getAuthenticatedShopper,
 } from "@/lib/auth/ShopperSession";
@@ -379,6 +381,7 @@ function hasExplicitAcquisition(
   );
 }
 
+
 export async function getOrCreateAnalyticsSession(
   req: NextRequest,
   attributionInput?: AnalyticsAttributionInput
@@ -453,46 +456,36 @@ export async function getOrCreateAnalyticsSession(
         existingSession.shopperId ===
         shopperId;
 
-      if (
-        isFresh &&
-        sameIdentity
-      ) {
-        await prisma.analyticsSession.update({
-          where: {
-            id:
-              existingSession.id,
-          },
+   if (isFresh && sameIdentity) {
+  const updatedRows = await prisma.$executeRaw`
+    UPDATE "AnalyticsSession"
+    SET
+      "lastSeenAt" = GREATEST(
+        "lastSeenAt",
+        ${now} AT TIME ZONE 'UTC'
+      ),
+      "shopperCountryCode" = ${shopperCountryCode},
+      "shopperCurrencyCode" = ${shopperCurrencyCode}
+    WHERE "id" = ${existingSession.id}
+      AND "shopperId" IS NOT DISTINCT FROM ${shopperId}::uuid
+  `;
 
-          data: {
-            lastSeenAt:
-              now,
+  if (updatedRows === 1) {
+    return {
+      sessionId: existingSession.id,
+      isNew: false,
+      shopperId,
+      shopperCountryCode,
+      shopperCurrencyCode,
+      attribution: null as StoredAttribution | null,
+      shouldSetAttributionCookie: false,
+    };
+  }
 
-            shopperCountryCode,
-
-            shopperCurrencyCode,
-          },
-        });
-
-        return {
-          sessionId:
-            existingSession.id,
-
-          isNew:
-            false,
-
-          shopperId,
-
-          shopperCountryCode,
-
-          shopperCurrencyCode,
-
-          attribution:
-            null as StoredAttribution | null,
-
-          shouldSetAttributionCookie:
-            false,
-        };
-      }
+  // The session disappeared or changed identity
+  // after the initial lookup. Fall through and
+  // create a new session.
+}
     }
   }
 
@@ -526,6 +519,13 @@ export async function getOrCreateAnalyticsSession(
         buildAttribution(
           attributionInput
         );
+
+  const creationLimit =
+    await checkAnalyticsSessionCreationLimit(req);
+
+  if (creationLimit.status === "BLOCKED") {
+    throw new AnalyticsSessionCreationBlockedError();
+  }
 
   const session =
     await prisma.analyticsSession.create({

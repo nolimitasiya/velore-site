@@ -12,7 +12,12 @@ export type TrackedSourcePage =
   | "EMERGING_BRANDS"
   | "NEW_IN"
   | "SALE"
-  | "OTHER";
+  | "OTHER"
+  | "WISHLIST";
+
+export type ShopClickOrigin =
+  | "PRODUCT_CARD"
+  | "PRODUCT_DETAIL";
 
 export function buildTrackedOutboundUrl(
   productId: string,
@@ -26,13 +31,18 @@ export function buildTrackedOutboundUrl(
     searchQuery?: string | null;
 
     entrySectionKey?: string | null;
+    entrySource?: TrackedSourcePage | null;
     entryPosition?: number | null;
     entryPageNumber?: number | null;
     entryContextType?: string | null;
+    clickOrigin?: ShopClickOrigin | null;
   }
 ) {
   const params =
     new URLSearchParams();
+  if (opts?.clickOrigin) {
+    params.set("origin", opts.clickOrigin);
+  }
 
   if (opts?.sourcePage) {
     params.set(
@@ -103,7 +113,9 @@ export function buildTrackedOutboundUrl(
     );
   }
 
-
+  if (opts?.entrySource) {
+    params.set("entry_src", opts.entrySource);
+  }
     if (opts?.entrySectionKey) {
   params.set(
     "entry_skey",

@@ -55,10 +55,10 @@ export default async function BrandPage({
   const { slug } = await params;
   const sp = await searchParams;
 
-  const discoverySource =
+ const incomingSource =
   normalizeDiscoverySource(
     firstParam(sp, "src")
-  ) ?? "BRAND";
+  );
 
 const discoveryQuery =
   firstParam(sp, "q").trim() ||
@@ -266,8 +266,7 @@ badges:
   buildTrackedOutboundUrl(
     p.id,
     {
-      sourcePage:
-        discoverySource,
+      sourcePage: "BRAND",
 
       // CURRENT exposure
       sectionKey:
@@ -276,8 +275,9 @@ badges:
       position:
         index + 1,
 
-      pageNumber:
-        discoveryPage,
+      pageNumber: 1,
+      clickOrigin: "PRODUCT_CARD",
+      entrySource: incomingSource,
 
       contextType:
         "BRAND_PRODUCT_GRID",
@@ -307,7 +307,8 @@ badges:
       p.slug,
 
     analytics: {
-  discoverySource,
+      discoverySource: "BRAND",
+      entrySource: incomingSource,
 
   searchQuery:
     discoveryQuery,
@@ -319,8 +320,7 @@ badges:
   position:
     index + 1,
 
-  pageNumber:
-    discoveryPage,
+  pageNumber: 1,
 
   contextType:
     "BRAND_PRODUCT_GRID",

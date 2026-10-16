@@ -73,31 +73,51 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ Brand = business (upsert by slug)
-    // - keep existing values if incoming ones are null
-    const brand = await prisma.brand.upsert({
+    // This endpoint creates invitations for NEW brands only.
+// Never attach an invitation to an existing brand based on its slug.
+const rawToken = crypto.randomBytes(32).toString("hex");
+const tokenHash = sha256(rawToken);
+const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7);
+
+let result: {
+  brand: {
+    id: string;
+    slug: string;
+    name: string;
+  };
+  invite: {
+    id: string;
+  };
+};
+
+try {
+  result = await prisma.$transaction(async (tx) => {
+    // Never attach a new-brand invitation to an existing brand.
+    const existingBrand = await tx.brand.findUnique({
       where: { slug: brandSlug },
-      update: {
-        name: brandName,
-        ...(countryCode ? { baseCountryCode: countryCode } : {}),
-        ...(baseRegion ? { baseRegion } : {}),
-        ...(city ? { baseCity: city } : {}),
-      },
-      create: {
+      select: { id: true },
+    });
+
+    if (existingBrand) {
+      throw new Error("BRAND_SLUG_CONFLICT");
+    }
+
+    const brand = await tx.brand.create({
+      data: {
         slug: brandSlug,
         name: brandName,
         baseCountryCode: countryCode,
         baseRegion,
         baseCity: city,
       },
-      select: { id: true, slug: true, name: true },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+      },
     });
 
-    const rawToken = crypto.randomBytes(32).toString("hex");
-    const tokenHash = sha256(rawToken);
-    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7);
-
-    const invite = await prisma.brandInvite.create({
+    const invite = await tx.brandInvite.create({
       data: {
         email,
         tokenHash,
@@ -108,7 +128,32 @@ export async function POST(req: Request) {
       select: { id: true },
     });
 
-   const onboardingUrl = getBrandOnboardingUrl(rawToken);
+    return { brand, invite };
+  });
+} catch (error) {
+  if (
+    (error instanceof Error &&
+      error.message === "BRAND_SLUG_CONFLICT") ||
+    (typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "P2002")
+  ) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "A brand with this slug already exists.",
+      },
+      { status: 409 }
+    );
+  }
+
+  throw error;
+}
+
+const { brand, invite } = result;
+
+const onboardingUrl = getBrandOnboardingUrl(rawToken);
 try {
   await sendBrandInvitationToKlaviyo({
     inviteId: invite.id,

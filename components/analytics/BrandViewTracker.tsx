@@ -115,6 +115,9 @@ export default function BrandViewTracker({
      * through a journey.
      */
 
+    const entrySource =
+      searchParams.get("entry_src");
+
     const entrySectionKey =
       searchParams.get(
         "entry_skey"
@@ -212,7 +215,7 @@ export default function BrandViewTracker({
                   sectionKey,
                   pageNumber,
                   contextType,
-
+                  entrySource,
                   entrySectionKey,
                   entryPosition,
                   entryPageNumber,

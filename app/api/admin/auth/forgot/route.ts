@@ -1,33 +1,61 @@
+import { hashRateLimitIp } from "@/lib/security/hashRateLimitIp";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { makeResetToken, hashToken, minutesFromNow } from "@/lib/auth/passwordReset";
 import { sendResetEmail } from "@/lib/email/sendResetEmail";
 import { rateLimit } from "@/lib/rateLimit";
+import crypto from "node:crypto";
+import { classifyClientIp } from "@/lib/security/clientIpClassification";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  // ---- rate limit (by IP) ----
-  const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    req.headers.get("x-real-ip") ||
-    "unknown";
+   // Only use IP-based limiting when the deployment policy
+  // identifies a Vercel-normalized client IP.
+  const clientIp = classifyClientIp(req);
 
-  const rl = await rateLimit({
-    key: `admin_forgot:${ip}`,
-    limit: 5,
-    windowMs: 15 * 60 * 1000, // 15 minutes
-  });
+  if (clientIp.status === "TRUSTED") {
+    const ipLimit = await rateLimit({
+      key: `admin_forgot:${hashRateLimitIp(clientIp.candidate)}`,
+      limit: 5,
+      windowMs: 15 * 60 * 1000,
+    });
 
-  // Always return ok to avoid enumeration + keep UX smooth
-  if (!rl.ok) return NextResponse.json({ ok: true });
+    // Keep the response generic to avoid account enumeration.
+    if (!ipLimit.ok) {
+      return NextResponse.json({ ok: true });
+    }
+  }
 
   // ---- request body ----
-  const body = await req.json().catch(() => ({}));
-  const email = String(body.email || "").trim().toLowerCase();
+const body = await req.json().catch(() => ({}));
+const email = String(body.email || "").trim().toLowerCase();
 
-  if (!email) return NextResponse.json({ ok: true });
+if (!email) {
+  return NextResponse.json({ ok: true });
+}
+
+// Hash the normalised email so the rate-limit table
+// does not store email addresses in plaintext.
+const emailKey = crypto
+  .createHash("sha256")
+  .update(email)
+  .digest("hex");
+
+// Limit reset requests targeting the same email,
+// even when they originate from different IP addresses.
+const accountLimit = await rateLimit({
+  key: `admin_forgot:account:${emailKey}`,
+  limit: 3,
+  windowMs: 60 * 60 * 1000,
+});
+
+// Keep the response identical for blocked requests
+// and unknown accounts.
+if (!accountLimit.ok) {
+  return NextResponse.json({ ok: true });
+}
 
   const admin = await prisma.adminUser.findFirst({
   where: {
@@ -45,8 +73,6 @@ export async function POST(req: Request) {
 if (!admin) {
   return NextResponse.json({ ok: true });
 }
-
-if (!admin) return NextResponse.json({ ok: true });
 await prisma.passwordResetToken.deleteMany({
   where: {
     userType: "ADMIN",

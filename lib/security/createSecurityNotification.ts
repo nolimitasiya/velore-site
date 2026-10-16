@@ -30,13 +30,26 @@ export async function createSecurityNotification(
   input: CreateSecurityNotificationInput,
   db: SecurityNotificationDb,
 ) {
-  if (input.securityEventType !== SecurityEventType.ADMIN_LOGIN_RATE_LIMITED) {
-    return null;
+  let notificationType: AdminNotificationType;
+
+  switch (input.securityEventType) {
+    case SecurityEventType.ADMIN_LOGIN_RATE_LIMITED:
+      notificationType =
+        AdminNotificationType.SECURITY_ADMIN_LOGIN_RATE_LIMITED;
+      break;
+
+    case SecurityEventType.AUDIT_INGESTION_SUPPRESSED:
+      notificationType =
+        AdminNotificationType.SECURITY_AUDIT_INGESTION_SUPPRESSED;
+      break;
+
+    default:
+      return null;
   }
 
   return db.adminNotification.create({
     data: {
-      type: AdminNotificationType.SECURITY_ADMIN_LOGIN_RATE_LIMITED,
+      type: notificationType,
       securityEventId: input.securityEventId,
     },
   });

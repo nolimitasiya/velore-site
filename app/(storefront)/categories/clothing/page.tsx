@@ -356,6 +356,7 @@ const mappedPromise: Promise<GridProduct[]> = (async () => {
             selectedMerchType
               ? "PRODUCT_TYPE"
               : "CLOTHING",
+              clickOrigin: "PRODUCT_CARD",
         }
       ),
 

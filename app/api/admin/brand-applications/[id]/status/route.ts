@@ -35,10 +35,25 @@ export const PATCH = withAdminAuth(async function PATCH(
   const body = await req.json().catch(() => ({}));
   const sendEmail = body.sendEmail !== false;
   const status = safe(body.status).toLowerCase() as AllowedStatus;
-
   if (!ALLOWED.includes(status)) {
-    return NextResponse.json({ ok: false, error: "Invalid status" }, { status: 400 });
-  }
+  return NextResponse.json(
+    { ok: false, error: "Invalid status" },
+    { status: 400 }
+  );
+}
+
+  // Onboarding is completed only when a brand successfully
+// redeems its invitation and creates its account.
+if (status === "onboarded") {
+  return NextResponse.json(
+    {
+      ok: false,
+      error:
+        "Onboarding is completed automatically when the brand creates its account.",
+    },
+    { status: 409 }
+  );
+}
 
   const current = await prisma.brandApplication.findUnique({
     where: { id },
@@ -69,14 +84,18 @@ select: {
 
   const prev = String(current.status).toLowerCase();
   if (prev === status) return NextResponse.json({ ok: true, skipped: true });
-
-  // ✅ HARD RULE: cannot onboard unless current DB status is contract_signed
-  if (status === "onboarded" && prev !== "contract_signed") {
-    return NextResponse.json(
-      { ok: false, error: "Blocked: contract must be signed before onboarding." },
-      { status: 400 }
-    );
-  }
+  // A completed onboarding cannot be moved backward through
+// the application pipeline.
+if (prev === "onboarded") {
+  return NextResponse.json(
+    {
+      ok: false,
+      error:
+        "This brand has completed onboarding. Its application status cannot be changed here.",
+    },
+    { status: 409 }
+  );
+}
 
   const now = new Date();
   const data: any = { status };

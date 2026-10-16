@@ -8,8 +8,7 @@ import {
   attachAnalyticsSessionCookie,
   getOrCreateAnalyticsSession,
 } from "@/lib/analytics/session";
-import { checkRateLimit } from "@/lib/security/rateLimit";
-
+import { checkAnalyticsRateLimit } from "@/lib/security/analyticsRateLimit";
 import {
   normalizeDiscoverySource,
 } from "@/lib/analytics/discoverySource";
@@ -20,25 +19,6 @@ export const dynamic = "force-dynamic";
 
 const BOT_PATTERN =
   /bot|crawler|spider|crawling|facebookexternalhit|linkedinbot|twitterbot|whatsapp|slack|discord|telegram|preview|prefetch/i;
-
-function getClientIp(req: NextRequest) {
-  const forwardedFor = req.headers.get("x-forwarded-for");
-
-  if (forwardedFor) {
-    const firstIp = forwardedFor.split(",")[0]?.trim();
-
-    if (firstIp) {
-      return firstIp;
-    }
-  }
-
-  return (
-    req.headers.get("x-real-ip") ??
-    req.headers.get("x-vercel-forwarded-for") ??
-    "unknown"
-  );
-}
-
 function normalizeActionSourcePage(
   value: string | null | undefined
 ): AnalyticsSourcePage | null {
@@ -119,15 +99,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const clientIp = getClientIp(req);
+  const analyticsLimit = await checkAnalyticsRateLimit(
+      req,
+      "wishlist",
+    );
 
-    const rateLimit = await checkRateLimit({
-      key: `analytics:wishlist:${clientIp}`,
-      limit: 120,
-      windowMs: 60_000,
-    });
-
-    if (!rateLimit.allowed) {
+    if (analyticsLimit.status === "BLOCKED") {
       return NextResponse.json(
         {
           ok: false,
@@ -135,7 +112,7 @@ export async function POST(req: NextRequest) {
         },
         {
           status: 429,
-        }
+        },
       );
     }
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
-
 import { prisma } from "@/lib/prisma";
+import { getAuditSuppressionNotificationContent } from "@/lib/security/auditSuppressionNotificationContent";
 import { MarkAllReadButton, NotificationActions } from "./NotificationActions";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +17,11 @@ type Props = {
 
 function getNotificationContent(notification: {
   type: string;
+
+  securityEvent: {
+    auditCategory: "ADMIN" | "BRAND" | null;
+  } | null;
+
   product: {
     id: string;
     title: string;
@@ -67,6 +72,16 @@ function getNotificationContent(notification: {
   const product = notification.product ?? targetProduct ?? null;
 
   const brand = notification.brand ?? targetProduct?.brand ?? null;
+  if (notification.type === "SECURITY_AUDIT_INGESTION_SUPPRESSED") {
+  return {
+    ...getAuditSuppressionNotificationContent(
+      notification.securityEvent?.auditCategory,
+    ),
+    productName: null,
+    brandName: null,
+    tone: "failure" as const,
+  };
+}
 
   if (notification.type === "SECURITY_ADMIN_LOGIN_RATE_LIMITED") {
     return {
@@ -220,8 +235,14 @@ export default async function NotificationsPage({ searchParams }: Props) {
     skip: (currentPage - 1) * PAGE_SIZE,
     take: PAGE_SIZE,
 
-    include: {
-      brand: {
+include: {
+  securityEvent: {
+    select: {
+      auditCategory: true,
+    },
+  },
+
+  brand: {
         select: {
           id: true,
           name: true,

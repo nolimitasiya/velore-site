@@ -145,6 +145,7 @@ function mapMerchToGridProduct(
           1,
 
         contextType,
+        clickOrigin: "PRODUCT_CARD",
       }
     ),
 
@@ -214,6 +215,7 @@ function mapFallbackToGridProduct(
         position: index + 1,
         pageNumber: 1,
         contextType,
+        clickOrigin: "PRODUCT_CARD",
       }
     ),
 

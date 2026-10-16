@@ -11,6 +11,7 @@ export const DISCOVERY_SOURCES = [
   "NEW_IN",
   "SALE",
   "OTHER",
+  "WISHLIST",
 ] as const;
 
 export type DiscoverySource =

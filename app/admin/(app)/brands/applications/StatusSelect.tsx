@@ -9,7 +9,6 @@ const OPTIONS = [
   "invited",
   "contract_sent",
   "contract_signed",
-  "onboarded",
   "rejected",
 ] as const;
 
@@ -115,30 +114,6 @@ export default function StatusSelect({
     setLoading(true);
 
     try {
-      if (pendingStatus === "onboarded") {
-        const res = await fetch(`/api/admin/brand-applications/${id}/invite`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ sendEmail }),
-        });
-
-        const j = await res.json().catch(() => ({}));
-
-        if (!res.ok || !j.ok) {
-          throw new Error(j?.error || `Failed (${res.status})`);
-        }
-
-        if (j.onboardingUrl) {
-          window.prompt("Onboarding link copy:", j.onboardingUrl);
-        }
-
-        setPendingStatus(null);
-        router.refresh();
-        return;
-      }
-
-      
-
       if (pendingStatus === "contract_signed") {
         await patchStatus({
           status: "contract_signed",
@@ -176,7 +151,6 @@ export default function StatusSelect({
     if (!file) return;
 
     setLoading(true);
-
     try {
       const path = await uploadContract({
         applicationId: id,
@@ -229,13 +203,19 @@ export default function StatusSelect({
             className="h-10 rounded-2xl border border-black/10 bg-white px-3 pr-9 text-sm font-medium text-neutral-800 outline-none transition hover:border-black/20 focus:border-black/20 focus:ring-2 focus:ring-black/5 disabled:cursor-not-allowed disabled:opacity-60"
             value={value}
             onChange={(e) => openModal(e.target.value)}
-            disabled={loading}
+            disabled={loading || value === "onboarded"}
           >
-            {OPTIONS.map((s) => (
-              <option key={s} value={s}>
-                {label(s)}
-              </option>
-            ))}
+            {value === "onboarded" && (
+  <option value="onboarded">
+    ONBOARDED
+  </option>
+)}
+
+{OPTIONS.map((s) => (
+  <option key={s} value={s}>
+    {label(s)}
+  </option>
+))}
           </select>
 
           <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-neutral-400">
@@ -345,13 +325,6 @@ export default function StatusSelect({
               <p className="mt-4 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm leading-6 text-green-900">
                 This will mark the contract as signed. If you want to upload the
                 signed PDF, use the contract upload flow afterwards.
-              </p>
-            ) : null}
-
-            {pendingStatus === "onboarded" ? (
-              <p className="mt-4 rounded-2xl border border-purple-200 bg-purple-50 p-4 text-sm leading-6 text-purple-900">
-                This will create or update the brand, generate an onboarding
-                invite, and mark the application as onboarded.
               </p>
             ) : null}
 

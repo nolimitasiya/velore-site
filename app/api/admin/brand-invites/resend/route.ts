@@ -52,22 +52,49 @@ export async function POST(req: Request) {
       );
     }
 
+if (existingInvite.usedAt || existingInvite.expiresAt <= new Date()) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "Invitation has already been used or has expired.",
+    },
+    { status: 409 },
+  );
+}
+
 const rawToken = crypto.randomBytes(32).toString("hex");
 const tokenHash = sha256(rawToken);
 const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-// Validate the onboarding URL before creating the invitation.
 const onboardingUrl = getBrandOnboardingUrl(rawToken);
 
-    const replacementInvite = await prisma.brandInvite.create({
-      data: {
-        email: existingInvite.email,
-        brandId: existingInvite.brandId,
-        role: existingInvite.role,
-        tokenHash,
-        expiresAt,
-      },
-    });
+const replacementInvite = await prisma.$transaction(async (tx) => {
+  const claimed = await tx.brandInvite.updateMany({
+    where: {
+      id: existingInvite.id,
+      usedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+    data: {
+      usedAt: new Date(),
+    },
+  });
+
+  if (claimed.count !== 1) {
+    throw new Error("INVITATION_NO_LONGER_AVAILABLE");
+  }
+
+  return tx.brandInvite.create({
+   data: {
+    email: existingInvite.email,
+    brandId: existingInvite.brandId,
+    applicationId: existingInvite.applicationId,
+    role: existingInvite.role,
+    tokenHash,
+    expiresAt,
+  },
+});
+});
 
     try {
       await sendBrandInvitationToKlaviyo({
@@ -89,7 +116,7 @@ const onboardingUrl = getBrandOnboardingUrl(rawToken);
           inviteCreated: true,
           inviteId: replacementInvite.id,
           error:
-            "Replacement invitation created, but Klaviyo did not accept the event. The previous invitation has not been revoked.",
+            "Replacement invitation created and previous invitation invalidated, but Klaviyo did not accept the event.",
           onboardingUrl,
           expiresAt,
         },
@@ -105,14 +132,27 @@ const onboardingUrl = getBrandOnboardingUrl(rawToken);
       eventAccepted: true,
     });
   } catch (error) {
-    console.error("[admin-brand-invite-resend] error", error);
-
+  if (
+    error instanceof Error &&
+    error.message === "INVITATION_NO_LONGER_AVAILABLE"
+  ) {
     return NextResponse.json(
       {
         ok: false,
-        error: "Failed to create replacement invitation.",
+        error: "Invitation has already been used, replaced or expired.",
       },
-      { status: 500 }
+      { status: 409 },
     );
   }
+
+  console.error("[admin-brand-invite-resend] error", error);
+
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "Failed to create replacement invitation.",
+    },
+    { status: 500 },
+  );
+}
 }

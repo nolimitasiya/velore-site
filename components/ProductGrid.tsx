@@ -51,6 +51,7 @@ function BadgePill({ children }: { children: React.ReactNode }) {
 
 function buildTrackedUrl(product: GridProduct, fallbackIndex: number) {
   const params = new URLSearchParams();
+  params.set("origin", "PRODUCT_CARD");
 
   const sourcePage =  product.analytics?.sourcePage ?? "OTHER";
   const sectionId = product.analytics?.sectionId ?? null;

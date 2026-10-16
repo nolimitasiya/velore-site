@@ -51,8 +51,11 @@ export default function ProductViewTracker({
 
 const contextType =
   searchParams.get("ctx")
+
+const entrySource =
+  searchParams.get("entry_src");
   
-  const entrySectionKey =
+const entrySectionKey =
   searchParams.get("entry_skey");
 
 const rawEntryPosition =
@@ -129,7 +132,7 @@ const entryContextType =
           sectionKey,
           pageNumber,
           contextType,
-
+          entrySource,
           entrySectionKey,
           entryPosition,
           entryPageNumber,

@@ -84,7 +84,7 @@ export async function rateLimit(
 
     // The account has already exceeded its allowance.
     // Preserve the existing window without increasing the counter.
-    if (existing.count > opts.limit) {
+    if (existing.count >= opts.limit) {
       return {
         ok: false,
         remaining: 0,

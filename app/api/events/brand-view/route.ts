@@ -4,6 +4,7 @@ import {
 } from "next/server";
 
 import { prisma } from "@/lib/prisma";
+import { checkAnalyticsRateLimit } from "@/lib/security/analyticsRateLimit";
 
 import {
   AnalyticsEventType,
@@ -18,10 +19,6 @@ import {
 } from "@/lib/analytics/session";
 
 import {
-  checkRateLimit,
-} from "@/lib/security/rateLimit";
-
-import {
   normalizeDiscoverySource,
 } from "@/lib/analytics/discoverySource";
 
@@ -31,79 +28,26 @@ export const dynamic = "force-dynamic";
 const BOT_PATTERN =
   /bot|crawler|spider|crawling|facebookexternalhit|linkedinbot|twitterbot|whatsapp|slack|discord|telegram|preview|prefetch/i;
 
-function getClientIp(
-  req: NextRequest
-) {
-  const forwardedFor =
-    req.headers.get(
-      "x-forwarded-for"
-    );
-
-  if (forwardedFor) {
-    const firstIp =
-      forwardedFor
-        .split(",")[0]
-        ?.trim();
-
-    if (firstIp) {
-      return firstIp;
-    }
-  }
-
-  return (
-    req.headers.get(
-      "x-real-ip"
-    ) ??
-    req.headers.get(
-      "x-vercel-forwarded-for"
-    ) ??
-    "unknown"
-  );
-}
-
 type BrandViewBody = {
   brandId?: string;
   sourcePath?: string;
 
-  discoverySource?:
-    | string
-    | null;
+  // Source that brought the shopper to this page
+  discoverySource?: string | null;
+  searchQuery?: string | null;
 
-  searchQuery?:
-    | string
-    | null;
+  // Placement associated with entering the brand page
+  position?: number | null;
+  sectionKey?: string | null;
+  pageNumber?: number | null;
+  contextType?: string | null;
 
-  position?:
-    | number
-    | null;
-
-  sectionKey?:
-    | string
-    | null;
-
-  pageNumber?:
-    | number
-    | null;
-
-  contextType?:
-    | string
-    | null;
-
-  entrySectionKey?:
-    | string
-    | null;
-
-  entryPosition?:
-    | number
-    | null;
-
-  entryPageNumber?:
-    | number
-    | null;
-
-  entryContextType?:
-    | string
-    | null;
+  // Earlier journey-entry information
+  entrySource?: string | null;
+  entrySectionKey?: string | null;
+  entryPosition?: number | null;
+  entryPageNumber?: number | null;
+  entryContextType?: string | null;
 };
 
 export async function POST(
@@ -144,32 +88,20 @@ export async function POST(
      * ─────────────────────────────
      */
 
-    const clientIp =
-      getClientIp(req);
+    const analyticsLimit = await checkAnalyticsRateLimit(
+      req,
+      "brand-view",
+    );
 
-    const rateLimit =
-      await checkRateLimit({
-        key:
-          `analytics:brand-view:${clientIp}`,
-
-        limit: 120,
-
-        windowMs:
-          60_000,
-      });
-
-    if (
-      !rateLimit.allowed
-    ) {
+    if (analyticsLimit.status === "BLOCKED") {
       return NextResponse.json(
         {
           ok: false,
-          error:
-            "Too many requests",
+          error: "Too many requests",
         },
         {
           status: 429,
-        }
+        },
       );
     }
 
@@ -204,6 +136,11 @@ export async function POST(
   normalizeDiscoverySource(
     body.discoverySource
   ) ?? "BRAND";
+
+  const entrySource =
+  normalizeDiscoverySource(
+    body.entrySource
+  );
 
     /*
      * ─────────────────────────────
@@ -378,6 +315,7 @@ export async function POST(
            */
           metadata: {
             discoverySource,
+            entrySource,
 
             searchQuery:
               String(

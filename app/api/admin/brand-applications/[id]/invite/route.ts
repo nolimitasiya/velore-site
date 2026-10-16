@@ -4,10 +4,8 @@ import { requireAdminSession } from "@/lib/auth/AdminSession";
 import { regionFromCountry } from "@/lib/geo";
 import crypto from "crypto";
 import { Role } from "@prisma/client";
-import {
-  syncBrandProfileToKlaviyo,
-  sendBrandLifecycleEventToKlaviyo,
-} from "@/lib/klaviyo/brandLifecycle";
+import {syncBrandProfileToKlaviyo,} from "@/lib/klaviyo/brandLifecycle";
+import { sendBrandInvitationToKlaviyo } from "@/lib/klaviyo/brandInvitations";
 
 function sha256(s: string) {
   return crypto.createHash("sha256").update(s).digest("hex");
@@ -101,92 +99,136 @@ const contactPhone = String(app.phone ?? "").trim() || null;
 
   const websiteUrl = String(app.website ?? "").trim() || null;
 
-  const brand = await prisma.brand.upsert({
-  where: { slug: brandSlug },
-  update: {
-    name: brandName,
-    baseCountryCode: countryCode,
-    baseRegion,
-    baseCity: city,
-    websiteUrl,
-    billingEmail: email,
-    contactName,
-    contactEmail: email,
-    contactPhone,
-  },
-  create: {
-    slug: brandSlug,
-    name: brandName,
-    baseCountryCode: countryCode,
-    baseRegion,
-    baseCity: city,
-    websiteUrl,
-    billingEmail: email,
-    contactName,
-    contactEmail: email,
-    contactPhone,
-  },
-  select: { id: true, name: true, slug: true },
-});
-
+    // Generate the invitation token before starting the transaction.
   const rawToken = crypto.randomBytes(32).toString("hex");
   const tokenHash = sha256(rawToken);
 
-  const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7);
+  const expiresAt = new Date(
+    Date.now() + 1000 * 60 * 60 * 24 * 7
+  );
 
-  await prisma.brandInvite.create({
-    data: {
-      email,
-      tokenHash,
-      brandId: brand.id,
-      role: Role.owner,
-      expiresAt,
-    },
-  });
+  let result;
+
+  try {
+    result = await prisma.$transaction(async (tx) => {
+      // Verify that the application is still eligible.
+      const currentApplication = await tx.brandApplication.findUnique({
+        where: { id: app.id },
+        select: { status: true },
+      });
+
+      if (currentApplication?.status !== "contract_signed") {
+        throw new Error("APPLICATION_NOT_ELIGIBLE");
+      }
+
+      // Never attach an owner invitation to an existing brand
+      // merely because its slug matches.
+      const existingBrand = await tx.brand.findUnique({
+        where: { slug: brandSlug },
+        select: { id: true },
+      });
+
+      if (existingBrand) {
+        throw new Error("BRAND_SLUG_CONFLICT");
+      }
+
+      const brand = await tx.brand.create({
+        data: {
+          slug: brandSlug,
+          name: brandName,
+          baseCountryCode: countryCode,
+          baseRegion,
+          baseCity: city,
+          websiteUrl,
+          billingEmail: email,
+          contactName,
+          contactEmail: email,
+          contactPhone,
+        },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+        },
+      });
+
+      const invite = await tx.brandInvite.create({
+        data: {
+          email,
+          tokenHash,
+          brandId: brand.id,
+          applicationId: app.id,
+          role: Role.owner,
+          expiresAt,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      return { brand, invite };
+    });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "APPLICATION_NOT_ELIGIBLE"
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Contract must be signed before onboarding.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      (error instanceof Error &&
+        error.message === "BRAND_SLUG_CONFLICT") ||
+      (typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        error.code === "P2002")
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "A brand with this name already exists. Please review the existing brand before issuing an owner invitation.",
+        },
+        { status: 409 }
+      );
+    }
+
+    throw error;
+  }
+
+  const { brand, invite } = result;
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
   const onboardingUrl = `${siteUrl}/brand/onboarding?token=${rawToken}`;
 
-  await prisma.brandApplication.update({
-  where: { id },
-  data: { status: "onboarded" },
-});
-
   if (sendEmail) {
   try {
-    await sendBrandLifecycleEventToKlaviyo({
-      eventName: "Brand Onboarded",
-
-      applicationId: app.id,
-
-      firstName: app.firstName,
-      lastName: app.lastName,
-      email: app.email,
-
-      companyName: app.companyName,
-      phone: app.phone,
-      website: app.website,
-      socialMedia: app.socialMedia,
-
-      countryCode: app.countryCode,
-      city: app.city,
-
-      stage: "onboarded",
-
+    await sendBrandInvitationToKlaviyo({
+      inviteId: invite.id,
+      email,
+      brandName: brand.name,
       onboardingUrl,
+      expiresAt,
     });
 
     console.log(
-      "[brand-app invite] Klaviyo event accepted",
-      "Brand Onboarded"
+      "[brand-app invite] Klaviyo invitation event accepted"
     );
-  } catch (e) {
+  } catch (error) {
     console.error(
-      "[brand-app invite] Klaviyo onboarding event failed",
-      e
+      "[brand-app invite] Klaviyo invitation event failed",
+      error
     );
   }
 }
+
 
   try {
   await syncBrandProfileToKlaviyo({
@@ -204,13 +246,13 @@ const contactPhone = String(app.phone ?? "").trim() || null;
     countryCode: app.countryCode,
     city: app.city,
 
-    stage: "onboarded",
+    stage: "contract_signed",
   });
 
   console.log(
     "[brand-app invite] Klaviyo profile synced",
     app.email,
-    "onboarded"
+    "contract_signed"
   );
 } catch (e) {
   console.error(
