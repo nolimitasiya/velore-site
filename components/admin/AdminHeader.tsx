@@ -77,10 +77,15 @@ export function AdminHeader({
         { href: "/admin/analytics", label: "Analytics", icon: "ti-chart-bar" },
       ],
     },
-    {
+  {
   title: "Catalogue",
   items: [
     { href: "/admin/products", label: "Products", icon: "ti-shirt" },
+    {
+      href: "/admin/fit",
+      label: "Fit & Sizing",
+      icon: "ti-ruler-measure",
+    },
     {
       href: "/admin/catalogue-health",
       label: "Catalogue Health",
@@ -99,6 +104,16 @@ export function AdminHeader({
       href: "/admin/platform-health",
       label: "Platform Health",
       icon: "ti-activity-heartbeat",
+    },
+    {
+      href: "/admin/notifications",
+      label: "Notifications",
+      icon: "ti-bell",
+    },
+    {
+      href: "/admin/feedback",
+      label: "Feedback",
+      icon: "ti-message-report",
     },
   ],
 },

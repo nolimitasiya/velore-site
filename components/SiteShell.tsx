@@ -9,14 +9,16 @@ import { NewsletterSignup } from "@/components/NewsletterSignup";
 import { NewsletterModal } from "@/components/newsletter/NewsletterModal";
 import Link from "next/link";
 import ShopperPreferencesModal from "@/components/ShopperPreferencesModal";
+import FeedbackWidget from "@/components/feedback/FeedbackWidget";
+import { FeedbackProductProvider } from "@/components/feedback/FeedbackProductContext";
 
 import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
 
-
 export default function SiteShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen w-full bg-white font-body text-black">
-      <StickyHeader>
+    <FeedbackProductProvider>
+      <div className="min-h-screen w-full bg-white font-body text-black">
+        <StickyHeader>
         <header className="border-b border-black/10 bg-[#fcfbf8] text-black">
           <div className="mx-auto w-full max-w-[1800px] px-8">
             <div className="flex items-center py-4">
@@ -251,6 +253,8 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
       <GoogleAnalytics />
       <CookieBanner />
       <NewsletterModal />
+      <FeedbackWidget />
     </div>
+      </FeedbackProductProvider>
   );
 }

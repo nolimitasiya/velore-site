@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { sendNewsletterConfirmEmail } from "@/lib/resend/templates/marketing/newsletterConfirm";
+import { getSiteBaseUrl } from "@/lib/config/siteUrl";
 
 export const runtime = "nodejs";
 
@@ -13,12 +14,13 @@ const BodySchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  if (!siteUrl) {
-    console.error("Invalid NEXT_PUBLIC_SITE_URL:", siteUrl);
+  try {
+    getSiteBaseUrl();
+  } catch {
+    console.error("Newsletter subscription URL configuration unavailable.");
     return NextResponse.json(
-      { ok: false, error: "Server misconfigured: invalid NEXT_PUBLIC_SITE_URL" },
-      { status: 500 }
+      { ok: false, error: "Server configuration unavailable." },
+      { status: 503 }
     );
   }
 

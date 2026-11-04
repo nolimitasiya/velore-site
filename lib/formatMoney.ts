@@ -3,17 +3,24 @@ export function formatMoney(
   currency: string,
   locale?: string
 ) {
-  if (amount === null || amount === undefined || amount === "") return "-";
+  if (amount === null || amount === undefined || amount === "") {
+    return "-";
+  }
 
-  const n = typeof amount === "number" ? amount : Number(amount);
-  if (!Number.isFinite(n)) return "-";
+  const n =
+    typeof amount === "number"
+      ? amount
+      : Number(amount);
+
+  if (!Number.isFinite(n)) {
+    return "-";
+  }
 
   const loc = locale ?? "en-GB";
 
   return new Intl.NumberFormat(loc, {
     style: "currency",
     currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    currencyDisplay: "symbol",
   }).format(n);
 }

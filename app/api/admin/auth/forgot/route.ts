@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { makeResetToken, hashToken, minutesFromNow } from "@/lib/auth/passwordReset";
 import { sendResetEmail } from "@/lib/email/sendResetEmail";
+import { buildSiteUrl } from "@/lib/config/siteUrl";
 import { rateLimit } from "@/lib/rateLimit";
 import crypto from "node:crypto";
 import { classifyClientIp } from "@/lib/security/clientIpClassification";
@@ -57,6 +58,17 @@ if (!accountLimit.ok) {
   return NextResponse.json({ ok: true });
 }
 
+  let resetBaseUrl: string;
+
+  try {
+    resetBaseUrl = buildSiteUrl("/admin/reset");
+  } catch {
+    return NextResponse.json(
+      { ok: false, error: "Server configuration unavailable." },
+      { status: 503 },
+    );
+  }
+
   const admin = await prisma.adminUser.findFirst({
   where: {
     email: {
@@ -73,6 +85,7 @@ if (!accountLimit.ok) {
 if (!admin) {
   return NextResponse.json({ ok: true });
 }
+
 await prisma.passwordResetToken.deleteMany({
   where: {
     userType: "ADMIN",
@@ -92,11 +105,10 @@ await prisma.passwordResetToken.deleteMany({
     },
   });
 
- const appUrl =
-  process.env.NEXT_PUBLIC_APP_URL ||
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-
-const resetUrl = `${appUrl}/admin/reset?token=${token}&email=${encodeURIComponent(email)}`;
+const resetUrlObject = new URL(resetBaseUrl);
+resetUrlObject.searchParams.set("token", token);
+resetUrlObject.searchParams.set("email", email);
+const resetUrl = resetUrlObject.toString();
   try {
   await sendResetEmail({
   to: admin.email,

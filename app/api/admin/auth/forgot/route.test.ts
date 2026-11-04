@@ -100,6 +100,9 @@ describe("admin forgot-password security", () => {
     sendResetEmailMock.mockResolvedValue(undefined);
   });
   afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+  afterEach(() => {
   if (originalVercel === undefined) {
     delete process.env.VERCEL;
   } else {
@@ -107,6 +110,9 @@ describe("admin forgot-password security", () => {
   }
 });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
   afterEach(() => {
     if (originalHmacKey === undefined) {
       delete process.env.RATE_LIMIT_IP_HMAC_KEY;
@@ -240,6 +246,113 @@ describe("admin forgot-password security", () => {
     });
   });
 
+  it("uses the canonical production origin for admin reset links", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://www.veiloraclub.com");
+
+    findAdminMock.mockResolvedValue({
+      email: "admin@example.test",
+      name: "Test Admin",
+    });
+
+    const response = await requestForgot("admin@example.test");
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true });
+
+    expect(sendResetEmailMock).toHaveBeenCalledTimes(1);
+
+    const emailPayload = sendResetEmailMock.mock.calls[0][0];
+    const resetUrl = new URL(emailPayload.resetUrl);
+
+    expect(resetUrl.origin).toBe("https://www.veiloraclub.com");
+    expect(resetUrl.pathname).toBe("/admin/reset");
+    expect(resetUrl.searchParams.get("token")).toBe("raw-test-token");
+    expect(resetUrl.searchParams.get("email")).toBe("admin@example.test");
+  });
+
+  it("rejects missing production URL configuration before account lookup", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "");
+
+    const response = await requestForgot("admin@example.test");
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      ok: false,
+      error: "Server configuration unavailable.",
+    });
+
+    expect(findAdminMock).not.toHaveBeenCalled();
+    expect(deleteTokensMock).not.toHaveBeenCalled();
+    expect(createTokenMock).not.toHaveBeenCalled();
+    expect(sendResetEmailMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid production URL configuration without token mutations", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "http://localhost:3000");
+
+    const response = await requestForgot("admin@example.test");
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      ok: false,
+      error: "Server configuration unavailable.",
+    });
+
+    expect(findAdminMock).not.toHaveBeenCalled();
+    expect(deleteTokensMock).not.toHaveBeenCalled();
+    expect(createTokenMock).not.toHaveBeenCalled();
+    expect(sendResetEmailMock).not.toHaveBeenCalled();
+  });
+
+  it("returns identical configuration errors regardless of account existence", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "");
+
+    findAdminMock.mockResolvedValue({
+      email: "admin@example.test",
+      name: "Test Admin",
+    });
+
+    const existingResponse = await requestForgot("admin@example.test");
+    const existingBody = await existingResponse.json();
+
+    findAdminMock.mockResolvedValue(null);
+
+    const unknownResponse = await requestForgot("missing@example.test");
+    const unknownBody = await unknownResponse.json();
+
+    expect(existingResponse.status).toBe(503);
+    expect(unknownResponse.status).toBe(503);
+    expect(existingBody).toEqual(unknownBody);
+
+    expect(findAdminMock).not.toHaveBeenCalled();
+    expect(deleteTokensMock).not.toHaveBeenCalled();
+    expect(createTokenMock).not.toHaveBeenCalled();
+    expect(sendResetEmailMock).not.toHaveBeenCalled();
+  });
+
+  it("does not fall back to legacy URL variables in production", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://legacy.example.com");
+    vi.stubEnv("VERCEL_URL", "preview.example.com");
+
+    const response = await requestForgot("admin@example.test");
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      ok: false,
+      error: "Server configuration unavailable.",
+    });
+
+    expect(findAdminMock).not.toHaveBeenCalled();
+    expect(deleteTokensMock).not.toHaveBeenCalled();
+    expect(createTokenMock).not.toHaveBeenCalled();
+    expect(sendResetEmailMock).not.toHaveBeenCalled();
+  });
   it("stores the hashed token and sends the raw token only in the reset link", async () => {
     findAdminMock.mockResolvedValue({
       email: "admin@example.test",

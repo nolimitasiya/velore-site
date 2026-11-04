@@ -8,6 +8,14 @@ import {
 import { invalidateStorefrontProduct } from "@/lib/storefront/invalidate-product";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
+import {
+  parseProductDetailsInput,
+  ProductDetailsValidationError,
+} from "@/lib/products/productDetailsInput";
+
+import {
+  isAllowedBrandCurrency,
+} from "@/lib/currency/codes";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -62,6 +70,25 @@ export async function GET(
         currency: true,
         badges: true,
         categoryId: true,
+        description: true,
+        colourDescription: true,
+        careInstructions: true,
+        countryOfOrigin: true,
+        transparency: true,
+        liningStatus: true,
+
+        specifications: {
+          orderBy: [
+            { sortOrder: "asc" },
+            { id: "asc" },
+          ],
+          select: {
+            id: true,
+            label: true,
+            value: true,
+            sortOrder: true,
+          },
+        },
 productType: true,
 lengths: true,
 polyesterFree: true,
@@ -166,6 +193,15 @@ productSizes: {
     badges: product.badges,
 
     categoryId: product.categoryId,
+
+    description: product.description,
+    colourDescription: product.colourDescription,
+    careInstructions: product.careInstructions,
+    countryOfOrigin: product.countryOfOrigin,
+    transparency: product.transparency,
+    liningStatus: product.liningStatus,
+    specifications: product.specifications,
+
     productType: product.productType,
     lengths: product.lengths,
     polyesterFree: product.polyesterFree,
@@ -289,6 +325,20 @@ const sizeIds = cleanStringArray(body.sizeIds);
 const lengths = cleanStringArray(body.lengths);
 
 const polyesterFree = body.polyesterFree === true;
+    let productDetails;
+
+    try {
+      productDetails = parseProductDetailsInput(body);
+    } catch (error) {
+      if (error instanceof ProductDetailsValidationError) {
+        return NextResponse.json(
+          { ok: false, error: error.message },
+          { status: 400 }
+        );
+      }
+
+      throw error;
+    }
 
     if (!title) {
       return NextResponse.json(
@@ -311,14 +361,12 @@ const polyesterFree = body.polyesterFree === true;
       );
     }
 
-    const allowedCurrencies = ["GBP", "EUR", "CHF", "USD"];
-
-    if (!allowedCurrencies.includes(currency)) {
-      return NextResponse.json(
-        { ok: false, error: "Unsupported currency." },
-        { status: 400 }
-      );
-    }
+if (!isAllowedBrandCurrency(currency)) {
+  return NextResponse.json(
+    { ok: false, error: "Unsupported currency." },
+    { status: 400 }
+  );
+}
 
     if (!productTypes.length) {
   return NextResponse.json(
@@ -353,7 +401,17 @@ if (
       try {
         price = new Prisma.Decimal(priceRaw);
 
-        if (price.isNegative()) {
+if (price.decimalPlaces() > 2) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "Price cannot have more than two decimal places.",
+    },
+    { status: 400 }
+  );
+}
+
+if (price.isNegative()) {
           return NextResponse.json(
             { ok: false, error: "Price cannot be negative." },
             { status: 400 }
@@ -373,7 +431,17 @@ if (
       try {
         originalPrice = new Prisma.Decimal(originalPriceRaw);
 
-        if (originalPrice.isNegative()) {
+if (originalPrice.decimalPlaces() > 2) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "Original price cannot have more than two decimal places.",
+    },
+    { status: 400 }
+  );
+}
+
+if (originalPrice.isNegative()) {
           return NextResponse.json(
             {
               ok: false,
@@ -536,9 +604,29 @@ if (protectedProductSizes.length) {
       badges,
 
       categoryId,
-      productType: productTypes[0] as ProductType,
-      lengths,
-      polyesterFree,
+
+...("description" in productDetails
+  ? { description: productDetails.description }
+  : {}),
+...("colourDescription" in productDetails
+  ? { colourDescription: productDetails.colourDescription }
+  : {}),
+...("careInstructions" in productDetails
+  ? { careInstructions: productDetails.careInstructions }
+  : {}),
+...("countryOfOrigin" in productDetails
+  ? { countryOfOrigin: productDetails.countryOfOrigin }
+  : {}),
+...("transparency" in productDetails
+  ? { transparency: productDetails.transparency }
+  : {}),
+...("liningStatus" in productDetails
+  ? { liningStatus: productDetails.liningStatus }
+  : {}),
+
+productType: productTypes[0] as ProductType,
+lengths,
+polyesterFree,
     },
     select: {
       id: true,
@@ -642,6 +730,22 @@ if (protectedProductSizes.length) {
       })),
       skipDuplicates: true,
     });
+  }
+  if (productDetails.specifications !== undefined) {
+    await tx.productSpecification.deleteMany({
+      where: { productId: id },
+    });
+
+    if (productDetails.specifications.length > 0) {
+      await tx.productSpecification.createMany({
+        data: productDetails.specifications.map((specification) => ({
+          productId: id,
+          label: specification.label,
+          value: specification.value,
+          sortOrder: specification.sortOrder,
+        })),
+      });
+    }
   }
 
   return updated;

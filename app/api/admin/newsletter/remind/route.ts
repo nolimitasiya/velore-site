@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
 import { sendNewsletterConfirmEmail } from "@/lib/resend/templates/marketing/newsletterConfirm";
+import { getSiteBaseUrl } from "@/lib/config/siteUrl";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,6 +12,16 @@ export async function POST(req: Request) {
   try {
     // ✅ must be inside the request handler
     await requireAdminSession();
+
+    try {
+      getSiteBaseUrl();
+    } catch {
+      console.error("Admin newsletter reminder URL configuration unavailable.");
+      return NextResponse.json(
+        { ok: false, error: "Server configuration unavailable." },
+        { status: 503 }
+      );
+    }
 
     const body = await req.json().catch(() => ({}));
     const id = String(body.id || "").trim();

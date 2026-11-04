@@ -1,25 +1,29 @@
 import Link from "next/link";
 
 type Props = {
-  params?: { category?: string };
+  params: Promise<{ category: string }>;
 };
 
 function titleize(slug?: string) {
   const safe = slug ?? "category";
+
   return safe
     .split("-")
     .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
     .join(" ");
 }
 
-export default function CategoryPage({ params }: Props) {
-  const name = titleize(params?.category);
- 
+export default async function CategoryPage({ params }: Props) {
+  const { category } = await params;
+  const name = titleize(category);
 
   return (
     <div className="mx-auto w-full max-w-[1800px] px-8 py-10">
       <header className="text-center">
-        <h1 className="font-heading text-4xl tracking-[0.08em]">{name}</h1>
+        <h1 className="font-heading text-4xl tracking-[0.08em]">
+          {name}
+        </h1>
+
         <p className="mx-auto mt-3 max-w-xl text-sm text-black/60">
           This section is coming soon. We’re curating the best modest picks across brands.
         </p>

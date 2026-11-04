@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
+import { fetchAdminAnalytics } from "@/lib/admin/analytics/fetchAdminAnalytics";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
 
 export const dynamic = "force-dynamic";
@@ -10,25 +10,8 @@ type PageProps = {
   searchParams: Promise<{ range?: string }>;
 };
 
-function absoluteUrl(path: string) {
-  const base =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : "http://localhost:3000");
-
-  return `${base}${path}`;
-}
-
 async function getJSON(path: string) {
-  const jar = await cookies();
-
-  const res = await fetch(absoluteUrl(path), {
-    cache: "no-store",
-    headers: {
-      cookie: jar.toString(),
-    },
-  });
+  const res = await fetchAdminAnalytics(path);
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");

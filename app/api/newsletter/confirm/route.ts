@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendNewsletterWelcomeEmail } from "@/lib/resend/templates/marketing/newsletterWelcome";
+import { buildSiteUrl } from "@/lib/config/siteUrl";
 
 export const runtime = "nodejs";
 
@@ -8,10 +9,20 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const token = searchParams.get("token");
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.veiloraclub.com";
+  let confirmPageUrl: string;
+
+  try {
+    confirmPageUrl = buildSiteUrl("/newsletter/confirm");
+  } catch {
+    console.error("Newsletter confirmation URL configuration unavailable.");
+    return new Response("Service temporarily unavailable.", {
+      status: 503,
+      headers: { "Cache-Control": "no-store" },
+    });
+  }
 
   if (!token) {
-    return NextResponse.redirect(`${baseUrl}/newsletter/confirm?status=missing`);
+    return NextResponse.redirect(`${confirmPageUrl}?status=missing`);
   }
 
   const subscriber = await prisma.newsletterSubscriber.findFirst({
@@ -20,7 +31,7 @@ export async function GET(req: Request) {
   });
 
   if (!subscriber || subscriber.status !== "pending") {
-    return NextResponse.redirect(`${baseUrl}/newsletter/confirm?status=invalid`);
+    return NextResponse.redirect(`${confirmPageUrl}?status=invalid`);
   }
 
   await prisma.newsletterSubscriber.update({
@@ -52,6 +63,6 @@ export async function GET(req: Request) {
     console.error("❌ welcome email failed:", e);
   }
 
-  return NextResponse.redirect(`${baseUrl}/newsletter/confirm?status=ok`);
+  return NextResponse.redirect(`${confirmPageUrl}?status=ok`);
   
 }

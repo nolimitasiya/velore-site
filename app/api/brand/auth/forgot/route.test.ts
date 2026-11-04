@@ -116,6 +116,9 @@ describe("brand forgot-password security", () => {
 });
   });
   afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+  afterEach(() => {
   if (originalVercel === undefined) {
     delete process.env.VERCEL;
   } else {
@@ -123,6 +126,9 @@ describe("brand forgot-password security", () => {
   }
 });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
   afterEach(() => {
     if (originalHmacKey === undefined) {
       delete process.env.RATE_LIMIT_IP_HMAC_KEY;
@@ -258,6 +264,125 @@ describe("brand forgot-password security", () => {
     });
   });
 
+  it("uses the canonical production origin for brand reset links", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://www.veiloraclub.com");
+
+    findUserMock.mockResolvedValue({
+      id: "test-user-id",
+      email: "brand@example.test",
+      name: "Test Brand",
+    });
+
+    const response = await requestForgot("brand@example.test");
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true });
+
+    expect(findMembershipMock).toHaveBeenCalledTimes(1);
+    expect(createTokenMock).toHaveBeenCalledTimes(1);
+    expect(sendResetEmailMock).toHaveBeenCalledTimes(1);
+
+    const emailPayload = sendResetEmailMock.mock.calls[0][0];
+    const resetUrl = new URL(emailPayload.resetUrl);
+
+    expect(resetUrl.origin).toBe("https://www.veiloraclub.com");
+    expect(resetUrl.pathname).toBe("/brand/reset");
+    expect(resetUrl.searchParams.get("token")).toBe("raw-test-token");
+    expect(resetUrl.searchParams.get("email")).toBe("brand@example.test");
+  });
+
+  it("rejects missing production URL configuration before Brand lookup", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "");
+
+    const response = await requestForgot("brand@example.test");
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      ok: false,
+      error: "Server configuration unavailable.",
+    });
+
+    expect(findUserMock).not.toHaveBeenCalled();
+    expect(findMembershipMock).not.toHaveBeenCalled();
+    expect(findApplicationMock).not.toHaveBeenCalled();
+    expect(deleteTokensMock).not.toHaveBeenCalled();
+    expect(createTokenMock).not.toHaveBeenCalled();
+    expect(makeResetTokenMock).not.toHaveBeenCalled();
+    expect(sendResetEmailMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid production URL configuration without token mutations", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "http://localhost:3000");
+
+    const response = await requestForgot("brand@example.test");
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      ok: false,
+      error: "Server configuration unavailable.",
+    });
+
+    expect(findUserMock).not.toHaveBeenCalled();
+    expect(findMembershipMock).not.toHaveBeenCalled();
+    expect(findApplicationMock).not.toHaveBeenCalled();
+    expect(deleteTokensMock).not.toHaveBeenCalled();
+    expect(createTokenMock).not.toHaveBeenCalled();
+    expect(makeResetTokenMock).not.toHaveBeenCalled();
+    expect(sendResetEmailMock).not.toHaveBeenCalled();
+  });
+
+  it("returns identical configuration errors for existing and unknown Brand accounts", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "");
+
+    findUserMock.mockResolvedValue({
+      id: "test-user-id",
+      email: "brand@example.test",
+      name: "Test Brand",
+    });
+
+    const existingResponse = await requestForgot("brand@example.test");
+    const existingBody = await existingResponse.json();
+
+    findUserMock.mockResolvedValue(null);
+
+    const unknownResponse = await requestForgot("unknown@example.test");
+    const unknownBody = await unknownResponse.json();
+
+    expect(existingResponse.status).toBe(503);
+    expect(unknownResponse.status).toBe(503);
+    expect(existingBody).toEqual(unknownBody);
+
+    expect(findUserMock).not.toHaveBeenCalled();
+    expect(findMembershipMock).not.toHaveBeenCalled();
+    expect(deleteTokensMock).not.toHaveBeenCalled();
+    expect(createTokenMock).not.toHaveBeenCalled();
+    expect(sendResetEmailMock).not.toHaveBeenCalled();
+  });
+
+  it("does not fall back to legacy URL variables in production", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://legacy.example.com");
+    vi.stubEnv("VERCEL_URL", "preview.example.com");
+
+    const response = await requestForgot("brand@example.test");
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      ok: false,
+      error: "Server configuration unavailable.",
+    });
+
+    expect(findUserMock).not.toHaveBeenCalled();
+    expect(findMembershipMock).not.toHaveBeenCalled();
+    expect(deleteTokensMock).not.toHaveBeenCalled();
+    expect(createTokenMock).not.toHaveBeenCalled();
+    expect(sendResetEmailMock).not.toHaveBeenCalled();
+  });
   it("stores the hashed token and sends the reset email", async () => {
     findUserMock.mockResolvedValue({
       id: "test-user-id",

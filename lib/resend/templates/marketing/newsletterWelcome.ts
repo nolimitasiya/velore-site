@@ -1,4 +1,5 @@
 import { FROM_MARKETING, REPLY_TO_MARKETING } from "../../client";
+import { getSiteBaseUrl } from "@/lib/config/siteUrl";
 import { sendEmail } from "../../send";
 import { veiloraEmailTemplate } from "../base/veiloraBase";
 
@@ -8,8 +9,7 @@ export async function sendNewsletterWelcomeEmail(opts: {
 }) {
   const subject = "Welcome to Veilora Club ✨";
 
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL || "https://www.veiloraclub.com";
+  const baseUrl = getSiteBaseUrl();
 
   const unsubscribeUrl =
     `${baseUrl}/api/newsletter/unsubscribe?token=${encodeURIComponent(

@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { getSiteBaseUrl } from "@/lib/config/siteUrl";
 
 export async function sendResetEmail(opts: {
   to: string;
@@ -20,9 +21,7 @@ export async function sendResetEmail(opts: {
 
   const resend = new Resend(apiKey);
 
-  const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    "https://www.veiloraclub.com";
+  const baseUrl = getSiteBaseUrl();
 
   const roleLabel =
     opts.userType === "ADMIN"

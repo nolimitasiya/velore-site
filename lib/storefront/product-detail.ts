@@ -158,13 +158,26 @@ lengthOptions: {
   },
 },
 
-      productMaterials: {
-        include: {
-          material: true,
-        },
-      },
+  productMaterials: {
+  include: {
+    material: true,
+  },
+},
 
-      shippingCountries: true,
+specifications: {
+  orderBy: [
+    { sortOrder: "asc" },
+    { id: "asc" },
+  ],
+  select: {
+    id: true,
+    label: true,
+    value: true,
+    sortOrder: true,
+  },
+},
+
+shippingCountries: true,
 
       
     },

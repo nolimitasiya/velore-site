@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { randomBytes, createHash } from "crypto";
 import { sendShopperResetEmail } from "@/lib/email/sendShopperResetEmail";
+import { buildSiteUrl } from "@/lib/config/siteUrl";
 import { PasswordResetUserType } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
@@ -14,6 +15,16 @@ export async function POST(req: NextRequest) {
     const normalizedEmail = email.toLowerCase().trim();
 
     // Always return success to prevent email enumeration
+    let resetBaseUrl: string;
+
+    try {
+      resetBaseUrl = buildSiteUrl("/account/reset");
+    } catch {
+      return NextResponse.json(
+        { error: "Server configuration unavailable." },
+        { status: 503 },
+      );
+    }
     const shopper = await prisma.shopper.findUnique({
       where: { email: normalizedEmail },
       select: { id: true, email: true, firstName: true },
@@ -38,8 +49,9 @@ export async function POST(req: NextRequest) {
   },
 });
 
-      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-      const resetUrl = `${baseUrl}/account/reset?token=${token}`;
+      const resetUrlObject = new URL(resetBaseUrl);
+      resetUrlObject.searchParams.set("token", token);
+      const resetUrl = resetUrlObject.toString();
 
      try {
   await sendShopperResetEmail({

@@ -13,6 +13,7 @@ import ImageGallery from "./ImageGallery";
 import Accordion from "./Accordion";
 import WishlistButton from "@/components/WishlistButton";
 import ProductViewTracker from "@/components/analytics/ProductViewTracker";
+import FeedbackProductRegistration from "@/components/feedback/FeedbackProductRegistration";
 import {  normalizeDiscoverySource,} from "@/lib/analytics/discoverySource";
 import {  getStorefrontProductDetail,  getCompleteTheLook,  getProductDiaryPosts,  getRelatedProducts,} from "@/lib/storefront/product-detail";
 import ProductPrice from "@/components/ProductPrice";
@@ -426,6 +427,7 @@ const shippingToLabels = getShippingToLabel(
 
   return (
   <>
+    <FeedbackProductRegistration productId={product.id} />
     <ProductViewTracker productId={product.id} />
     <div className="mx-auto w-full max-w-[1800px] px-4 py-8 md:px-8 md:py-10">
 
@@ -763,29 +765,144 @@ const shippingToLabels = getShippingToLabel(
             {/* Accordions */}
             <div className="rounded-[20px] border border-black/8 bg-white divide-y divide-black/6 overflow-hidden">
 
-              {/* Product details */}
-              <Accordion title="Product details">
-                <div className="space-y-2 text-sm text-black/60">
-                  {product.productType && (
-                    <div className="flex justify-between">
-                      <span className="text-black/40">Type</span>
-                      <span>{formatProductTypeLabel(product.productType)}</span>
-                    </div>
-                  )}
-                  {product.productMaterials.length > 0 && (
-                    <div className="flex justify-between gap-4">
-                      <span className="text-black/40 shrink-0">Material</span>
-                      <span className="text-right">{product.productMaterials.map((m) => m.material.name).join(", ")}</span>
-                    </div>
-                  )}
-                  {product.note && (
-                    <div className="pt-1 text-black/60 leading-relaxed">{product.note}</div>
-                  )}
-                  {!product.productType && !product.productMaterials.length && !product.note && (
-                    <p className="text-black/40">Full details available on the brand's website.</p>
-                  )}
-                </div>
-              </Accordion>
+             {/* Product details */}
+<Accordion title="Product details">
+  <div className="space-y-4 text-sm text-black/60">
+
+    {/* Product description */}
+    {product.description?.trim() && (
+      <p className="whitespace-pre-line leading-relaxed">
+        {product.description}
+      </p>
+    )}
+
+    {/* Colour */}
+    {product.colourDescription?.trim() && (
+      <div className="flex justify-between gap-4">
+        <span className="shrink-0 text-black/40">Colour</span>
+        <span className="text-right">
+          {product.colourDescription}
+        </span>
+      </div>
+    )}
+
+    {/* Ordered product specifications */}
+    {product.specifications
+      .filter(
+        (specification) =>
+          specification.label.trim() &&
+          specification.value.trim()
+      )
+      .map((specification) => (
+        <div
+          key={specification.id}
+          className="flex justify-between gap-4"
+        >
+          <span className="shrink-0 text-black/40">
+            {specification.label}
+          </span>
+          <span className="text-right whitespace-pre-line">
+            {specification.value}
+          </span>
+        </div>
+      ))}
+
+    {/* Legacy material fallback */}
+    {!product.specifications.some((specification) =>
+      /^(material|fabric|shell|outer layer|lining|trim|embroidery)(\s+[ivx]+|\s+\d+)?$/i.test(
+        specification.label.trim()
+      )
+    ) &&
+      product.productMaterials.length > 0 && (
+        <div className="flex justify-between gap-4">
+          <span className="shrink-0 text-black/40">
+            Material
+          </span>
+          <span className="text-right">
+            {product.productMaterials
+              .map((item) => item.material.name)
+              .join(", ")}
+          </span>
+        </div>
+      )}
+
+    {/* Transparency */}
+    {product.transparency?.trim() && (
+      <div className="flex justify-between gap-4">
+        <span className="shrink-0 text-black/40">
+          Transparency
+        </span>
+        <span className="text-right">
+          {product.transparency}
+        </span>
+      </div>
+    )}
+
+    {/* Lining */}
+    {product.liningStatus?.trim() && (
+      <div className="flex justify-between gap-4">
+        <span className="shrink-0 text-black/40">
+          Lining
+        </span>
+        <span className="text-right">
+          {product.liningStatus}
+        </span>
+      </div>
+    )}
+
+    {/* Care instructions */}
+    {product.careInstructions?.trim() && (
+      <div className="flex justify-between gap-4">
+        <span className="shrink-0 text-black/40">
+          Care instructions
+        </span>
+        <span className="text-right whitespace-pre-line">
+          {product.careInstructions}
+        </span>
+      </div>
+    )}
+
+    {/* Country of origin */}
+    {product.countryOfOrigin?.trim() && (
+      <div className="flex justify-between gap-4">
+        <span className="shrink-0 text-black/40">
+          Country of origin
+        </span>
+        <span className="text-right">
+          {product.countryOfOrigin}
+        </span>
+      </div>
+    )}
+
+    {/* Existing product note */}
+    {product.note?.trim() &&
+      product.note.trim() !== product.description?.trim() && (
+        <p className="whitespace-pre-line leading-relaxed">
+          {product.note}
+        </p>
+      )}
+
+    {/* Fallback when no details exist */}
+    {!product.description?.trim() &&
+      !product.colourDescription?.trim() &&
+      !product.specifications.some(
+        (specification) =>
+          specification.label.trim() &&
+          specification.value.trim()
+      ) &&
+      product.productMaterials.length === 0 &&
+      !product.transparency?.trim() &&
+      !product.liningStatus?.trim() &&
+      !product.careInstructions?.trim() &&
+      !product.countryOfOrigin?.trim() &&
+      !product.note?.trim() && (
+        <p className="text-black/40">
+          Full details available on the brand&apos;s website.
+        </p>
+      )}
+
+  </div>
+</Accordion>
 
               <ProductSizeAndFit
                 presentation={fitPresentation}

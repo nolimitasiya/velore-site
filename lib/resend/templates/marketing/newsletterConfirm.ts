@@ -1,4 +1,5 @@
 import { FROM_MARKETING, REPLY_TO_MARKETING } from "../../client";
+import { getSiteBaseUrl } from "@/lib/config/siteUrl";
 import { sendEmail } from "../../send";
 
 export async function sendNewsletterConfirmEmail(opts: {
@@ -6,8 +7,7 @@ export async function sendNewsletterConfirmEmail(opts: {
   confirmToken: string;
   unsubscribeToken: string;
 }) {
-const baseUrl =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://www.veiloraclub.com";
+const baseUrl = getSiteBaseUrl();
   const confirmUrl =
   `${baseUrl}/api/newsletter/confirm?token=${encodeURIComponent(opts.confirmToken)}`;
 const unsubscribeUrl =

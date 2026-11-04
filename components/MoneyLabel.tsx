@@ -96,23 +96,42 @@ export default function MoneyLabel({
   }, []);
 
   const display = useMemo(() => {
-    const base = amount == null || amount === "" ? null : Number(amount);
-    if (base == null || !Number.isFinite(base)) return "—";
+  const base =
+    amount == null || amount === ""
+      ? null
+      : Number(amount);
 
-    const from = String(currency || "").toUpperCase();
-    const to = String(chosen || "GBP").toUpperCase();
+  if (base == null || !Number.isFinite(base)) {
+    return "—";
+  }
 
-    if (!rates) {
-      return formatMoney(base, (safeCurrency(from) ?? "GBP") as any);
-    }
+  const from = safeCurrency(
+    String(currency ?? "").trim().toUpperCase()
+  );
 
-    const converted = convert(base, from, to, rates);
-    if (converted == null) {
-      return formatMoney(base, (safeCurrency(from) ?? "GBP") as any);
-    }
+  const to = safeCurrency(
+    String(chosen ?? "").trim().toUpperCase()
+  );
 
-    return formatMoney(converted, (safeCurrency(to) ?? "GBP") as any);
-  }, [amount, currency, chosen, rates]);
+  // Never label an unknown source currency as GBP.
+  if (!from) {
+    return "Price unavailable";
+  }
+
+  // No rates available: display the original price and currency.
+  if (!rates || !to) {
+    return formatMoney(base, from);
+  }
+
+  const converted = convert(base, from, to, rates);
+
+  // Missing conversion rate: preserve the original currency.
+  if (converted == null) {
+    return formatMoney(base, from);
+  }
+
+  return formatMoney(converted, to);
+}, [amount, currency, chosen, rates]);
 
   return <span className={className}>{display}</span>;
 }

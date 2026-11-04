@@ -454,6 +454,27 @@ const activeRow =
                 </Link>
               );
             })}
+          {/* Feedback */}
+{isRoot && (
+  <div className="border-t border-black/10 px-4 py-3">
+    <button
+      type="button"
+      onClick={() => {
+        closeMenu();
+
+        window.dispatchEvent(
+          new Event("veilora:open-feedback")
+        );
+      }}
+      className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm text-black transition-colors hover:bg-black/[0.03]"
+    >
+      <span aria-hidden="true" className="text-lg text-[#7B2D3E]">
+        ✎
+      </span>
+      <span>Feedback</span>
+    </button>
+  </div>
+)}
         {/* Account section — always visible at bottom */}
         {isRoot && (
   <div className="mt-auto border-t border-black/8 p-4 space-y-2">

@@ -9,6 +9,13 @@ import {
 
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
+import {
+  parseProductDetailsInput,
+  ProductDetailsValidationError,
+} from "@/lib/products/productDetailsInput";
+import {
+  isAllowedBrandCurrency,
+} from "@/lib/currency/codes";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -104,7 +111,20 @@ const categoryId =
 
     const polyesterFree = body.polyesterFree === true;
     const saleBadge = body.saleBadge === true;
+    let productDetails;
 
+try {
+  productDetails = parseProductDetailsInput(body);
+} catch (error) {
+  if (error instanceof ProductDetailsValidationError) {
+    return NextResponse.json(
+      { ok: false, error: error.message },
+      { status: 400 }
+    );
+  }
+
+  throw error;
+}
     if (!brandId) {
       return NextResponse.json(
         { ok: false, error: "Select a brand." },
@@ -133,14 +153,12 @@ const categoryId =
       );
     }
 
-    const allowedCurrencies = ["GBP", "EUR", "CHF", "USD"];
-
-    if (!allowedCurrencies.includes(currency)) {
-      return NextResponse.json(
-        { ok: false, error: "Unsupported currency." },
-        { status: 400 }
-      );
-    }
+if (!isAllowedBrandCurrency(currency)) {
+  return NextResponse.json(
+    { ok: false, error: "Unsupported currency." },
+    { status: 400 }
+  );
+}
 
     let price: Prisma.Decimal | null = null;
 
@@ -148,7 +166,17 @@ const categoryId =
       try {
         price = new Prisma.Decimal(priceRaw);
 
-        if (price.isNegative()) {
+if (price.decimalPlaces() > 2) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "Price cannot have more than two decimal places.",
+    },
+    { status: 400 }
+  );
+}
+
+if (price.isNegative()) {
           return NextResponse.json(
             { ok: false, error: "Price cannot be negative." },
             { status: 400 }
@@ -168,7 +196,17 @@ if (originalPriceRaw) {
   try {
     originalPrice = new Prisma.Decimal(originalPriceRaw);
 
-    if (originalPrice.isNegative()) {
+if (originalPrice.decimalPlaces() > 2) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "Original price cannot have more than two decimal places.",
+    },
+    { status: 400 }
+  );
+}
+
+if (originalPrice.isNegative()) {
       return NextResponse.json(
         { ok: false, error: "Original price cannot be negative." },
         { status: 400 }
@@ -325,7 +363,12 @@ if (originalPrice && price && originalPrice.lte(price)) {
 
 
           categoryId,
-
+          description: productDetails.description ?? null,
+          colourDescription: productDetails.colourDescription ?? null,
+          careInstructions: productDetails.careInstructions ?? null,
+          countryOfOrigin: productDetails.countryOfOrigin ?? null,
+          transparency: productDetails.transparency ?? null,
+          liningStatus: productDetails.liningStatus ?? null,
           productType: productTypes[0] as ProductType,
 
           lengths,
@@ -411,17 +454,28 @@ if (originalPrice && price && originalPrice.lte(price)) {
         });
       }
 
-      if (images.length) {
-        await tx.productImage.createMany({
-          data: images.map((url, index) => ({
-            productId: product.id,
-            url,
-            sortOrder: index,
-          })),
-        });
-      }
+if (images.length) {
+  await tx.productImage.createMany({
+    data: images.map((url, index) => ({
+      productId: product.id,
+      url,
+      sortOrder: index,
+    })),
+  });
+}
 
-      return product;
+if (productDetails.specifications?.length) {
+  await tx.productSpecification.createMany({
+    data: productDetails.specifications.map((specification) => ({
+      productId: product.id,
+      label: specification.label,
+      value: specification.value,
+      sortOrder: specification.sortOrder,
+    })),
+  });
+}
+
+return product;
     });
 
     return NextResponse.json(

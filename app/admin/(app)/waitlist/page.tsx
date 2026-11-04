@@ -546,7 +546,9 @@ while (
     "—"}
 </td>
                   <td className="px-6 py-3.5 text-neutral-500">
-                    {new Date(r.createdAt).toLocaleString("en-GB")}
+                    {new Date(r.createdAt).toLocaleString("en-GB", {
+                      timeZone: "Europe/London",
+                      })}
                   </td>
                 </tr>
               ))}

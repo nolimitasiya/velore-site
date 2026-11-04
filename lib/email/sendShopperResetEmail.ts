@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { getSiteBaseUrl } from "@/lib/config/siteUrl";
 
 export async function sendShopperResetEmail(opts: {
   to: string;
@@ -19,9 +20,7 @@ export async function sendShopperResetEmail(opts: {
 
   const resend = new Resend(apiKey);
 
-  const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    "https://www.veiloraclub.com";
+  const baseUrl = getSiteBaseUrl();
 
   const rawFirstName =
   opts.firstName?.trim().split(/\s+/)[0] || null;

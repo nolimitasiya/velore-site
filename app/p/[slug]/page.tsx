@@ -1,10 +1,16 @@
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 
-export default async function LegacyProductPage({ params }: { params: { slug: string } }) {
+export default async function LegacyProductPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+
   const product = await prisma.product.findFirst({
     where: {
-      slug: params.slug,
+      slug,
       isActive: true,
       publishedAt: { not: null },
     },

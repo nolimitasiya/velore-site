@@ -302,15 +302,35 @@ model Product {
   categoryMerchPlacements CategoryMerchPlacement[]
   homepageStyleFeedItems  HomepageStyleFeedItemProduct[]
   catalogueHealthTargets  CatalogueHealthTarget[]
+  feedbackSubmissions FeedbackSubmission[]
 
   completeTheLook    ProductCompleteTheLook[] @relation("CompleteTheLookSource")
   completeTheLookFor ProductCompleteTheLook[] @relation("CompleteTheLookTarget")
+  description       String? @db.Text
+  colourDescription String?
+  careInstructions  String? @db.Text
+  countryOfOrigin   String?
+  transparency      String?
+  liningStatus      String?
+
+specifications ProductSpecification[]
 
   @@unique([brandId, sourceUrl], name: "brandId_sourceUrl")
   @@index([brandId, slug])
   @@index([categoryId])
   @@index([affiliateUrl])
   @@index([productType])
+}
+model ProductSpecification {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId String  @db.Uuid
+  label     String
+  value     String  @db.Text
+  sortOrder Int     @default(0)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sortOrder])
 }
 
 model ProductImage {
@@ -1785,6 +1805,7 @@ model Shopper {
   fitProfile        ShopperFitProfile?
   emailChanges      ShopperEmailChange[]
   authSessions      ShopperAuthSession[]
+  feedbackSubmissions FeedbackSubmission[]
 }
 
 model ShopperEmailChange {
@@ -2576,4 +2597,83 @@ model SecurityEvent {
 enum SecurityAuditCategory {
   ADMIN
   BRAND
+}
+enum FeedbackType {
+  ISSUE
+  IDEA
+}
+
+enum FeedbackStatus {
+  NEW
+  IN_PROGRESS
+  UNDER_REVIEW
+  RESOLVED
+  IMPLEMENTED
+  DISMISSED
+}
+
+enum FeedbackEmailStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+  NOT_APPLICABLE
+}
+
+model FeedbackSubmission {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  type     FeedbackType
+  category String?
+  message  String @db.Text
+  status   FeedbackStatus @default(NEW)
+
+  // Authenticated shopper, when available.
+  shopperId String? @db.Uuid
+
+  // Contact details captured at submission time.
+  contactEmail String?
+  contactName  String?
+
+  // Whether the email came from an authenticated account.
+  emailVerifiedBySession Boolean @default(false)
+
+  // Product association, when available.
+  productId String? @db.Uuid
+
+  // Product snapshot preserved if the product is removed.
+  productTitleSnapshot String?
+  brandNameSnapshot    String?
+  productUrlSnapshot   String? @db.Text
+
+  // Page where feedback originated.
+  pageUrl String? @db.Text
+
+  // Notification delivery tracking.
+  adminEmailStatus   FeedbackEmailStatus @default(PENDING)
+  shopperEmailStatus FeedbackEmailStatus @default(NOT_APPLICABLE)
+
+  adminEmailSentAt   DateTime?
+  shopperEmailSentAt DateTime?
+  adminEmailAttempts       Int       @default(0)
+  shopperEmailAttempts     Int       @default(0)
+  adminEmailClaimedAt      DateTime?
+  shopperEmailClaimedAt    DateTime?
+  adminEmailNextAttemptAt  DateTime?
+  shopperEmailNextAttemptAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dedupeKey       String?   @unique
+  dedupeExpiresAt DateTime?
+  duplicateCount  Int       @default(0)
+
+  shopper Shopper? @relation(fields: [shopperId], references: [id], onDelete: SetNull)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([type, status, createdAt])
+  @@index([shopperId])
+  @@index([productId])
+  @@index([createdAt])
 }
