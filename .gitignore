@@ -42,3 +42,13 @@ next-env.d.ts
 
 /app/generated/prisma
 recorinding.mp4
+
+# Local database rehearsals and generated audit artefacts
+/rehearsal-backups/
+/prisma/feedback-migration-temp/
+/prisma.rehearsal.config.ts
+/dependency-audit.json
+/scripts/backup-production-database.ps1.before-env-safety
+/scripts/verify-production-migrations-readonly.ps1.previous
+/scripts/schema-verification/*.before-*
+/scripts/verify-seven-migrations-production-readonly.REVIEW.ps1.before-parser-fix

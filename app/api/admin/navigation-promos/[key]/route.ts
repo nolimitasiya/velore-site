@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/auth/AdminSession";
 import { NavigationPromoKey } from "@prisma/client";
+import { revalidateTag } from "next/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -115,6 +116,8 @@ export async function POST(
         isActive,
       },
     });
+
+    revalidateTag("header-promos", "max");
 
     return NextResponse.json({
       ok: true,
