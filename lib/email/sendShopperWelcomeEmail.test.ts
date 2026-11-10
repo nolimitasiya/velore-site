@@ -21,6 +21,7 @@ type WelcomeOptions = Parameters<typeof sendShopperWelcomeEmail>[0];
 const options: WelcomeOptions = {
   to: "shopper@example.com",
   firstName: "Amina",
+  idempotencyKey: "shopper-welcome-test-123",
 };
 
 function getSentEmail() {
@@ -130,9 +131,63 @@ describe("Shopper welcome email canonical URLs", () => {
     );
   });
 
+  it("escapes HTML markup in shopper names", async () => {
+    const unsafeName = '<script>alert("test")</script>';
+
+    await sendShopperWelcomeEmail({
+      ...options,
+      firstName: unsafeName,
+    });
+
+    const email = getSentEmail();
+
+    expect(email.html).toContain(
+      "Hi &lt;script&gt;alert(&quot;test&quot;)&lt;/script&gt;,"
+    );
+
+    expect(email.html).not.toContain(
+      '<script>alert("test")</script>'
+    );
+  });
+
+  it("escapes ampersands, quotes and apostrophes in HTML", async () => {
+    await sendShopperWelcomeEmail({
+      ...options,
+      firstName: `A&B "C" 'D'`,
+    });
+
+    const email = getSentEmail();
+
+    expect(email.html).toContain(
+      "Hi A&amp;B &quot;C&quot; &#39;D&#39;,"
+    );
+
+    expect(email.html).not.toContain(
+      `Hi A&B "C" 'D',`
+    );
+  });
+
+  it("preserves original shopper names in plain text", async () => {
+    const unsafeName = '<script>alert("test")</script>';
+
+    await sendShopperWelcomeEmail({
+      ...options,
+      firstName: unsafeName,
+    });
+
+    const email = getSentEmail();
+
+    expect(email.text).toContain(
+      `Welcome to Veilora Club, ${unsafeName}!`
+    );
+
+    expect(email.text).not.toContain("&lt;script&gt;");
+  });
+
   it("preserves the default greeting", async () => {
     await sendShopperWelcomeEmail({
       to: options.to,
+      idempotencyKey: options.idempotencyKey,
     });
 
     const email = getSentEmail();
@@ -262,7 +317,7 @@ describe("Shopper welcome email canonical URLs", () => {
     ).rejects.toThrow("Mock network failure");
   });
 
-  it("preserves current handling of a resolved Resend error", async () => {
+  it("rejects a resolved Resend provider error", async () => {
     resendMocks.send.mockResolvedValue({
       data: null,
       error: { message: "Mock provider error" },
@@ -270,7 +325,7 @@ describe("Shopper welcome email canonical URLs", () => {
 
     await expect(
       sendShopperWelcomeEmail(options)
-    ).resolves.toBeUndefined();
+    ).rejects.toThrow("Welcome email delivery failed");
 
     expect(resendMocks.send).toHaveBeenCalledTimes(1);
   });

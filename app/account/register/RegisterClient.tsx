@@ -113,7 +113,7 @@ if (age < 13) {
         setErr(j?.error ?? `Registration failed (${r.status})`);
         return;
       }
-      window.location.assign("/account/wishlist");
+      window.location.assign("/account/verify-email");
     } finally {
       setBusy(false);
     }

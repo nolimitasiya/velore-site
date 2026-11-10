@@ -7,6 +7,14 @@ import {
   dispatchFeedbackEmails,
 } from "@/lib/feedback/dispatchFeedbackEmails";
 
+import {
+  dispatchShopperWelcomeEmails,
+} from "@/lib/email/dispatchShopperWelcomeEmails";
+
+import {
+  countStuckShopperWelcomeEmails,
+} from "@/lib/email/countStuckShopperWelcomeEmails";
+
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
@@ -37,35 +45,84 @@ export async function GET(request: NextRequest) {
       { status: 401 }
     );
   }
+  const feedbackEnabled =
+    process.env.FEEDBACK_EMAIL_CRON_ENABLED === "true";
 
- if (process.env.FEEDBACK_EMAIL_CRON_ENABLED !== "true") {
+  const welcomeEnabled =
+    process.env.SHOPPER_WELCOME_EMAIL_CRON_ENABLED === "true";
+
+  if (!feedbackEnabled && !welcomeEnabled) {
     return NextResponse.json({
       ok: true,
       enabled: false,
-      message: "Feedback email delivery is not enabled.",
+      message: "Scheduled email delivery is not enabled.",
     });
   }
 
-  try {
-    const result = await dispatchFeedbackEmails();
+  const results: {
+    feedback?: Awaited<ReturnType<typeof dispatchFeedbackEmails>>;
+    welcome?: Awaited<ReturnType<typeof dispatchShopperWelcomeEmails>>;
+    welcomeStuckClaims?: number;
+  } = {};
 
-    console.log(
-      "[feedback-emails-cron] Run completed",
-      result
-    );
+  let failed = false;
 
-    return NextResponse.json({
-      ok: true,
-      ...result,
-    });
-  } catch {
-    console.error(
-      "[feedback-emails-cron] Run failed"
-    );
-
-    return NextResponse.json(
-      { error: "Feedback email dispatch failed." },
-      { status: 500 }
-    );
+  if (feedbackEnabled) {
+    try {
+      results.feedback = await dispatchFeedbackEmails();
+    } catch (error) {
+      failed = true;
+      console.error(
+        "[feedback-emails-cron] Feedback dispatch failed",
+        error
+      );
+    }
   }
+
+  if (welcomeEnabled) {
+    try {
+      results.welcome = await dispatchShopperWelcomeEmails();
+    } catch (error) {
+      failed = true;
+      console.error(
+        "[feedback-emails-cron] Welcome dispatch failed",
+        error
+      );
+    }
+
+    try {
+      results.welcomeStuckClaims =
+        await countStuckShopperWelcomeEmails();
+
+      if (results.welcomeStuckClaims > 0) {
+        console.warn(
+          "[feedback-emails-cron] Stuck welcome-email claims detected",
+          { count: results.welcomeStuckClaims }
+        );
+      }
+    } catch (error) {
+      failed = true;
+      console.error(
+        "[feedback-emails-cron] Stuck-claim monitoring failed",
+        error
+      );
+    }
+  }
+
+  console.log("[feedback-emails-cron] Run completed", {
+    feedbackEnabled,
+    welcomeEnabled,
+    failed,
+    results,
+  });
+
+  return NextResponse.json(
+    {
+      ok: !failed,
+      feedbackEnabled,
+      welcomeEnabled,
+      ...results,
+    },
+    { status: failed ? 500 : 200 }
+  );
 }

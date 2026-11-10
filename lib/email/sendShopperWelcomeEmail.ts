@@ -1,9 +1,19 @@
 import { Resend } from "resend";
 import { getSiteBaseUrl } from "@/lib/config/siteUrl";
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export async function sendShopperWelcomeEmail(opts: {
   to: string;
   firstName?: string | null;
+  idempotencyKey: string;
 }) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM_NO_REPLY;
@@ -38,7 +48,7 @@ export async function sendShopperWelcomeEmail(opts: {
       </p>
 
       <h2 style="margin:0 0 16px;font-size:24px;font-weight:400;color:#1a0a0e;line-height:1.3;">
-        ${greeting}
+        ${escapeHtml(greeting)}
       </h2>
 
       <p style="margin:0 0 16px;color:#6b5c4e;font-size:14px;line-height:1.7;">
@@ -104,12 +114,31 @@ Veilora Club
 ${baseUrl}
   `;
 
-  await resend.emails.send({
+  const { data, error } = await resend.emails.send(
+    {
     from,
     to: opts.to,
     subject: "Welcome to Veilora Club ✦",
     html,
     text,
     ...(replyTo ? { replyTo } : {}),
-  });
+  },
+    {
+      idempotencyKey: opts.idempotencyKey,
+    }
+  );
+
+  if (error) {
+    throw new Error(
+      "Welcome email delivery failed: " + error.name
+    );
+  }
+
+  if (!data?.id) {
+    throw new Error(
+      "Resend did not confirm acceptance of the welcome email."
+    );
+  }
+
+  return { id: data.id };
 }

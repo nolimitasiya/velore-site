@@ -15,8 +15,14 @@ import {
 } from "@/lib/auth/ShopperSession";
 
 import {
-  sendShopperWelcomeEmail,
-} from "@/lib/email/sendShopperWelcomeEmail";
+  generateShopperEmailVerificationCode,
+  hashShopperEmailVerificationCode,
+  getShopperEmailVerificationExpiry,
+} from "@/lib/auth/shopperEmailVerificationCode";
+
+import {
+  sendShopperEmailVerificationCode,
+} from "@/lib/email/sendShopperEmailVerificationCode";
 
 import {
   ShopperSessionCreationReason,
@@ -184,9 +190,15 @@ if (!passwordValidation.ok) {
     /*
      * Create shopper
      */
+    const verificationCode =
+      generateShopperEmailVerificationCode();
+
     const shopper =
-      await prisma.shopper.create({
-        data: {
+      await prisma.$transaction(async (tx) => {
+        const createdShopper =
+          await tx.shopper.create({
+            data: {
+
           email:
             email
               .toLowerCase()
@@ -217,25 +229,72 @@ if (!passwordValidation.ok) {
 
             countryCode:
   selectedCountry,
-        },
+            },
+          });
+
+        await tx.shopperEmailVerification.create({
+          data: {
+            shopperId: createdShopper.id,
+            email: createdShopper.email,
+            codeHash: hashShopperEmailVerificationCode(
+              verificationCode,
+              createdShopper.id,
+              createdShopper.email
+            ),
+            expiresAt:
+              getShopperEmailVerificationExpiry(),
+          },
+        });
+
+        return createdShopper;
       });
 
     /*
-     * Welcome email
+     * Send verification code after the
+     * shopper and challenge are committed.
      */
-    sendShopperWelcomeEmail({
-      to:
-        shopper.email,
+    try {
+      await sendShopperEmailVerificationCode({
+        to: shopper.email,
+        firstName: shopper.firstName,
+        code: verificationCode,
+      });
+    } catch (emailError) {
+      console.error(
+        "[shopper-verification-email]",
+        emailError
+      );
 
-      firstName:
-        shopper.firstName,
-    }).catch(
-      (err) =>
+      /*
+       * Email delivery failed.
+       *
+       * Invalidate this specific challenge
+       * while preserving the shopper account.
+       */
+      try {
+        await prisma.shopperEmailVerification.updateMany({
+          where: {
+            shopperId: shopper.id,
+            email: shopper.email,
+            codeHash:
+              hashShopperEmailVerificationCode(
+                verificationCode,
+                shopper.id,
+                shopper.email
+              ),
+            status: "PENDING",
+          },
+          data: {
+            status: "SUPERSEDED",
+          },
+        });
+      } catch (invalidationError) {
         console.error(
-          "[welcome-email]",
-          err
-        )
-    );
+          "[shopper-verification-invalidation]",
+          invalidationError
+        );
+      }
+    }
 
     const res =
       NextResponse.json({

@@ -1791,6 +1791,13 @@ model Shopper {
   id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email       String  @unique
   password    String
+  emailVerifiedAt DateTime?
+  welcomeEmailSentAt        DateTime?
+  welcomeEmailStatus        ShopperWelcomeEmailStatus @default(PENDING)
+  welcomeEmailAttempts      Int @default(0)
+  welcomeEmailClaimedAt     DateTime?
+  welcomeEmailNextAttemptAt DateTime?
+  welcomeEmailProviderId    String?
   firstName   String?
   lastName    String?
   countryCode String? @db.Char(2)
@@ -1804,8 +1811,43 @@ model Shopper {
   analyticsSessions AnalyticsSession[]
   fitProfile        ShopperFitProfile?
   emailChanges      ShopperEmailChange[]
+  emailVerifications ShopperEmailVerification[]
   authSessions      ShopperAuthSession[]
   feedbackSubmissions FeedbackSubmission[]
+}
+
+model ShopperEmailVerification {
+  id String @id @default(cuid())
+
+  shopperId String @db.Uuid
+  email String
+  codeHash String
+
+  status ShopperEmailVerificationStatus @default(PENDING)
+
+  expiresAt DateTime
+  usedAt DateTime?
+
+  attemptCount Int @default(0)
+  sentAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shopper Shopper @relation(fields: [shopperId], references: [id], onDelete: Cascade)
+
+  @@index([shopperId])
+  @@index([shopperId, status])
+  @@index([email])
+  @@index([expiresAt])
+}
+
+enum ShopperEmailVerificationStatus {
+  PENDING
+  VERIFIED
+  EXPIRED
+  LOCKED
+  SUPERSEDED
 }
 
 model ShopperEmailChange {
@@ -2676,4 +2718,11 @@ model FeedbackSubmission {
   @@index([shopperId])
   @@index([productId])
   @@index([createdAt])
+}
+
+enum ShopperWelcomeEmailStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
 }
