@@ -46,10 +46,25 @@ export async function GET(request: NextRequest) {
       process.env.SHOPPER_MARKETING_PROVIDER_SUBMISSION_ENABLED ===
       "true";
 
+    const allowedEmail = process.env.SHOPPER_MARKETING_ALLOWED_EMAIL
+      ?.trim()
+      .toLowerCase();
+
+    if (providerSubmissionEnabled && !allowedEmail) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Marketing provider submission requires an allowed email.",
+        },
+        { status: 503 }
+      );
+    }
+
     const result = await processOneShopperMarketingSync(
       prisma,
       {
         enableProviderSubmission: providerSubmissionEnabled,
+        allowedEmail: allowedEmail || undefined,
       }
     );
 
