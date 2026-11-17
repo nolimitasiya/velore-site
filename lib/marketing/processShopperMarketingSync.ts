@@ -385,6 +385,35 @@ export async function processOneShopperMarketingSync(
     }
   }
 
+  // Revalidate current consent immediately before provider submission.
+  const finalValidation =
+    await validateClaimedShopperMarketingSync(
+      db,
+      claimed.id,
+      claimed.claimToken
+    );
+
+  if (finalValidation.status === "SUPERSEDED") {
+    const transitioned =
+      await transitionShopperMarketingSync(
+        db,
+        claimed.id,
+        claimed.claimToken,
+        { status: "SUPERSEDED" }
+      );
+
+    return transitioned
+      ? { status: "SUPERSEDED" }
+      : { status: "TRANSITION_CONFLICT" };
+  }
+
+  if (finalValidation.status !== "READY") {
+    return {
+      status: "INVALID_CLAIM",
+      reason: finalValidation.reason,
+    };
+  }
+
   try {
     const submission =
       await submitShopperMarketingConsentToKlaviyo({
