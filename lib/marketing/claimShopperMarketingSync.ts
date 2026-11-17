@@ -130,9 +130,9 @@ export async function claimShopperMarketingSync(
     >`
       SELECT active."id"
       FROM "ShopperMarketingConsentSync" AS active
-      WHERE active."id" <> ${row.id}
+      WHERE active."id" <> ${row.id}::uuid
         AND (
-          active."shopperId" = ${row.shopperId}
+          active."shopperId" = ${row.shopperId}::uuid
           OR LOWER(BTRIM(active."email")) = ${normalisedEmail}
         )
         AND active."status" IN (
