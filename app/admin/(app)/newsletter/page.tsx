@@ -55,7 +55,7 @@ export default async function AdminNewsletterPage() {
       },
     });
   const total = subs.length;
-  const confirmed = subs.filter((s) => s.status === "confirmed").length;
+  const confirmed = subs.filter((s) => s.status === "subscribed").length;
   const pending = subs.filter((s) => s.status === "pending").length;
 
   return (

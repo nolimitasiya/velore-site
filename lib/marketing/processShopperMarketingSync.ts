@@ -193,7 +193,7 @@ export async function processOneShopperMarketingSync(
               equals: claimed.email,
               mode: "insensitive",
             },
-            status: "confirmed",
+            status: "subscribed",
           },
         });
     } catch {

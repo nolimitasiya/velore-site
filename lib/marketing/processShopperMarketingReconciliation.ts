@@ -124,7 +124,7 @@ export async function processShopperMarketingReconciliation(
               equals: operation.email,
               mode: "insensitive",
             },
-            status: "confirmed",
+            status: "subscribed",
           },
         });
 
