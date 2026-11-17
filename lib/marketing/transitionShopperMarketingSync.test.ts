@@ -124,6 +124,74 @@ describe("shopper marketing consent status transitions", () => {
     );
   });
 
+  it("records HTTP 202 acceptance without marking the operation applied", async () => {
+    const { db, updateMany } = makeDb();
+
+    const result = await transitionShopperMarketingSync(
+      db,
+      "operation-1",
+      "token-1",
+      {
+        status: "UNKNOWN",
+        providerAccepted: true,
+        error: "Klaviyo accepted HTTP 202 without a job ID",
+      }
+    );
+
+    expect(result).toBe(true);
+
+    expect(updateMany).toHaveBeenCalledWith({
+      where: {
+        id: "operation-1",
+        status: "PROCESSING",
+        claimToken: "token-1",
+      },
+      data: expect.objectContaining({
+        status: "UNKNOWN",
+        submittedAt: expect.any(Date),
+        lastError: "Klaviyo accepted HTTP 202 without a job ID",
+        claimToken: null,
+        claimedAt: null,
+        nextAttemptAt: null,
+      }),
+    });
+  });
+
+  it("does not record acceptance for an uncertain network outcome", async () => {
+    const { db, updateMany } = makeDb();
+
+    const result = await transitionShopperMarketingSync(
+      db,
+      "operation-1",
+      "token-1",
+      {
+        status: "UNKNOWN",
+        error: "Network timeout",
+      }
+    );
+
+    expect(result).toBe(true);
+
+    expect(updateMany).toHaveBeenCalledTimes(1);
+
+    const update = updateMany.mock.calls[0][0];
+
+    expect(update.where).toEqual({
+      id: "operation-1",
+      status: "PROCESSING",
+      claimToken: "token-1",
+    });
+
+    expect(update.data).toEqual({
+      status: "UNKNOWN",
+      lastError: "Network timeout",
+      claimToken: null,
+      claimedAt: null,
+      nextAttemptAt: null,
+    });
+
+    expect(update.data).not.toHaveProperty("submittedAt");
+  });
   it("records uncertain provider outcomes separately", async () => {
     const { db, updateMany } = makeDb();
 

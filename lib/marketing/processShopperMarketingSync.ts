@@ -459,6 +459,7 @@ export async function processOneShopperMarketingSync(
           claimed.claimToken,
           {
             status: "UNKNOWN",
+            providerAccepted: true,
             error:
               "Klaviyo accepted the request (HTTP 202) without a job ID; subscription state requires reconciliation.",
           }

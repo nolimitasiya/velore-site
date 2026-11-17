@@ -26,6 +26,7 @@ export type MarketingSyncTransition =
   | {
       status: "UNKNOWN";
       error: string;
+      providerAccepted?: boolean;
     };
 
 export async function transitionShopperMarketingSync(
@@ -89,6 +90,9 @@ export async function transitionShopperMarketingSync(
       data = {
         status: "UNKNOWN" as const,
         lastError: transition.error,
+        ...(transition.providerAccepted === true
+          ? { submittedAt: now }
+          : {}),
         claimToken: null,
         claimedAt: null,
         nextAttemptAt: null,
