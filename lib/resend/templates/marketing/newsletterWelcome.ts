@@ -6,6 +6,7 @@ import { veiloraEmailTemplate } from "../base/veiloraBase";
 export async function sendNewsletterWelcomeEmail(opts: {
   to: string;
   unsubscribeToken: string;
+  idempotencyKey?: string;
 }) {
   const subject = "Welcome to Veilora Club ✨";
 
@@ -73,5 +74,6 @@ export async function sendNewsletterWelcomeEmail(opts: {
     subject,
     html,
     replyTo: REPLY_TO_MARKETING,
+    idempotencyKey: opts.idempotencyKey,
   });
 }

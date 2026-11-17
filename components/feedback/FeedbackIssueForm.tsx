@@ -206,11 +206,18 @@ export default function FeedbackIssueForm({
   </div>
 )}
 
-      <button
+<button
   type="submit"
-  disabled
-  aria-disabled="true"
-  className="w-full cursor-not-allowed rounded-lg bg-[#7B2D3E] px-4 py-3 text-sm font-medium text-white opacity-50"
+  disabled={
+    isSubmitting ||
+    submissionResult?.ok === true ||
+    !category ||
+    message.trim().length < 20 ||
+    shopper.status === "IDLE" ||
+    shopper.status === "LOADING" ||
+    shopper.status === "UNAVAILABLE"
+  }
+  className="w-full rounded-lg bg-[#7B2D3E] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#632333] disabled:cursor-not-allowed disabled:opacity-50"
 >
   {isSubmitting ? "Submitting..." : "Submit report"}
 </button>

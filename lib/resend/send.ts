@@ -6,6 +6,7 @@ type SendEmailArgs = {
   subject: string;
   html: string;
   replyTo?: string;
+  idempotencyKey?: string;
 };
 
 export async function sendEmail(args: SendEmailArgs) {
@@ -20,7 +21,9 @@ export async function sendEmail(args: SendEmailArgs) {
     subject: args.subject,
     html: args.html,
     replyTo: args.replyTo,
-  });
+  }, args.idempotencyKey
+    ? { idempotencyKey: args.idempotencyKey }
+    : undefined);
 
   if (error) {
     console.error("[Resend] Email rejected:", {

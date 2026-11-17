@@ -4,7 +4,6 @@ import {
 } from "next/server";
 
 import { prisma } from "@/lib/prisma";
-import { syncWaitlistSubscriberToKlaviyo } from "@/lib/klaviyo/waitlist";
 import { ANALYTICS_SESSION_COOKIE } from "@/lib/analytics/session";
 
 export const runtime = "nodejs";
@@ -256,59 +255,13 @@ if (!emailPattern.test(email)) {
     });
 
     /*
-     * Existing Klaviyo behaviour
-     * remains unchanged.
+     * Waitlist registration does not itself authorise
+     * ongoing promotional marketing.
+     *
+     * Do not submit a Klaviyo marketing subscription here.
+     * Marketing consent must be obtained and verified
+     * through an appropriate consent workflow.
      */
-    try {
-      await syncWaitlistSubscriberToKlaviyo({
-  email,
-
-  name:
-    friendlyName,
-
-  attribution: {
-    source:
-      analyticsSession
-        ?.acquisitionSource ??
-      null,
-
-    medium:
-      analyticsSession
-        ?.acquisitionMedium ??
-      null,
-
-    campaign:
-      analyticsSession
-        ?.acquisitionCampaign ??
-      null,
-
-    content:
-      analyticsSession
-        ?.acquisitionContent ??
-      null,
-
-    term:
-      analyticsSession
-        ?.acquisitionTerm ??
-      null,
-
-    referrer:
-      analyticsSession
-        ?.referrer ??
-      null,
-
-    landingPath:
-      analyticsSession
-        ?.landingPath ??
-      null,
-  },
-});
-    } catch (err) {
-      console.error(
-        "[waitlist] Klaviyo sync failed",
-        err
-      );
-    }
 
     return NextResponse.json({
       ok: true,

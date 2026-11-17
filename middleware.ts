@@ -109,6 +109,8 @@ function isLaunchPublicPage(pathname: string) {
 
 function isLaunchPublicApi(pathname: string) {
   return (
+    (process.env.NODE_ENV === "development" &&
+      pathname === "/api/feedback") ||
     pathname === "/api/waitlist" ||
     pathname.startsWith("/api/waitlist/") ||
     pathname === "/api/brand-apply" ||

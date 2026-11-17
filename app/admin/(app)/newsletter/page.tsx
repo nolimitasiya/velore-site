@@ -1,21 +1,59 @@
 import NewsletterTableClient from "./NewsletterTableClient";
+import NewsletterWelcomeReconciliation from "./NewsletterWelcomeReconciliation";
+import NewsletterWelcomeMonitoring from "./NewsletterWelcomeMonitoring";
+import ShopperMarketingConsentReview from "./ShopperMarketingConsentReview";
+import { listNewsletterWelcomeReconciliationEvents } from "@/lib/marketing/listNewsletterWelcomeReconciliationEvents";
+import { getNewsletterWelcomeMonitoringSummary } from "@/lib/marketing/getNewsletterWelcomeMonitoringSummary";
+import { getNewsletterWelcomeStaleMonitoringCutoff } from "@/lib/marketing/newsletterWelcomeMonitoringConfig";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function AdminNewsletterPage() {
-  const subs = await prisma.newsletterSubscriber.findMany({
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      email: true,
-      source: true,
-      status: true,
-      createdAt: true,
-    },
-  });
+  const staleBefore = getNewsletterWelcomeStaleMonitoringCutoff();
 
+  const [subs, welcomeEvents, welcomeMonitoring] = await Promise.all([
+    prisma.newsletterSubscriber.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        email: true,
+        source: true,
+        status: true,
+        createdAt: true,
+      },
+    }),
+    listNewsletterWelcomeReconciliationEvents(prisma),
+    getNewsletterWelcomeMonitoringSummary(prisma, { staleBefore }),
+  ]);
+
+  const shopperMarketingOperations =
+    await prisma.shopperMarketingConsentSync.findMany({
+      where: {
+        status: {
+          in: ["PENDING", "FAILED", "SUBMITTED", "UNKNOWN"],
+        },
+      },
+      orderBy: [
+        { createdAt: "desc" },
+        { id: "desc" },
+      ],
+      take: 50,
+      select: {
+        id: true,
+        email: true,
+        desiredConsent: true,
+        reason: true,
+        status: true,
+        consentVersion: true,
+        providerJobId: true,
+        lastError: true,
+        createdAt: true,
+        submittedAt: true,
+        lastCheckedAt: true,
+      },
+    });
   const total = subs.length;
   const confirmed = subs.filter((s) => s.status === "confirmed").length;
   const pending = subs.filter((s) => s.status === "pending").length;
@@ -61,6 +99,14 @@ export default async function AdminNewsletterPage() {
             ...s,
             createdAt: s.createdAt.toISOString(),
           }))}
+        />
+
+        <NewsletterWelcomeMonitoring summary={welcomeMonitoring} />
+
+        <NewsletterWelcomeReconciliation events={welcomeEvents} />
+
+        <ShopperMarketingConsentReview
+          operations={shopperMarketingOperations}
         />
 
       </div>

@@ -4,6 +4,9 @@ const mocks = vi.hoisted(() => ({
   requireAdminSession: vi.fn(),
   findUnique: vi.fn(),
   update: vi.fn(),
+  transaction: vi.fn(),
+  queryRaw: vi.fn(),
+  executeRaw: vi.fn(),
   sendNewsletterConfirmEmail: vi.fn(),
 }));
 
@@ -15,6 +18,7 @@ vi.mock("@/lib/auth/AdminSession", () => ({
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
+    $transaction: mocks.transaction,
     newsletterSubscriber: {
       findUnique: mocks.findUnique,
       update: mocks.update,
@@ -74,6 +78,25 @@ describe("Individual Admin newsletter reminder URL safety", () => {
       email: "shopper@example.com",
       status: "pending",
       unsubscribeToken: "unsubscribe-token",
+    });
+
+    mocks.executeRaw.mockResolvedValue(1);
+
+    mocks.queryRaw.mockImplementation(async () => {
+      const subscriber = await mocks.findUnique.mock.results.at(-1)?.value;
+
+      return subscriber ? [subscriber] : [];
+    });
+
+    mocks.transaction.mockImplementation(async (callback) => {
+      return callback({
+        newsletterSubscriber: {
+          findUnique: mocks.findUnique,
+          update: mocks.update,
+        },
+        $queryRaw: mocks.queryRaw,
+        $executeRaw: mocks.executeRaw,
+      });
     });
 
     mocks.update.mockResolvedValue({
@@ -240,8 +263,6 @@ describe("Individual Admin newsletter reminder URL safety", () => {
       select: {
         id: true,
         email: true,
-        status: true,
-        unsubscribeToken: true,
       },
     });
   });
@@ -283,6 +304,31 @@ describe("Individual Admin newsletter reminder URL safety", () => {
     expectNoMutationOrEmail();
   });
 
+  it("preserves an existing pending confirmation token when sending a reminder", async () => {
+    const existingToken = "existing-pending-confirmation-token";
+
+    mocks.findUnique.mockResolvedValue({
+      id: "subscriber-1",
+      email: "shopper@example.com",
+      status: "pending",
+      confirmToken: existingToken,
+      unsubscribeToken: "unsubscribe-token",
+    });
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true });
+
+    expect(mocks.update).not.toHaveBeenCalled();
+
+    expect(mocks.sendNewsletterConfirmEmail).toHaveBeenCalledOnce();
+    expect(mocks.sendNewsletterConfirmEmail).toHaveBeenCalledWith({
+      to: "shopper@example.com",
+      confirmToken: existingToken,
+      unsubscribeToken: "unsubscribe-token",
+    });
+  });
   it("generates a fresh 48-character hexadecimal confirmation token", async () => {
     await POST(request());
 
@@ -303,9 +349,17 @@ describe("Individual Admin newsletter reminder URL safety", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true });
 
+    expect(mocks.update).toHaveBeenCalledOnce();
+    expect(mocks.sendNewsletterConfirmEmail).toHaveBeenCalledOnce();
+
+    const persistedToken =
+      mocks.update.mock.calls[0][0].data.confirmToken;
+
+    expect(persistedToken).toMatch(/^[0-9a-f]{48}$/);
+
     expect(mocks.sendNewsletterConfirmEmail).toHaveBeenCalledWith({
       to: "shopper@example.com",
-      confirmToken: "new-confirm-token",
+      confirmToken: persistedToken,
       unsubscribeToken: "unsubscribe-token",
     });
   });
@@ -355,15 +409,22 @@ describe("Individual Admin newsletter reminder URL safety", () => {
   });
 
   it("preserves existing missing-unsubscribe-token handling", async () => {
-    mocks.update.mockResolvedValue({
+    mocks.findUnique.mockResolvedValue({
+      id: "subscriber-1",
       email: "shopper@example.com",
-      confirmToken: "new-confirm-token",
+      status: "pending",
       unsubscribeToken: null,
     });
 
     const response = await POST(request());
 
     expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({
+      ok: false,
+      error: "Missing unsub token",
+    });
+
+    expect(mocks.update).not.toHaveBeenCalled();
     expect(mocks.sendNewsletterConfirmEmail).not.toHaveBeenCalled();
   });
 
@@ -407,5 +468,212 @@ describe("Individual Admin newsletter reminder URL safety", () => {
     expect(body).not.toContain("not-a-valid-url");
 
     expectNoDatabaseAccess();
+  });
+});
+
+describe("Admin newsletter reminder transaction security", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://www.veiloraclub.com");
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "");
+
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    mocks.requireAdminSession.mockResolvedValue({ id: "admin-1" });
+
+    mocks.findUnique.mockResolvedValue({
+      id: "subscriber-1",
+      email: "shopper@example.com",
+    });
+
+    mocks.executeRaw.mockResolvedValue(1);
+
+    mocks.queryRaw.mockResolvedValue([
+      {
+        id: "subscriber-1",
+        email: "shopper@example.com",
+        status: "pending",
+        unsubscribeToken: "unsubscribe-token",
+      },
+    ]);
+
+    mocks.update.mockResolvedValue({});
+
+    mocks.sendNewsletterConfirmEmail.mockResolvedValue({
+      id: "mock-email-id",
+    });
+
+    mocks.transaction.mockImplementation(async (callback) => {
+      return callback({
+        newsletterSubscriber: {
+          findUnique: mocks.findUnique,
+          update: mocks.update,
+        },
+        $queryRaw: mocks.queryRaw,
+        $executeRaw: mocks.executeRaw,
+      });
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it("acquires the advisory lock before reading the locked subscriber", async () => {
+    const order: string[] = [];
+
+    mocks.executeRaw.mockImplementation(async () => {
+      order.push("advisory-lock");
+      return 1;
+    });
+
+    mocks.queryRaw.mockImplementation(async () => {
+      order.push("locked-read");
+      return [
+        {
+          id: "subscriber-1",
+          email: "shopper@example.com",
+          status: "pending",
+          unsubscribeToken: "unsubscribe-token",
+        },
+      ];
+    });
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(200);
+    expect(order).toEqual(["advisory-lock", "locked-read"]);
+    expect(mocks.executeRaw).toHaveBeenCalledOnce();
+    expect(mocks.queryRaw).toHaveBeenCalledOnce();
+  });
+
+  it("rejects a subscriber who becomes unsubscribed before the locked read", async () => {
+    mocks.queryRaw.mockResolvedValue([
+      {
+        id: "subscriber-1",
+        email: "shopper@example.com",
+        status: "unsubscribed",
+        unsubscribeToken: "unsubscribe-token",
+      },
+    ]);
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(400);
+    expectNoMutationOrEmail();
+  });
+
+  it("rejects a subscriber who becomes subscribed before the locked read", async () => {
+    mocks.queryRaw.mockResolvedValue([
+      {
+        id: "subscriber-1",
+        email: "shopper@example.com",
+        status: "subscribed",
+        unsubscribeToken: "unsubscribe-token",
+      },
+    ]);
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(400);
+    expectNoMutationOrEmail();
+  });
+
+  it("rejects a subscriber who disappears before the locked read", async () => {
+    mocks.queryRaw.mockResolvedValue([]);
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(404);
+    expectNoMutationOrEmail();
+  });
+
+  it("rejects a subscriber whose email changes before the locked read", async () => {
+    mocks.queryRaw.mockResolvedValue([
+      {
+        id: "subscriber-1",
+        email: "different@example.com",
+        status: "pending",
+        unsubscribeToken: "unsubscribe-token",
+      },
+    ]);
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(404);
+    expectNoMutationOrEmail();
+  });
+
+  it("does not update or email when advisory lock acquisition fails", async () => {
+    mocks.executeRaw.mockRejectedValue(
+      new Error("Mock advisory lock failure")
+    );
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(500);
+    expect(mocks.queryRaw).not.toHaveBeenCalled();
+    expectNoMutationOrEmail();
+  });
+
+  it("does not email when the transaction fails after updating", async () => {
+    mocks.transaction.mockImplementation(async (callback) => {
+      const tx = {
+        newsletterSubscriber: {
+          findUnique: mocks.findUnique,
+          update: mocks.update,
+        },
+        $queryRaw: mocks.queryRaw,
+        $executeRaw: mocks.executeRaw,
+      };
+
+      await callback(tx);
+
+      throw new Error("Mock transaction commit failure");
+    });
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(500);
+    expect(mocks.update).toHaveBeenCalledOnce();
+    expect(mocks.sendNewsletterConfirmEmail).not.toHaveBeenCalled();
+  });
+
+  it("sends the email only after the transaction completes", async () => {
+    const order: string[] = [];
+
+    mocks.transaction.mockImplementation(async (callback) => {
+      order.push("transaction-start");
+
+      const result = await callback({
+        newsletterSubscriber: {
+          findUnique: mocks.findUnique,
+          update: mocks.update,
+        },
+        $queryRaw: mocks.queryRaw,
+        $executeRaw: mocks.executeRaw,
+      });
+
+      order.push("transaction-complete");
+
+      return result;
+    });
+
+    mocks.sendNewsletterConfirmEmail.mockImplementation(async () => {
+      order.push("email");
+      return {};
+    });
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(200);
+    expect(order).toEqual([
+      "transaction-start",
+      "transaction-complete",
+      "email",
+    ]);
   });
 });

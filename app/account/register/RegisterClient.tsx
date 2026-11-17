@@ -9,6 +9,7 @@ export default function RegisterClient() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [dateOfBirth, setDateOfBirth] =  useState("");
+  const [marketingConsent, setMarketingConsent] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   
@@ -99,14 +100,21 @@ if (age < 13) {
   );
   return;
 }
-    setBusy(true);
+setBusy(true);
     setErr(null);
     try {
       const r = await fetch("/api/account/auth/register", {
         method: "POST",
         headers: { "content-type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email, password, firstName, lastName, dateOfBirth,}),
+        body: JSON.stringify({
+          email,
+          password,
+          firstName,
+          lastName,
+          dateOfBirth,
+          marketingConsent: age >= 18 && marketingConsent,
+        }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) {
@@ -118,6 +126,29 @@ if (age < 13) {
       setBusy(false);
     }
   }
+
+  const ageForMarketing = (() => {
+    if (!dateOfBirth) return null;
+
+    const dob = new Date(`${dateOfBirth}T00:00:00.000Z`);
+
+    if (Number.isNaN(dob.getTime())) return null;
+
+    const today = new Date();
+
+    let age = today.getUTCFullYear() - dob.getUTCFullYear();
+
+    const monthDifference = today.getUTCMonth() - dob.getUTCMonth();
+
+    if (
+      monthDifference < 0 ||
+      (monthDifference === 0 && today.getUTCDate() < dob.getUTCDate())
+    ) {
+      age -= 1;
+    }
+
+    return age;
+  })();
 
   return (
     <AuthShell
@@ -162,11 +193,10 @@ if (age < 13) {
     type="date"
     className="mt-1 w-full rounded border border-[#d8c9b5] bg-white px-4 py-3 text-sm text-[#1a0a0e] outline-none focus:border-[#7B2D3E]"
     value={dateOfBirth}
-    onChange={(e) =>
-      setDateOfBirth(
-        e.target.value
-      )
-    }
+    onChange={(e) => {
+      setDateOfBirth(e.target.value);
+      setMarketingConsent(false);
+    }}
     required
   />
 
@@ -206,6 +236,27 @@ if (age < 13) {
   At least 10 characters, including an uppercase
   letter, lowercase letter, number and symbol.
 </p>
+        </div>
+
+        <div className="rounded border border-[#e6d9c9] bg-[#faf7f3] px-4 py-4">
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              checked={ageForMarketing !== null && ageForMarketing >= 18 && marketingConsent}
+              onChange={(e) => setMarketingConsent(e.target.checked)}
+              disabled={ageForMarketing === null || ageForMarketing < 18}
+              className="mt-1 h-4 w-4 shrink-0 accent-[#7B2D3E]"
+            />
+            <span className="text-xs leading-relaxed text-[#6b5c4e]">
+              I'd love to receive updates from Veilora Club, including new brands,
+              curated collections and exclusive discoveries. I can unsubscribe at any time.
+            </span>
+          </label>
+          {ageForMarketing !== null && ageForMarketing < 18 && (
+            <p className="mt-2 text-[11px] text-[#a89280]">
+              Marketing updates are available to shoppers aged 18 or over.
+            </p>
+          )}
         </div>
 
         <button

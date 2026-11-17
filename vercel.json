@@ -1,24 +1,32 @@
 {
-  "crons": [
-    {
-      "path": "/api/cron/platform-health",
-      "schedule": "* * * * *"
-    },
-    {
-      "path": "/api/cron/platform-health-history",
-      "schedule": "5 * * * *"
-    },
-    {
-      "path": "/api/cron/catalogue-health",
-      "schedule": "*/15 * * * *"
-    },
-    {
-      "path": "/api/admin/snapshots/daily",
-      "schedule": "0 1 * * *"
-    },
-    {
-  "path": "/api/cron/feedback-emails",
-  "schedule": "*/5 * * * *"
-}
-  ]
+    "crons":  [
+                  {
+                      "path":  "/api/cron/platform-health",
+                      "schedule":  "* * * * *"
+                  },
+                  {
+                      "path":  "/api/cron/platform-health-history",
+                      "schedule":  "5 * * * *"
+                  },
+                  {
+                      "path":  "/api/cron/catalogue-health",
+                      "schedule":  "*/15 * * * *"
+                  },
+                  {
+                      "path":  "/api/admin/snapshots/daily",
+                      "schedule":  "0 1 * * *"
+                  },
+                  {
+                      "path":  "/api/cron/feedback-emails",
+                      "schedule":  "*/5 * * * *"
+                  },
+                  {
+                      "path":  "/api/cron/shopper-marketing-sync",
+                      "schedule":  "*/5 * * * *"
+                  },
+                  {
+                      "path":  "/api/cron/newsletter-welcome",
+                      "schedule":  "*/5 * * * *"
+                  }
+              ]
 }

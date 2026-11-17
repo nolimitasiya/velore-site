@@ -6,6 +6,8 @@ import {
   useState,
 } from "react";
 
+import MarketingPreferences from "./MarketingPreferences";
+
 type ShopperProfile = {
   id: string;
   email: string;
@@ -745,6 +747,8 @@ async function verifyEmailChange(
 </form>
   )}
 </section>
+
+        <MarketingPreferences />
 
         {/* Password */}
 <section>

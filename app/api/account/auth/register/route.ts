@@ -47,6 +47,7 @@ export async function POST(
       firstName,
       lastName,
       dateOfBirth,
+      marketingConsent: requestedMarketingConsent,
     } = await req.json();
 
     /*
@@ -102,8 +103,11 @@ if (!passwordValidation.ok) {
       );
 
     if (
-      Number.isNaN(
-        parsedDateOfBirth.getTime()
+      (
+        typeof dateOfBirth !== "string" ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth) ||
+        Number.isNaN(parsedDateOfBirth.getTime()) ||
+        parsedDateOfBirth.toISOString().slice(0, 10) !== dateOfBirth
       )
     ) {
       return NextResponse.json(
@@ -146,6 +150,43 @@ if (!passwordValidation.ok) {
         {
           error:
             "You must be at least 13 years old to create a Veilora account.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    /*
+     * Marketing consent is optional and must be explicit.
+     * Missing consent defaults to false.
+     */
+    if (
+      requestedMarketingConsent !== undefined &&
+      typeof requestedMarketingConsent !== "boolean"
+    ) {
+      return NextResponse.json(
+        {
+          error: "Invalid marketing consent value.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const marketingConsent =
+      requestedMarketingConsent === true;
+
+    /*
+     * Marketing opt-in is restricted to adults.
+     * Shoppers aged 13-17 may still register.
+     */
+    if (marketingConsent && age < 18) {
+      return NextResponse.json(
+        {
+          error:
+            "Marketing updates are available to shoppers aged 18 or over.",
         },
         {
           status: 400,
@@ -226,6 +267,15 @@ if (!passwordValidation.ok) {
            */
           dateOfBirth:
             parsedDateOfBirth,
+
+          marketingConsent:
+            marketingConsent,
+
+          marketingConsentAt:
+            marketingConsent ? new Date() : null,
+
+          marketingConsentSource:
+            marketingConsent ? "REGISTRATION" : null,
 
             countryCode:
   selectedCountry,

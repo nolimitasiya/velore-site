@@ -376,6 +376,7 @@ model NewsletterSubscriber {
   source           String?
   createdAt        DateTime  @default(now())
   status           String    @default("pending")
+  subscriptionGeneration Int @default(0)
   tags             String[]
   updatedAt        DateTime  @updatedAt
   confirmToken     String?   @unique
@@ -383,6 +384,59 @@ model NewsletterSubscriber {
   unsubscribeToken String?   @unique
   unsubscribedAt   DateTime?
   countryCode      String?   @db.Char(2)
+  welcomeEvents    NewsletterWelcomeEvent[]
+}
+
+enum NewsletterWelcomeEventStatus {
+  PENDING
+  PROCESSING
+  SUBMITTING
+  SENT
+  FAILED
+  CANCELLED
+  UNKNOWN
+}
+
+model NewsletterWelcomeEvent {
+  id                     String                       @id @default(uuid())
+  subscriberId           String
+  subscriptionGeneration Int
+  eventKey               String                       @unique
+  status                 NewsletterWelcomeEventStatus @default(PENDING)
+  attemptCount           Int                          @default(0)
+  claimToken             String?
+  claimedAt              DateTime?
+  nextAttemptAt          DateTime?
+  submittedAt            DateTime?
+  providerMessageId      String?
+  lastError              String?
+  createdAt              DateTime                     @default(now())
+  updatedAt              DateTime                     @updatedAt
+
+  subscriber NewsletterSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+  reconciliationAudits NewsletterWelcomeReconciliationAudit[]
+
+  @@unique([subscriberId, subscriptionGeneration])
+  @@index([status, nextAttemptAt, createdAt])
+  @@index([subscriberId, status])
+}
+
+model NewsletterWelcomeReconciliationAudit {
+  id                String   @id @default(uuid())
+  welcomeEventId    String
+  adminId           String
+  previousStatus    NewsletterWelcomeEventStatus
+  resultingStatus   NewsletterWelcomeEventStatus
+  evidenceOutcome   String
+  evidenceReference String
+  reason            String
+  providerMessageId String?
+  createdAt         DateTime @default(now())
+
+  welcomeEvent NewsletterWelcomeEvent @relation(fields: [welcomeEventId], references: [id], onDelete: Restrict)
+
+  @@index([welcomeEventId, createdAt])
+  @@index([adminId, createdAt])
 }
 
 model BrandApplication {
@@ -1792,6 +1846,10 @@ model Shopper {
   email       String  @unique
   password    String
   emailVerifiedAt DateTime?
+  marketingConsent       Boolean   @default(false)
+  marketingConsentAt     DateTime?
+  marketingConsentSource String?
+  marketingConsentVersion Int @default(0)
   welcomeEmailSentAt        DateTime?
   welcomeEmailStatus        ShopperWelcomeEmailStatus @default(PENDING)
   welcomeEmailAttempts      Int @default(0)
@@ -1814,6 +1872,8 @@ model Shopper {
   emailVerifications ShopperEmailVerification[]
   authSessions      ShopperAuthSession[]
   feedbackSubmissions FeedbackSubmission[]
+  marketingEvents ShopperMarketingEvent[]
+  marketingConsentSyncs ShopperMarketingConsentSync[]
 }
 
 model ShopperEmailVerification {
@@ -2725,4 +2785,105 @@ enum ShopperWelcomeEmailStatus {
   PROCESSING
   SENT
   FAILED
+}
+
+model ShopperMarketingEvent {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  shopperId String @db.Uuid
+  shopper Shopper @relation(fields: [shopperId], references: [id], onDelete: Cascade)
+
+  eventType ShopperMarketingEventType
+  eventKey String @unique
+
+  status ShopperMarketingEventStatus @default(PENDING)
+
+  attemptCount Int @default(0)
+  claimedAt DateTime?
+  claimToken String? @db.Uuid
+  nextAttemptAt DateTime?
+
+  sentAt DateTime?
+  lastError String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shopperId, eventType])
+  @@index([status, nextAttemptAt, createdAt])
+  @@index([status, claimedAt])
+}
+
+enum ShopperMarketingEventType {
+  SHOPPER_EMAIL_VERIFIED
+}
+
+enum ShopperMarketingEventStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+model ShopperMarketingConsentSync {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  shopperId String @db.Uuid
+  shopper Shopper @relation(fields: [shopperId], references: [id], onDelete: Cascade)
+
+  operationKey String @unique
+  email String
+
+  consentVersion Int
+  desiredConsent Boolean
+  reason ShopperMarketingConsentSyncReason
+
+  status ShopperMarketingConsentSyncStatus @default(PENDING)
+
+  attemptCount Int @default(0)
+  claimedAt DateTime?
+  claimToken String? @db.Uuid
+  nextAttemptAt DateTime?
+
+  submittedAt DateTime?
+  providerJobId String?
+  providerOperationType ShopperMarketingProviderOperationType?
+  lastCheckedAt DateTime?
+  reconciledAt DateTime?
+  appliedAt DateTime?
+  lastError String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shopperId, consentVersion])
+  @@index([email, status])
+  @@index([status, nextAttemptAt, createdAt])
+  @@index([status, claimedAt])
+}
+
+enum ShopperMarketingConsentSyncReason {
+  REGISTRATION
+  ACCOUNT_OPT_IN
+  ACCOUNT_OPT_OUT
+  EMAIL_CHANGE_OLD_ADDRESS
+  EMAIL_CHANGE_NEW_ADDRESS
+  RECONCILIATION
+}
+
+enum ShopperMarketingConsentSyncStatus {
+  PENDING
+  PROCESSING
+  SUBMITTED
+  APPLIED
+  FAILED
+  UNKNOWN
+  SUPERSEDED
+}
+
+enum ShopperMarketingProviderOperationType {
+  SUBSCRIBE
+  UNSUBSCRIBE
+  REMOVE_FROM_SHOPPER_LIST
 }

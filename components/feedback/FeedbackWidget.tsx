@@ -16,7 +16,7 @@ export default function FeedbackWidget() {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<FeedbackView>("CHOOSER");
   // Disabled until production database safety checks are complete.
-const FEEDBACK_AUTH_LOOKUP_ENABLED = false;
+const FEEDBACK_AUTH_LOOKUP_ENABLED = true;
 
 const shopper = useFeedbackShopper(
   FEEDBACK_AUTH_LOOKUP_ENABLED && open

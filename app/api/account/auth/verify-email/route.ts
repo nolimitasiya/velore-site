@@ -9,6 +9,9 @@ import {
 } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import {
+  isShopperMarketingEligible,
+} from "@/lib/marketing/shopperMarketingEligibility";
 
 import {
   requireAuthenticatedShopper,
@@ -264,6 +267,35 @@ export async function POST(req: NextRequest) {
               ShopperEmailVerificationStatus.SUPERSEDED,
           },
         });
+
+        const marketingShopper =
+          await tx.shopper.findUnique({
+            where: {
+              id: shopper.id,
+            },
+            select: {
+              marketingConsent: true,
+              marketingConsentAt: true,
+              dateOfBirth: true,
+            },
+          });
+
+        if (
+          marketingShopper &&
+          isShopperMarketingEligible(
+            marketingShopper,
+            now
+          )
+        ) {
+          await tx.shopperMarketingEvent.create({
+            data: {
+              shopperId: shopper.id,
+              eventType: "SHOPPER_EMAIL_VERIFIED",
+              eventKey:
+                `SHOPPER_EMAIL_VERIFIED:${shopper.id}`,
+            },
+          });
+        }
 
         return {
           status: "VERIFIED" as const,

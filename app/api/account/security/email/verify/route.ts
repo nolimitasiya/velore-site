@@ -11,6 +11,9 @@ import {
 
 import { prisma } from "@/lib/prisma";
 import {
+  createShopperMarketingConsentSync,
+} from "@/lib/marketing/createShopperMarketingConsentSync";
+import {
   requireAuthenticatedShopper,
 } from "@/lib/auth/ShopperSession";
 
@@ -256,6 +259,7 @@ if (
                 select: {
                   id: true,
                   email: true,
+                  marketingConsentVersion: true,
                 },
               });
 
@@ -303,11 +307,52 @@ if (
                 data: {
                   email:
                     challenge.newEmail,
+                  emailVerifiedAt: new Date(),
+                  marketingConsent: false,
+                  marketingConsentAt: null,
+                  marketingConsentSource: null,
+                  marketingConsentVersion: {
+                    increment: 1,
+                  },
                 },
                 select: {
                   email: true,
                 },
               });
+
+            const nextConsentVersion =
+              shopper.marketingConsentVersion + 1;
+
+            await tx.shopperMarketingEvent.updateMany({
+              where: {
+                shopperId: shopper.id,
+                status: {
+                  in: ["PENDING", "FAILED"],
+                },
+              },
+              data: {
+                status: "CANCELLED",
+                nextAttemptAt: null,
+              },
+            });
+
+            await createShopperMarketingConsentSync({
+              tx,
+              shopperId: shopper.id,
+              email: shopper.email,
+              consentVersion: nextConsentVersion,
+              desiredConsent: false,
+              reason: "EMAIL_CHANGE_OLD_ADDRESS",
+            });
+
+            await createShopperMarketingConsentSync({
+              tx,
+              shopperId: shopper.id,
+              email: challenge.newEmail,
+              consentVersion: nextConsentVersion,
+              desiredConsent: false,
+              reason: "EMAIL_CHANGE_NEW_ADDRESS",
+            });
 
             await tx.shopperEmailChange.update({
               where: {
@@ -320,6 +365,10 @@ if (
             });
 
             return updatedShopper;
+          },
+          {
+            isolationLevel:
+              Prisma.TransactionIsolationLevel.Serializable,
           }
         );
 
@@ -394,6 +443,22 @@ if (
           {
             error:
               "An account already exists with this email address.",
+          },
+          {
+            status: 409,
+          }
+        );
+      }
+
+      if (
+        error instanceof
+          Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2034"
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Your email change could not be completed because of a concurrent update. Please try verifying again.",
           },
           {
             status: 409,

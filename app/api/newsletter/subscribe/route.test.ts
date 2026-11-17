@@ -1,22 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  findUnique: vi.fn(),
-  create: vi.fn(),
-  update: vi.fn(),
+  createNewsletterSubscription: vi.fn(),
   sendNewsletterConfirmEmail: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
 
-vi.mock("@/lib/prisma", () => ({
-  prisma: {
-    newsletterSubscriber: {
-      findUnique: mocks.findUnique,
-      create: mocks.create,
-      update: mocks.update,
-    },
-  },
+vi.mock("@/lib/marketing/createNewsletterSubscription", () => ({
+  createNewsletterSubscription: mocks.createNewsletterSubscription,
 }));
 
 vi.mock(
@@ -27,6 +19,15 @@ vi.mock(
 );
 
 import { POST } from "./route";
+
+const pendingResult = {
+  status: "pending" as const,
+  sendConfirmation: true as const,
+  email: "shopper@example.com",
+  confirmToken: "new-confirm-token",
+  unsubscribeToken: "new-unsubscribe-token",
+  subscriptionGeneration: 0,
+};
 
 function request(body: unknown): Request {
   return new Request("https://www.veiloraclub.com/api/newsletter/subscribe", {
@@ -54,14 +55,10 @@ async function responseBody(response: Response) {
 }
 
 function expectNoDatabaseAccess() {
-  expect(mocks.findUnique).not.toHaveBeenCalled();
-  expect(mocks.create).not.toHaveBeenCalled();
-  expect(mocks.update).not.toHaveBeenCalled();
+  expect(mocks.createNewsletterSubscription).not.toHaveBeenCalled();
 }
 
 function expectNoMutationOrEmail() {
-  expect(mocks.create).not.toHaveBeenCalled();
-  expect(mocks.update).not.toHaveBeenCalled();
   expect(mocks.sendNewsletterConfirmEmail).not.toHaveBeenCalled();
 }
 
@@ -78,17 +75,10 @@ describe("Newsletter subscribe route canonical URL safety", () => {
 
     vi.spyOn(console, "error").mockImplementation(() => {});
 
-    mocks.findUnique.mockResolvedValue(null);
-    mocks.create.mockResolvedValue({
-      email: "shopper@example.com",
-      confirmToken: "new-confirm-token",
-      unsubscribeToken: "new-unsubscribe-token",
+    mocks.createNewsletterSubscription.mockResolvedValue({
+      ...pendingResult,
     });
-    mocks.update.mockResolvedValue({
-      email: "shopper@example.com",
-      confirmToken: "rotated-confirm-token",
-      unsubscribeToken: "existing-unsubscribe-token",
-    });
+
     mocks.sendNewsletterConfirmEmail.mockResolvedValue({
       id: "mock-email-id",
     });
@@ -108,42 +98,39 @@ describe("Newsletter subscribe route canonical URL safety", () => {
       status: "pending",
     });
 
-    expect(mocks.create).toHaveBeenCalledTimes(1);
-    expect(mocks.create.mock.calls[0][0].data.status).toBe("pending");
+    expect(mocks.createNewsletterSubscription).toHaveBeenCalledTimes(1);
   });
 
   it("normalises subscriber email before lookup", async () => {
     await POST(validRequest());
 
-    expect(mocks.findUnique).toHaveBeenCalledWith({
-      where: { email: "shopper@example.com" },
-      select: {
-        id: true,
-        status: true,
-        unsubscribeToken: true,
-      },
+    expect(mocks.createNewsletterSubscription).toHaveBeenCalledWith({
+      email: "SHOPPER@EXAMPLE.COM",
+      source: "launch",
+      tags: ["waitlist"],
     });
   });
 
   it("preserves subscriber source and tags", async () => {
     await POST(validRequest());
 
-    expect(mocks.create.mock.calls[0][0].data).toMatchObject({
-      email: "shopper@example.com",
-      source: "launch",
-      tags: ["waitlist"],
-      status: "pending",
-    });
+    expect(mocks.createNewsletterSubscription).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: "launch",
+        tags: ["waitlist"],
+      })
+    );
   });
 
-  it("generates separate confirmation and unsubscribe tokens", async () => {
+  it("delegates token generation to the transactional helper", async () => {
     await POST(validRequest());
 
-    const data = mocks.create.mock.calls[0][0].data;
-
-    expect(data.confirmToken).toMatch(/^[a-f0-9]{48}$/);
-    expect(data.unsubscribeToken).toMatch(/^[a-f0-9]{48}$/);
-    expect(data.confirmToken).not.toBe(data.unsubscribeToken);
+    expect(mocks.createNewsletterSubscription).toHaveBeenCalledTimes(1);
+    expect(mocks.sendNewsletterConfirmEmail).toHaveBeenCalledWith({
+      to: pendingResult.email,
+      confirmToken: pendingResult.confirmToken,
+      unsubscribeToken: pendingResult.unsubscribeToken,
+    });
   });
 
   it("sends the new subscriber's confirmation tokens", async () => {
@@ -157,10 +144,9 @@ describe("Newsletter subscribe route canonical URL safety", () => {
   });
 
   it("does not modify an already subscribed subscriber", async () => {
-    mocks.findUnique.mockResolvedValue({
-      id: "subscriber-1",
+    mocks.createNewsletterSubscription.mockResolvedValue({
       status: "subscribed",
-      unsubscribeToken: "existing-unsubscribe-token",
+      sendConfirmation: false,
     });
 
     const response = await POST(validRequest());
@@ -170,13 +156,14 @@ describe("Newsletter subscribe route canonical URL safety", () => {
       status: "subscribed",
     });
 
+    expect(mocks.createNewsletterSubscription).toHaveBeenCalledTimes(1);
     expectNoMutationOrEmail();
   });
 
-  it("rotates the confirmation token for pending subscribers", async () => {
-    mocks.findUnique.mockResolvedValue({
-      id: "subscriber-1",
-      status: "pending",
+  it("handles pending subscriber confirmation rotation", async () => {
+    mocks.createNewsletterSubscription.mockResolvedValue({
+      ...pendingResult,
+      confirmToken: "rotated-confirm-token",
       unsubscribeToken: "existing-unsubscribe-token",
     });
 
@@ -184,32 +171,33 @@ describe("Newsletter subscribe route canonical URL safety", () => {
 
     expect(response.status).toBe(200);
 
-    const update = mocks.update.mock.calls[0][0];
-
-    expect(update.data.status).toBe("pending");
-    expect(update.data.confirmToken).toMatch(/^[a-f0-9]{48}$/);
-    expect(update.data.unsubscribeToken).toBeUndefined();
+    expect(mocks.sendNewsletterConfirmEmail).toHaveBeenCalledWith({
+      to: "shopper@example.com",
+      confirmToken: "rotated-confirm-token",
+      unsubscribeToken: "existing-unsubscribe-token",
+    });
   });
 
-  it("restores a missing unsubscribe token on resubscription", async () => {
-    mocks.findUnique.mockResolvedValue({
-      id: "subscriber-1",
-      status: "unsubscribed",
-      unsubscribeToken: null,
+  it("handles restored unsubscribe tokens on resubscription", async () => {
+    mocks.createNewsletterSubscription.mockResolvedValue({
+      ...pendingResult,
+      subscriptionGeneration: 1,
+      unsubscribeToken: "restored-unsubscribe-token",
     });
 
     await POST(validRequest());
 
-    const update = mocks.update.mock.calls[0][0];
-
-    expect(update.data.unsubscribeToken).toMatch(/^[a-f0-9]{48}$/);
-    expect(update.data.status).toBe("pending");
+    expect(mocks.sendNewsletterConfirmEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        unsubscribeToken: "restored-unsubscribe-token",
+      })
+    );
   });
 
   it("sends the updated confirmation token", async () => {
-    mocks.findUnique.mockResolvedValue({
-      id: "subscriber-1",
-      status: "pending",
+    mocks.createNewsletterSubscription.mockResolvedValue({
+      ...pendingResult,
+      confirmToken: "rotated-confirm-token",
       unsubscribeToken: "existing-unsubscribe-token",
     });
 
@@ -371,7 +359,9 @@ describe("Newsletter subscribe route canonical URL safety", () => {
   });
 
   it("returns a generic error when subscriber creation fails", async () => {
-    mocks.create.mockRejectedValue(new Error("Mock database failure"));
+    mocks.createNewsletterSubscription.mockRejectedValue(
+      new Error("Mock database failure")
+    );
 
     const response = await POST(validRequest());
 
@@ -393,11 +383,26 @@ describe("Newsletter subscribe route canonical URL safety", () => {
     expect((await responseBody(response)).error).toBe(
       "Something went wrong."
     );
-    expect(mocks.create).toHaveBeenCalledTimes(1);
+    expect(mocks.createNewsletterSubscription).toHaveBeenCalledTimes(1);
   });
 
-  it("preserves existing unique-conflict retry behaviour", async () => {
-    mocks.create.mockRejectedValue({ code: "P2002" });
+  it("handles concurrency through the transactional helper", async () => {
+    const response = await POST(validRequest());
+
+    expect(response.status).toBe(200);
+    expect(await responseBody(response)).toEqual({
+      ok: true,
+      status: "pending",
+    });
+    expect(mocks.createNewsletterSubscription).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not disclose explicit account marketing withdrawal", async () => {
+    mocks.createNewsletterSubscription.mockRejectedValue(
+      new Error(
+        "Newsletter subscription blocked by account marketing consent."
+      )
+    );
 
     const response = await POST(validRequest());
 
@@ -406,6 +411,18 @@ describe("Newsletter subscribe route canonical URL safety", () => {
       ok: true,
       status: "pending",
     });
+
+    expect(mocks.sendNewsletterConfirmEmail).not.toHaveBeenCalled();
+  });
+
+  it("does not send confirmation for already subscribed accounts", async () => {
+    mocks.createNewsletterSubscription.mockResolvedValue({
+      status: "subscribed",
+      sendConfirmation: false,
+    });
+
+    await POST(validRequest());
+
     expect(mocks.sendNewsletterConfirmEmail).not.toHaveBeenCalled();
   });
 });

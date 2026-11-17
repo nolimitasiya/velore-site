@@ -2,6 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   findFirst: vi.fn(),
+  queryRaw: vi.fn(),
+  executeRaw: vi.fn(),
+  transaction: vi.fn(),
+  findVerifiedShoppers: vi.fn(),
+  findConsentSync: vi.fn(),
   update: vi.fn(),
   sendNewsletterWelcomeEmail: vi.fn(),
 }));
@@ -10,6 +15,7 @@ vi.mock("server-only", () => ({}));
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
+    $transaction: mocks.transaction,
     newsletterSubscriber: {
       findFirst: mocks.findFirst,
       update: mocks.update,
@@ -75,6 +81,42 @@ describe("Newsletter confirmation route canonical URL safety", () => {
       unsubscribeToken: "unsubscribe-token",
     });
 
+    mocks.queryRaw.mockImplementation(async () => {
+      const candidate = await mocks.findFirst.mock.results.at(-1)?.value;
+
+      if (!candidate) {
+        return [];
+      }
+
+      return [{
+        id: candidate.id ?? "subscriber-1",
+        email: candidate.email,
+        status: candidate.status ?? "pending",
+        unsubscribeToken: candidate.unsubscribeToken ?? null,
+      }];
+    });
+
+    mocks.executeRaw.mockResolvedValue(1);
+    mocks.findVerifiedShoppers.mockResolvedValue([]);
+    mocks.findConsentSync.mockResolvedValue(null);
+
+    mocks.transaction.mockImplementation(async (callback) =>
+      callback({
+        newsletterSubscriber: {
+          findFirst: mocks.findFirst,
+          update: mocks.update,
+        },
+        shopper: {
+          findMany: mocks.findVerifiedShoppers,
+        },
+        shopperMarketingConsentSync: {
+          findFirst: mocks.findConsentSync,
+        },
+        $executeRaw: mocks.executeRaw,
+        $queryRaw: mocks.queryRaw,
+      })
+    );
+
     mocks.update.mockResolvedValue({
       id: "subscriber-1",
     });
@@ -110,10 +152,7 @@ describe("Newsletter confirmation route canonical URL safety", () => {
     expect(mocks.findFirst).toHaveBeenCalledWith({
       where: { confirmToken: "confirm-token" },
       select: {
-        id: true,
         email: true,
-        status: true,
-        unsubscribeToken: true,
       },
     });
   });
@@ -158,7 +197,7 @@ describe("Newsletter confirmation route canonical URL safety", () => {
   it("confirms pending subscribers", async () => {
     const response = await GET(request("confirm-token"));
 
-    expectRedirect(response, "ok");
+    expectRedirect(response, "success");
 
     expect(mocks.update).toHaveBeenCalledWith({
       where: { id: "subscriber-1" },
@@ -166,6 +205,7 @@ describe("Newsletter confirmation route canonical URL safety", () => {
         status: "subscribed",
         confirmedAt: expect.any(Date),
         confirmToken: null,
+        unsubscribeToken: "unsubscribe-token",
       },
     });
   });
@@ -207,9 +247,9 @@ describe("Newsletter confirmation route canonical URL safety", () => {
 
     await GET(request("confirm-token"));
 
-    expect(mocks.update).toHaveBeenCalledTimes(2);
+    expect(mocks.update).toHaveBeenCalledTimes(1);
 
-    const tokenUpdate = mocks.update.mock.calls[1][0];
+    const tokenUpdate = mocks.update.mock.calls[0][0];
 
     expect(tokenUpdate.where).toEqual({
       id: "subscriber-1",
@@ -238,7 +278,7 @@ describe("Newsletter confirmation route canonical URL safety", () => {
 
     const response = await GET(request("confirm-token"));
 
-    expectRedirect(response, "ok");
+    expectRedirect(response, "success");
     expect(mocks.update).toHaveBeenCalledTimes(1);
   });
 
@@ -247,9 +287,12 @@ describe("Newsletter confirmation route canonical URL safety", () => {
       new Error("Mock database failure")
     );
 
-    await expect(
-      GET(request("confirm-token"))
-    ).rejects.toThrow("Mock database failure");
+    const response = await GET(request("confirm-token"));
+
+    expect(response.status).toBe(503);
+    expect(await response.text()).toBe(
+      "Newsletter confirmation temporarily unavailable."
+    );
 
     expect(mocks.sendNewsletterWelcomeEmail).not.toHaveBeenCalled();
   });
@@ -372,4 +415,53 @@ describe("Newsletter confirmation route canonical URL safety", () => {
     expect(body).not.toContain("not-a-valid-url");
     expectNoDatabaseAccess();
   });
-});
+  it("acquires the email advisory lock before locking the subscriber row", async () => {
+    const operations: string[] = [];
+
+    mocks.executeRaw.mockImplementation(async () => {
+      operations.push("email-lock");
+      return 1;
+    });
+
+    mocks.queryRaw.mockImplementation(async () => {
+      operations.push("row-lock");
+
+      return [{
+        id: "subscriber-1",
+        email: "shopper@example.com",
+        status: "pending",
+        unsubscribeToken: "unsubscribe-token",
+      }];
+    });
+
+    const response = await GET(request("confirm-token"));
+
+    expectRedirect(response, "success");
+    expect(operations).toEqual(["email-lock", "row-lock"]);
+  });
+
+  it("rejects a token invalidated before the locked re-read", async () => {
+    mocks.queryRaw.mockResolvedValue([]);
+
+    const response = await GET(request("confirm-token"));
+
+    expectRedirect(response, "invalid");
+    expect(mocks.executeRaw).toHaveBeenCalledTimes(1);
+    expect(mocks.update).not.toHaveBeenCalled();
+    expect(mocks.sendNewsletterWelcomeEmail).not.toHaveBeenCalled();
+  });
+
+  it("rejects a subscriber unsubscribed before the locked re-read", async () => {
+    mocks.queryRaw.mockResolvedValue([{
+      id: "subscriber-1",
+      email: "shopper@example.com",
+      status: "unsubscribed",
+      unsubscribeToken: "unsubscribe-token",
+    }]);
+
+    const response = await GET(request("confirm-token"));
+
+    expectRedirect(response, "invalid");
+    expect(mocks.update).not.toHaveBeenCalled();
+    expect(mocks.sendNewsletterWelcomeEmail).not.toHaveBeenCalled();
+  });});

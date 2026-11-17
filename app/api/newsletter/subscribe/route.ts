@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
-import crypto from "crypto";
+import crypto from "node:crypto";
+
+import { createNewsletterSubscription } from "@/lib/marketing/createNewsletterSubscription";
 import { sendNewsletterConfirmEmail } from "@/lib/resend/templates/marketing/newsletterConfirm";
 import { getSiteBaseUrl } from "@/lib/config/siteUrl";
 
@@ -18,6 +19,7 @@ export async function POST(req: Request) {
     getSiteBaseUrl();
   } catch {
     console.error("Newsletter subscription URL configuration unavailable.");
+
     return NextResponse.json(
       { ok: false, error: "Server configuration unavailable." },
       { status: 503 }
@@ -26,109 +28,104 @@ export async function POST(req: Request) {
 
   if (!process.env.RESEND_API_KEY) {
     console.error("Missing RESEND_API_KEY");
+
     return NextResponse.json(
       { ok: false, error: "Server misconfigured: missing RESEND_API_KEY" },
       { status: 500 }
     );
   }
 
-  if (!process.env.RESEND_FROM_MARKETING && !process.env.RESEND_FROM_ONBOARDING) {
+  if (
+    !process.env.RESEND_FROM_MARKETING &&
+    !process.env.RESEND_FROM_ONBOARDING
+  ) {
     console.error("Missing RESEND_FROM_*");
+
     return NextResponse.json(
       { ok: false, error: "Server misconfigured: missing RESEND_FROM" },
       { status: 500 }
     );
   }
 
-  const makeToken = () => crypto.randomBytes(24).toString("hex");
-
   try {
     const json = await req.json();
     const body = BodySchema.parse(json);
 
-    const email = body.email.toLowerCase();
+    let result;
 
-    const existing = await prisma.newsletterSubscriber.findUnique({
-      where: { email },
-      select: { id: true, status: true, unsubscribeToken: true },
-    });
-
-    // NEW subscriber -> create as pending + send confirm email
-    if (!existing) {
-      const subscriber = await prisma.newsletterSubscriber.create({
-        data: {
-          email,
-          source: body.source ?? "unknown",
-          tags: body.tags ?? [],
+    try {
+      result = await createNewsletterSubscription({
+        email: body.email,
+        source: body.source,
+        tags: body.tags,
+      });
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message ===
+          "Newsletter subscription blocked by account marketing consent."
+      ) {
+        // Do not disclose account marketing preferences.
+        return NextResponse.json({
+          ok: true,
           status: "pending",
-          unsubscribeToken: makeToken(),
-          confirmToken: makeToken(),
-        },
-        select: { email: true, confirmToken: true, unsubscribeToken: true },
-      });
+        });
+      }
 
-      await sendNewsletterConfirmEmail({
-        to: subscriber.email,
-        confirmToken: subscriber.confirmToken!, // should exist right after create
-        unsubscribeToken: subscriber.unsubscribeToken!,
-      });
-
-      return NextResponse.json({ ok: true, status: "pending" });
+      throw error;
     }
 
-    // Already confirmed -> do nothing
-    if (existing.status === "subscribed") {
-      return NextResponse.json({ ok: true, status: "subscribed" });
-    }
-
-    // Existing but pending/unsubscribed -> rotate confirm token + ensure unsubscribe token exists
-    const newConfirmToken = makeToken();
-    const ensuredUnsubscribeToken = existing.unsubscribeToken ?? makeToken();
-
-    const updated = await prisma.newsletterSubscriber.update({
-      where: { email },
-      data: {
-        source: body.source ?? undefined,
-        tags: body.tags ?? undefined,
-        status: "pending",
-        confirmToken: newConfirmToken,
-        // If legacy row has null, store a token so unsubscribe always works
-        unsubscribeToken: existing.unsubscribeToken ? undefined : ensuredUnsubscribeToken,
-      },
-      select: { email: true, confirmToken: true, unsubscribeToken: true },
-    });
-
-    const unsubscribeToken = updated.unsubscribeToken ?? ensuredUnsubscribeToken;
-
-    if (!updated.confirmToken || !unsubscribeToken) {
-      return NextResponse.json(
-        { ok: false, error: "Failed to create confirmation link." },
-        { status: 500 }
-      );
+    if (!result.sendConfirmation) {
+      return NextResponse.json({
+        ok: true,
+        status: "subscribed",
+      });
     }
 
     await sendNewsletterConfirmEmail({
-      to: updated.email,
-      confirmToken: updated.confirmToken,
-      unsubscribeToken,
+      to: result.email,
+      confirmToken: result.confirmToken,
+      unsubscribeToken: result.unsubscribeToken,
     });
 
-    return NextResponse.json({ ok: true, status: "pending" });
-  } catch (err: any) {
+    return NextResponse.json({
+      ok: true,
+      status: "pending",
+    });
+  } catch (error) {
     const debugId = crypto.randomBytes(6).toString("hex");
-    console.error(`❌ subscribe error [${debugId}]`, err);
 
-    if (err?.name === "ZodError") {
-      return NextResponse.json({ ok: false, error: "Invalid input." }, { status: 400 });
+    console.error(
+      "Newsletter subscription failed.",
+      { debugId, error }
+    );
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Invalid input.",
+        },
+        { status: 400 }
+      );
     }
 
-    if (err?.code === "P2002") {
-      // Rare race-condition: treat as pending (client can retry)
-      return NextResponse.json({ ok: true, status: "pending" }, { status: 200 });
+    if (error instanceof SyntaxError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Invalid request body.",
+        },
+        { status: 400 }
+      );
     }
 
     return NextResponse.json(
-      { ok: false, error: "Something went wrong.", debugId },
+      {
+        ok: false,
+        error: "Something went wrong.",
+        debugId,
+      },
       { status: 500 }
     );
   }
