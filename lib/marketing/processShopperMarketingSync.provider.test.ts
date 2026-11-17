@@ -124,6 +124,103 @@ describe("Shopper marketing re-subscription", () => {
     });
   });
 });
+describe("Final consent revalidation", () => {
+  it("blocks submission when consent is withdrawn before provider submission", async () => {
+    validate
+      .mockResolvedValueOnce({
+        status: "READY",
+        reason: "CURRENT_CONSENT",
+      })
+      .mockResolvedValueOnce({
+        status: "SUPERSEDED",
+        reason: "CONSENT_VERSION_CHANGED",
+      } as never);
+
+    const result = await processOneShopperMarketingSync(
+      {} as never,
+      { enableProviderSubmission: true }
+    );
+
+    expect(result).toEqual({
+      status: "SUPERSEDED",
+    });
+
+    expect(validate).toHaveBeenCalledTimes(2);
+    expect(submit).not.toHaveBeenCalled();
+
+    expect(transition).toHaveBeenCalledWith(
+      expect.anything(),
+      operation.id,
+      operation.claimToken,
+      { status: "SUPERSEDED" }
+    );
+  });
+});
+describe("Final validation failure handling", () => {
+  it("quarantines a blocked claim without contacting Klaviyo", async () => {
+    validate
+      .mockResolvedValueOnce({
+        status: "READY",
+        reason: "CURRENT_CONSENT",
+      })
+      .mockResolvedValueOnce({
+        status: "BLOCKED",
+        reason: "CONSENT_REVIEW_REQUIRED",
+      } as never);
+
+    const result = await processOneShopperMarketingSync(
+      {} as never,
+      { enableProviderSubmission: true }
+    );
+
+    expect(result).toEqual({
+      status: "BLOCKED",
+      reason: "CONSENT_REVIEW_REQUIRED",
+    });
+
+    expect(transition).toHaveBeenCalledWith(
+      expect.anything(),
+      operation.id,
+      operation.claimToken,
+      {
+        status: "UNKNOWN",
+        error: "Final validation blocked: CONSENT_REVIEW_REQUIRED",
+      }
+    );
+
+    expect(submit).not.toHaveBeenCalled();
+  });
+
+  it("releases an invalid claim without contacting Klaviyo", async () => {
+    validate
+      .mockResolvedValueOnce({
+        status: "READY",
+        reason: "CURRENT_CONSENT",
+      })
+      .mockResolvedValueOnce({
+        status: "INVALID_CLAIM",
+        reason: "CLAIM_NO_LONGER_VALID",
+      } as never);
+
+    const result = await processOneShopperMarketingSync(
+      {} as never,
+      { enableProviderSubmission: true }
+    );
+
+    expect(result).toEqual({
+      status: "INVALID_CLAIM",
+      reason: "CLAIM_NO_LONGER_VALID",
+    });
+
+    expect(release).toHaveBeenCalledWith(
+      expect.anything(),
+      operation.id,
+      operation.claimToken
+    );
+
+    expect(submit).not.toHaveBeenCalled();
+  });
+});
 describe("Klaviyo provider submission lifecycle", () => {
   it("submits an eligible opt-in and records the job ID", async () => {
     const result = await processOneShopperMarketingSync(

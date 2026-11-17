@@ -407,11 +407,40 @@ export async function processOneShopperMarketingSync(
       : { status: "TRANSITION_CONFLICT" };
   }
 
+  if (finalValidation.status === "BLOCKED") {
+    const transitioned =
+      await transitionShopperMarketingSync(
+        db,
+        claimed.id,
+        claimed.claimToken,
+        {
+          status: "UNKNOWN",
+          error: `Final validation blocked: ${finalValidation.reason}`,
+        }
+      );
+
+    return transitioned
+      ? {
+          status: "BLOCKED",
+          reason: finalValidation.reason,
+        }
+      : { status: "TRANSITION_CONFLICT" };
+  }
+
   if (finalValidation.status !== "READY") {
-    return {
-      status: "INVALID_CLAIM",
-      reason: finalValidation.reason,
-    };
+    const released =
+      await releaseShopperMarketingSyncClaim(
+        db,
+        claimed.id,
+        claimed.claimToken
+      );
+
+    return released
+      ? {
+          status: "INVALID_CLAIM",
+          reason: finalValidation.reason,
+        }
+      : { status: "TRANSITION_CONFLICT" };
   }
 
   try {
